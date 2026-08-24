@@ -14,12 +14,16 @@ use Livewire\Component;
 class CommerceSettings extends Component
 {
     public array $payments = [];
+
     public array $shippingProviders = [];
+
     public array $shippingMethods = [];
 
     public function mount(): void
     {
-        if (PaymentProvider::count() === 0) app(CommerceProviderSeeder::class)->run();
+        if (PaymentProvider::count() === 0) {
+            app(CommerceProviderSeeder::class)->run();
+        }
         $this->loadSettings();
     }
 
@@ -93,5 +97,8 @@ class CommerceSettings extends Component
         $this->shippingMethods = ShippingMethod::orderBy('position')->get()->toArray();
     }
 
-    public function render() { return view('livewire.admin.commerce-settings'); }
+    public function render()
+    {
+        return view('livewire.admin.commerce-settings');
+    }
 }

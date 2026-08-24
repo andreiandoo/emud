@@ -12,8 +12,11 @@ use Livewire\Component;
 class OrderEditor extends Component
 {
     public Order $order;
+
     public ?int $shippingProviderId = null;
+
     public float $weightKg = 1;
+
     public int $pieces = 1;
 
     public function mount(Order $order): void

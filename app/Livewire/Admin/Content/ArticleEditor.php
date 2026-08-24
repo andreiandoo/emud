@@ -15,26 +15,44 @@ class ArticleEditor extends Component
     use WithFileUploads;
 
     public ?Article $article = null;
+
     public string $title = '';
+
     public string $slug = '';
+
     public ?int $articleCategoryId = null;
+
     public string $excerpt = '';
+
     public string $content = '';
+
     public string $status = 'draft';
+
     public bool $isFeatured = false;
+
     public $featuredImage;
+
     public string $featuredImageAlt = '';
+
     public string $seoTitle = '';
+
     public string $seoDescription = '';
+
     public string $canonicalUrl = '';
+
     public bool $robotsIndex = true;
+
     public bool $robotsFollow = true;
 
     public function mount(?Article $article = null): void
     {
-        if (! $article?->exists) return;
+        if (! $article?->exists) {
+            return;
+        }
         $this->article = $article;
-        foreach (['title', 'slug', 'excerpt', 'content', 'status'] as $field) $this->{$field} = $article->{$field} ?? '';
+        foreach (['title', 'slug', 'excerpt', 'content', 'status'] as $field) {
+            $this->{$field} = $article->{$field} ?? '';
+        }
         $this->articleCategoryId = $article->article_category_id;
         $this->isFeatured = $article->is_featured;
         $this->featuredImageAlt = $article->featured_image_alt ?? '';
@@ -47,7 +65,9 @@ class ArticleEditor extends Component
 
     public function updatedTitle(): void
     {
-        if (! $this->article || $this->slug === '') $this->slug = Str::slug($this->title);
+        if (! $this->article || $this->slug === '') {
+            $this->slug = Str::slug($this->title);
+        }
     }
 
     public function save(): void

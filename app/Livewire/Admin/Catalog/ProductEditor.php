@@ -19,27 +19,49 @@ class ProductEditor extends Component
     use WithFileUploads;
 
     public ?Product $product = null;
+
     public string $name = '';
+
     public string $slug = '';
+
     public string $sku = '';
+
     public string $manufacturerPartNumber = '';
+
     public ?int $brandId = null;
+
     public string $status = 'draft';
+
     public string $shortDescription = '';
+
     public string $description = '';
+
     public bool $isUniversal = false;
+
     public bool $isFeatured = false;
+
     public ?int $warrantyMonths = null;
+
     public $weightKg = null;
+
     public array $categoryIds = [];
+
     public array $variants = [];
+
     public array $attributeValues = [];
+
     public array $fitments = [];
+
     public array $images = [];
+
     public string $seoTitle = '';
+
     public string $seoDescription = '';
+
     public string $canonicalUrl = '';
+
     public bool $robotsIndex = true;
+
     public bool $robotsFollow = true;
 
     public function mount(?Product $product = null): void
@@ -89,10 +111,15 @@ class ProductEditor extends Component
 
     public function updatedName(): void
     {
-        if (! $this->product || $this->slug === '') $this->slug = Str::slug($this->name);
+        if (! $this->product || $this->slug === '') {
+            $this->slug = Str::slug($this->name);
+        }
     }
 
-    public function addVariant(): void { $this->variants[] = $this->emptyVariant(); }
+    public function addVariant(): void
+    {
+        $this->variants[] = $this->emptyVariant();
+    }
 
     public function removeVariant(int $index): void
     {
@@ -163,19 +190,29 @@ class ProductEditor extends Component
             $product->attributeValues()->delete();
             foreach (Attribute::whereIn('id', array_keys($this->attributeValues))->get() as $attribute) {
                 $value = $this->attributeValues[$attribute->id] ?? null;
-                if ($value === null || $value === '') continue;
+                if ($value === null || $value === '') {
+                    continue;
+                }
                 $data = ['attribute_id' => $attribute->id];
-                if (in_array($attribute->type, ['select', 'color'], true)) $data['option_id'] = $value;
-                elseif ($attribute->type === 'number') $data['value_number'] = $value;
-                elseif ($attribute->type === 'boolean') $data['value_boolean'] = (bool) $value;
-                elseif ($attribute->type === 'multiselect') $data['value_json'] = (array) $value;
-                else $data['value_text'] = $value;
+                if (in_array($attribute->type, ['select', 'color'], true)) {
+                    $data['option_id'] = $value;
+                } elseif ($attribute->type === 'number') {
+                    $data['value_number'] = $value;
+                } elseif ($attribute->type === 'boolean') {
+                    $data['value_boolean'] = (bool) $value;
+                } elseif ($attribute->type === 'multiselect') {
+                    $data['value_json'] = (array) $value;
+                } else {
+                    $data['value_text'] = $value;
+                }
                 $product->attributeValues()->create($data);
             }
 
             $keptFitmentIds = [];
             foreach ($this->fitments as $row) {
-                if (! ($row['generation_id'] ?? null)) continue;
+                if (! ($row['generation_id'] ?? null)) {
+                    continue;
+                }
                 $generation = VehicleGeneration::with('model')->findOrFail($row['generation_id']);
                 $fitment = $product->fitments()->updateOrCreate(['id' => $row['id'] ?? null], [
                     'make_id' => $generation->model->make_id, 'model_id' => $generation->model_id,
@@ -197,7 +234,10 @@ class ProductEditor extends Component
         $this->redirectRoute('admin.products.edit', $this->product, navigate: true);
     }
 
-    public function removeMedia(int $mediaId): void { $this->product?->media()->whereKey($mediaId)->delete(); }
+    public function removeMedia(int $mediaId): void
+    {
+        $this->product?->media()->whereKey($mediaId)->delete();
+    }
 
     public function deleteProduct(): void
     {

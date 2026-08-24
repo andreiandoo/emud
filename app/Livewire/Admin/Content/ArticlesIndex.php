@@ -15,6 +15,7 @@ class ArticlesIndex extends Component
     use WithPagination;
 
     public string $categoryName = '';
+
     public ?int $editingCategoryId = null;
 
     public function saveCategory(): void

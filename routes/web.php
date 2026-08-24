@@ -1,10 +1,10 @@
 <?php
 
 use App\Livewire\Admin\Catalog\AttributesIndex;
-use App\Livewire\Admin\Catalog\CategoriesIndex;
-use App\Livewire\Admin\Catalog\ProductsIndex;
-use App\Livewire\Admin\Catalog\ProductEditor;
 use App\Livewire\Admin\Catalog\BrandsIndex;
+use App\Livewire\Admin\Catalog\CategoriesIndex;
+use App\Livewire\Admin\Catalog\ProductEditor;
+use App\Livewire\Admin\Catalog\ProductsIndex;
 use App\Livewire\Admin\CommerceSettings;
 use App\Livewire\Admin\Content\ArticleEditor;
 use App\Livewire\Admin\Content\ArticlesIndex;

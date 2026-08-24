@@ -25,7 +25,13 @@ class MediaLibrary extends Component
         $this->reset('files');
     }
 
-    public function delete(int $id): void { MediaAsset::findOrFail($id)->delete(); }
+    public function delete(int $id): void
+    {
+        MediaAsset::findOrFail($id)->delete();
+    }
 
-    public function render() { return view('livewire.admin.media-library', ['assets' => MediaAsset::latest()->paginate(30)]); }
+    public function render()
+    {
+        return view('livewire.admin.media-library', ['assets' => MediaAsset::latest()->paginate(30)]);
+    }
 }

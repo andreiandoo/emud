@@ -3,11 +3,11 @@
 namespace App\Livewire\Admin\Catalog;
 
 use App\Models\Category;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Str;
 
 #[Layout('layouts::admin')]
 class CategoriesIndex extends Component
@@ -18,18 +18,31 @@ class CategoriesIndex extends Component
     public string $search = '';
 
     public ?int $editingId = null;
+
     public ?int $parentId = null;
+
     public string $name = '';
+
     public string $slug = '';
+
     public string $description = '';
+
     public $image;
+
     public ?string $currentImage = null;
+
     public string $seoTitle = '';
+
     public string $seoDescription = '';
+
     public string $canonicalUrl = '';
+
     public bool $robotsIndex = true;
+
     public bool $robotsFollow = true;
+
     public bool $isActive = true;
+
     public bool $isVisibleInMenu = true;
 
     public function updatedName(): void

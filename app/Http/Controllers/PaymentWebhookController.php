@@ -27,7 +27,9 @@ class PaymentWebhookController extends Controller
             ['payment_provider_id' => $paymentProvider->id, 'external_id' => $externalId],
             ['event_type' => $type, 'payload' => $payload]
         );
-        if ($event->processed_at) return response('OK');
+        if ($event->processed_at) {
+            return response('OK');
+        }
 
         DB::transaction(function () use ($event, $gateway, $payload): void {
             $reference = $gateway->webhookReference($payload);

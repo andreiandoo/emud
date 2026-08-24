@@ -42,7 +42,9 @@ class FanCourierGateway implements ShippingGateway
         )->throw()->json();
 
         $awb = data_get($response, 'shipments.0.awbNumber') ?? data_get($response, 'data.0.awb') ?? data_get($response, 'awb');
-        if (! $awb) throw new RuntimeException('FAN Courier nu a returnat un număr AWB.');
+        if (! $awb) {
+            throw new RuntimeException('FAN Courier nu a returnat un număr AWB.');
+        }
 
         return new ShipmentResult((string) $awb, 'created', "https://www.fancourier.ro/awb-tracking/?xawb={$awb}", data_get($response, 'shipments.0.cost'), $response);
     }
@@ -61,7 +63,9 @@ class FanCourierGateway implements ShippingGateway
     {
         $credentials = $provider->credentials ?? [];
         $token = $credentials['token'] ?? null;
-        if (! $token) throw new RuntimeException('Tokenul API FAN Courier nu este configurat.');
+        if (! $token) {
+            throw new RuntimeException('Tokenul API FAN Courier nu este configurat.');
+        }
 
         return Http::acceptJson()->withToken($token)->timeout(30)->retry(2, 300);
     }
