@@ -31,7 +31,7 @@ jobs:
           --health-retries 10
     env:
       APP_ENV: testing
-      APP_KEY: base64:J5k4Q1Z2bXMmcXY1RFoxN3Q1K3hiZ2d4c1UxUjRwYnlwcWphYz0=
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
