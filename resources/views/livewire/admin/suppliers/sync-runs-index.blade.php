@@ -1,0 +1,7 @@
+<div>
+    <div class="mb-6"><h1 class="text-2xl font-bold">Sincronizări</h1><p class="text-stone-500">Jurnal complet pentru fiecare rulare a feedurilor.</p></div>
+    <select wire:model.live="status" class="mb-4 rounded-lg border bg-white px-3 py-2"><option value="">Toate statusurile</option>@foreach(['pending','running','completed','completed_with_errors','failed'] as $item)<option>{{ $item }}</option>@endforeach</select>
+    <div class="overflow-hidden rounded-xl border bg-white"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-stone-50 text-stone-500"><tr><th class="p-3">Furnizor</th><th class="p-3">Mod</th><th class="p-3">Status</th><th class="p-3">Procesate</th><th class="p-3">Noi</th><th class="p-3">Actualizate</th><th class="p-3">Erori</th><th class="p-3">Data</th></tr></thead><tbody>
+    @forelse($runs as $run)<tr class="border-t"><td class="p-3 font-medium">{{ $run->supplier->name }}</td><td class="p-3">{{ $run->mode }}</td><td class="p-3">{{ $run->status->value }}</td><td class="p-3">{{ $run->processed }}</td><td class="p-3">{{ $run->created_count }}</td><td class="p-3">{{ $run->updated_count }}</td><td class="p-3">{{ $run->failed_count }}</td><td class="p-3">{{ $run->created_at->format('d.m.Y H:i') }}</td></tr>@empty<tr><td colspan="8" class="p-8 text-center text-stone-500">Nicio rulare.</td></tr>@endforelse
+    </tbody></table></div><div class="border-t p-4">{{ $runs->links() }}</div></div>
+</div>
