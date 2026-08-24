@@ -21,10 +21,14 @@
                 'admin.products.index' => 'Produse',
                 'admin.categories.index' => 'Categorii',
                 'admin.attributes.index' => 'Filtre & atribute',
+                'admin.brands.index' => 'Branduri',
+                'admin.media.index' => 'Bibliotecă media',
+                'admin.articles.index' => 'Articole & ghiduri',
                 'admin.vehicles.index' => 'Compatibilitate auto',
                 'admin.suppliers.index' => 'Furnizori',
                 'admin.suppliers.sync-runs' => 'Sincronizări',
                 'admin.orders.index' => 'Comenzi',
+                'admin.commerce.settings' => 'Plăți & livrare',
             ] as $route => $label)
                 <a href="{{ route($route) }}" @class([
                     'block rounded-lg px-3 py-2.5 transition',

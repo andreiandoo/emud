@@ -28,6 +28,18 @@ docker compose up -d
 
 Aplicația este disponibilă la `http://localhost:8080`, iar administrarea la `/admin/login`.
 
+## Administrare disponibilă
+
+- arbore de categorii/subcategorii cu mutare, ordonare, imagine, descriere și SEO;
+- filtre tipizate, opțiuni și reguli per categorie;
+- produse cu brand, categorii, variante, prețuri, imagini, atribute, compatibilități auto și SEO;
+- articole și categorii editoriale cu imagine, publicare și SEO;
+- Stripe și NETOPIA Payments v2, activabile și selectabile din `Plăți & livrare`;
+- FAN Courier, metode/tarife de livrare, generare AWB și istoric de tracking;
+- bibliotecă media, comenzi, tranzacții și expedieri.
+
+Credentialele Stripe, NETOPIA și FAN Courier se introduc în admin și sunt criptate prin cast-ul Laravel `encrypted:array`. Se pornește în `sandbox`; trecerea pe `live` se face numai după validarea contului și webhook-urilor/IPN-urilor.
+
 ## Sincronizări furnizori
 
 ```bash
@@ -46,4 +58,4 @@ Schedulerul rulează automat: stoc la 15 minute, prețuri în fiecare oră și c
 4. O comandă salvează un snapshot al produsului și furnizorului ales, astfel încât istoricul să nu se schimbe retroactiv.
 5. Compatibilitatea nu este un text liber: este o regulă structurată pe marcă, model, generație, motor, ani și condiții de montaj.
 
-Detalii: [`docs/architecture.md`](docs/architecture.md), [`docs/data-model.md`](docs/data-model.md), [`docs/supplier-onboarding.md`](docs/supplier-onboarding.md).
+Detalii: [`docs/architecture.md`](docs/architecture.md), [`docs/data-model.md`](docs/data-model.md), [`docs/commerce-integrations.md`](docs/commerce-integrations.md), [`docs/supplier-onboarding.md`](docs/supplier-onboarding.md).

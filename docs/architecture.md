@@ -22,6 +22,12 @@ Fiecare furnizor are protocol, endpointuri separate, credentiale criptate, mapar
 
 La checkout, furnizorul ales și costul se copiază în `order_items`. O comandă cu produse de la mai mulți furnizori poate fi împărțită ulterior în purchase orders separate fără schimbarea modelului de comandă client.
 
+`carts` și `cart_items` păstrează selecția temporară, iar `CheckoutService` creează adresele și snapshoturile comenzii într-o tranzacție. Inițierea plății este idempotentă și separată de tranzacția bazei de date. Confirmarea se face exclusiv din webhook/IPN verificat, nu din pagina de retur a clientului.
+
+Procesatoarele implementează același contract. Providerul implicit este ales din admin dintre Stripe și NETOPIA, iar credentialele sunt criptate. `payment_transactions` și `payment_webhook_events` oferă audit și deduplicare.
+
+Livrarea folosește un contract separat de curier. Prima implementare este FAN Courier: adminul configurează tokenul, clientul și serviciul, iar din comandă poate genera AWB și actualiza evenimentele de tracking. Endpointurile sunt configurabile pentru a permite alinierea la versiunea SelfAWB activată pe contul contractual.
+
 ## Personalizare și comunitate
 
 `saved_searches`, `product_alerts` și `notification_preferences` susțin alerte de stoc/preț și newslettere pe mașinile salvate. Alertele folosesc stare de tranziție (`condition_met`), ca să nu trimită același mesaj la fiecare sincronizare.
@@ -39,4 +45,4 @@ Evenimentele online și offline sunt stocate în `community_events`, iar înscri
 
 ## Limite intenționate ale acestei etape
 
-Interfața publică, checkoutul, procesatorul de plăți, curierii, facturile, purchase orders către furnizori și editorul vizual complet din admin urmează după validarea feedurilor reale. Schema și punctele de extensie sunt pregătite.
+Checkoutul are serviciul de domeniu, persistența și integrarea procesatoarelor; interfața publică va fi proiectată în etapa de storefront. Facturarea fiscală și purchase orders automate către furnizori rămân module separate. Credentialele live și validarea contractuală Stripe/NETOPIA/FAN Courier nu pot fi finalizate fără conturile comerciantului.

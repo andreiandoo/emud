@@ -17,6 +17,8 @@ class Category extends Model
             'is_active' => 'boolean',
             'is_visible_in_menu' => 'boolean',
             'metadata' => 'array',
+            'robots_index' => 'boolean',
+            'robots_follow' => 'boolean',
         ];
     }
 

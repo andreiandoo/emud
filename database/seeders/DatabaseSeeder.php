@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([CategorySeeder::class, AttributeSeeder::class]);
+        $this->call([CategorySeeder::class, AttributeSeeder::class, CommerceProviderSeeder::class]);
 
         if (filled(env('ADMIN_EMAIL')) && filled(env('ADMIN_PASSWORD'))) {
             User::query()->updateOrCreate(

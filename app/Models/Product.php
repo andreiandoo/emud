@@ -25,6 +25,8 @@ class Product extends Model
             'dimensions_cm' => 'array',
             'metadata' => 'array',
             'published_at' => 'datetime',
+            'robots_index' => 'boolean',
+            'robots_follow' => 'boolean',
         ];
     }
 
@@ -56,6 +58,11 @@ class Product extends Model
     public function attributeValues(): HasMany
     {
         return $this->hasMany(ProductAttributeValue::class);
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(ProductMedia::class)->orderBy('position');
     }
 
     public function scopeActive(Builder $query): Builder

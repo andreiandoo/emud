@@ -11,3 +11,5 @@
 }
 
 button, select, input { outline-color: var(--color-lime-500); }
+
+[x-cloak] { display: none !important; }
