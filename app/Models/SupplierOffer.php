@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SupplierOffer extends Model
 {
     protected $guarded = [];
+
     protected function casts(): array
     {
         return [
@@ -20,5 +21,9 @@ class SupplierOffer extends Model
             'stale_after' => 'datetime',
         ];
     }
-    public function supplierProduct(): BelongsTo { return $this->belongsTo(SupplierProduct::class); }
+
+    public function supplierProduct(): BelongsTo
+    {
+        return $this->belongsTo(SupplierProduct::class);
+    }
 }

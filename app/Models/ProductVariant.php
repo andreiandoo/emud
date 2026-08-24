@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductVariant extends Model
 {
@@ -23,6 +23,13 @@ class ProductVariant extends Model
         ];
     }
 
-    public function product(): BelongsTo { return $this->belongsTo(Product::class); }
-    public function supplierProducts(): HasMany { return $this->hasMany(SupplierProduct::class, 'variant_id'); }
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function supplierProducts(): HasMany
+    {
+        return $this->hasMany(SupplierProduct::class, 'variant_id');
+    }
 }

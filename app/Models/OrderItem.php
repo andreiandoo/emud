@@ -7,5 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class OrderItem extends Model
 {
     protected $guarded = [];
-    protected function casts(): array { return ['snapshot' => 'array']; }
+
+    protected function casts(): array
+    {
+        return ['snapshot' => 'array'];
+    }
 }

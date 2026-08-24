@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use Database\Seeders\CategorySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,6 +20,6 @@ class CategorySeederTest extends TestCase
             'full_path' => 'camping-si-outdoor/corturi-de-acoperis-auto/corturi-de-acoperis-hard-top',
             'depth' => 2,
         ]);
-        $this->assertGreaterThan(70, \App\Models\Category::query()->count());
+        $this->assertGreaterThan(70, Category::query()->count());
     }
 }

@@ -154,7 +154,7 @@ return new class extends Migration
 
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-            DB::statement("CREATE INDEX products_name_trgm_idx ON products USING gin (name gin_trgm_ops)");
+            DB::statement('CREATE INDEX products_name_trgm_idx ON products USING gin (name gin_trgm_ops)');
             DB::statement('CREATE INDEX product_attribute_values_json_idx ON product_attribute_values USING gin (value_json)');
         }
     }

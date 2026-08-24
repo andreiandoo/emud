@@ -22,6 +22,13 @@ class Supplier extends Model
         ];
     }
 
-    public function products(): HasMany { return $this->hasMany(SupplierProduct::class); }
-    public function syncRuns(): HasMany { return $this->hasMany(SupplierSyncRun::class); }
+    public function products(): HasMany
+    {
+        return $this->hasMany(SupplierProduct::class);
+    }
+
+    public function syncRuns(): HasMany
+    {
+        return $this->hasMany(SupplierSyncRun::class);
+    }
 }

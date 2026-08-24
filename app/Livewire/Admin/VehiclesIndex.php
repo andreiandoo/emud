@@ -10,7 +10,8 @@ use Livewire\Component;
 #[Layout('layouts::admin')]
 class VehiclesIndex extends Component
 {
-    #[Url] public string $search = '';
+    #[Url]
+    public string $search = '';
 
     public function render()
     {

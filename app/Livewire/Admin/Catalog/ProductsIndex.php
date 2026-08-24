@@ -14,9 +14,14 @@ class ProductsIndex extends Component
 {
     use WithPagination;
 
-    #[Url] public string $search = '';
-    #[Url] public string $status = '';
-    #[Url] public string $category = '';
+    #[Url]
+    public string $search = '';
+
+    #[Url]
+    public string $status = '';
+
+    #[Url]
+    public string $category = '';
 
     public function updated($property): void
     {

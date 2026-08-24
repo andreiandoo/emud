@@ -12,8 +12,12 @@ use Livewire\WithPagination;
 class OrdersIndex extends Component
 {
     use WithPagination;
-    #[Url] public string $search = '';
-    #[Url] public string $status = '';
+
+    #[Url]
+    public string $search = '';
+
+    #[Url]
+    public string $status = '';
 
     public function render()
     {

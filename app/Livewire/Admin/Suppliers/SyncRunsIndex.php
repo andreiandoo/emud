@@ -12,7 +12,9 @@ use Livewire\WithPagination;
 class SyncRunsIndex extends Component
 {
     use WithPagination;
-    #[Url] public string $status = '';
+
+    #[Url]
+    public string $status = '';
 
     public function render()
     {

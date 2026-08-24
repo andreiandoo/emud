@@ -10,7 +10,8 @@ use Livewire\Component;
 #[Layout('layouts::admin')]
 class CategoriesIndex extends Component
 {
-    #[Url] public string $search = '';
+    #[Url]
+    public string $search = '';
 
     public function toggle(int $categoryId): void
     {

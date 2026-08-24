@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 class SyncSuppliers extends Command
 {
     protected $signature = 'suppliers:sync {supplier? : Supplier code} {--mode=catalog : catalog, stock or prices}';
+
     protected $description = 'Queue supplier catalog, stock, or price synchronization jobs.';
 
     public function handle(): int
@@ -16,6 +17,7 @@ class SyncSuppliers extends Command
         $mode = (string) $this->option('mode');
         if (! in_array($mode, ['catalog', 'stock', 'prices'], true)) {
             $this->error('Mode must be catalog, stock or prices.');
+
             return self::INVALID;
         }
 
@@ -26,6 +28,7 @@ class SyncSuppliers extends Command
 
         if ($suppliers->isEmpty()) {
             $this->warn('No active suppliers matched.');
+
             return self::FAILURE;
         }
 

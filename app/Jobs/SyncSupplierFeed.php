@@ -21,7 +21,9 @@ class SyncSupplierFeed implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 1800;
+
     public int $tries = 3;
+
     public array $backoff = [60, 300, 900];
 
     public function __construct(public readonly int $supplierId, public readonly string $mode = 'catalog')

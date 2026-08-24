@@ -114,7 +114,18 @@ class HttpFeedConnector implements SupplierConnector
         }
     }
 
-    private function nullableString(mixed $value): ?string { return filled($value) ? (string) $value : null; }
-    private function nullableFloat(mixed $value): ?float { return is_numeric($value) ? (float) $value : null; }
-    private function nullableInt(mixed $value): ?int { return is_numeric($value) ? (int) $value : null; }
+    private function nullableString(mixed $value): ?string
+    {
+        return filled($value) ? (string) $value : null;
+    }
+
+    private function nullableFloat(mixed $value): ?float
+    {
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
+    }
 }

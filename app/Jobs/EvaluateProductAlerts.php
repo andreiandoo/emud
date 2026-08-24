@@ -14,7 +14,10 @@ class EvaluateProductAlerts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public readonly int $productId) { $this->onQueue('notifications'); }
+    public function __construct(public readonly int $productId)
+    {
+        $this->onQueue('notifications');
+    }
 
     public function handle(): void
     {

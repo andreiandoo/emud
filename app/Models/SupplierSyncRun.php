@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SupplierSyncRun extends Model
 {
     protected $guarded = [];
+
     protected function casts(): array
     {
         return [

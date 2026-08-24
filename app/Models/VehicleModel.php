@@ -9,7 +9,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class VehicleModel extends Model
 {
     protected $guarded = [];
-    protected function casts(): array { return ['is_active' => 'boolean']; }
-    public function make(): BelongsTo { return $this->belongsTo(VehicleMake::class, 'make_id'); }
-    public function generations(): HasMany { return $this->hasMany(VehicleGeneration::class, 'model_id'); }
+
+    protected function casts(): array
+    {
+        return ['is_active' => 'boolean'];
+    }
+
+    public function make(): BelongsTo
+    {
+        return $this->belongsTo(VehicleMake::class, 'make_id');
+    }
+
+    public function generations(): HasMany
+    {
+        return $this->hasMany(VehicleGeneration::class, 'model_id');
+    }
 }
