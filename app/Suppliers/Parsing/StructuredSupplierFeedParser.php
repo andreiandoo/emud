@@ -7,7 +7,7 @@ use RuntimeException;
 class StructuredSupplierFeedParser
 {
     /** @param resource $stream
-     *  @return iterable<array<string, mixed>>
+     * @return iterable<array<string, mixed>>
      */
     public function rows($stream, string $format, array $settings = []): iterable
     {
@@ -24,7 +24,7 @@ class StructuredSupplierFeedParser
     }
 
     /** @param resource $stream
-     *  @return iterable<array<string, mixed>>
+     * @return iterable<array<string, mixed>>
      */
     private function csvRows($stream, string $format, array $settings): iterable
     {
@@ -67,7 +67,7 @@ class StructuredSupplierFeedParser
     }
 
     /** @param resource $stream
-     *  @return iterable<array<string, mixed>>
+     * @return iterable<array<string, mixed>>
      */
     private function xmlRows($stream, array $settings): iterable
     {
@@ -91,7 +91,7 @@ class StructuredSupplierFeedParser
     }
 
     /** @param resource $stream
-     *  @return iterable<array<string, mixed>>
+     * @return iterable<array<string, mixed>>
      */
     private function jsonRows($stream, array $settings): iterable
     {
