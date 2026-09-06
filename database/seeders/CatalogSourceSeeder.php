@@ -84,8 +84,18 @@ class CatalogSourceSeeder extends Seeder
                 'allow_api_redistribution' => true,
                 'is_active' => false,
                 'license_name' => 'CC0',
+                'license_url' => 'https://www.wikidata.org/wiki/Wikidata:Licensing',
                 'base_url' => 'https://www.wikidata.org/',
-                'capabilities' => ['aliases' => true, 'vehicle_enrichment' => true],
+                'settings' => [
+                    'action_api_url' => 'https://www.wikidata.org/w/api.php',
+                    'user_agent' => 'eMUD-Automotive-Catalog/1.0 (https://github.com/andreiandoo/emud)',
+                    'maxlag' => 5,
+                    'timeout_seconds' => 30,
+                    'search_limit' => 5,
+                    'search_language' => 'en',
+                    'languages' => ['en', 'ro', 'de', 'fr', 'it', 'es'],
+                ],
+                'capabilities' => ['aliases' => true, 'vehicle_enrichment' => true, 'wikidata_qid' => true],
             ],
         ];
 
