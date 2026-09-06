@@ -17,7 +17,9 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
         $datasets = $this->datasets($source, $mode);
 
         foreach ($datasets as $dataset) {
-            yield from $this->datasetRecords($source, $dataset);
+            foreach ($this->datasetRecords($source, $dataset) as $record) {
+                yield $record;
+            }
         }
     }
 
