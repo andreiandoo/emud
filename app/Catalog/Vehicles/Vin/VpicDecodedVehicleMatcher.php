@@ -8,9 +8,9 @@ class VpicDecodedVehicleMatcher
 {
     public function match(array $decoded): VinResolutionResult
     {
-        $make = trim((string) ($decoded['Make'] ?? ''));
-        $model = trim((string) ($decoded['Model'] ?? ''));
-        $year = (int) ($decoded['ModelYear'] ?? 0);
+        $make = trim((string) $this->firstValue($decoded['Make'] ?? null));
+        $model = trim((string) $this->firstValue($decoded['Model'] ?? null));
+        $year = (int) $this->firstValue($decoded['ModelYear'] ?? null);
         $publicDecoded = $this->publicDecoded($decoded);
 
         if ($make === '' || $model === '' || $year === 0) {
@@ -89,5 +89,10 @@ class VpicDecodedVehicleMatcher
             ->mapWithKeys(fn ($key) => [$key => $decoded[$key] ?? null])
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->all();
+    }
+
+    private function firstValue(mixed $value): mixed
+    {
+        return is_array($value) ? ($value[0] ?? null) : $value;
     }
 }
