@@ -1,73 +1,35 @@
 <div class="space-y-6">
-    <div>
-        <h1 class="text-2xl font-bold">Catalog Explorer</h1>
-        <p class="text-sm text-stone-500">Enter from any side: vehicle, MPN, OE/IAM number, identifier or text.</p>
-    </div>
+    <div><h1 class="text-2xl font-bold">Catalog Explorer</h1><p class="text-sm text-stone-500">Caută din orice direcție: vehicul, OE/OEM/IAM, MPN, fitment, sursă sau conflict.</p></div>
 
-    <div class="rounded-xl border border-stone-200 bg-white p-4">
-        <div class="grid gap-3 lg:grid-cols-[12rem_1fr]">
-            <select wire:model.live="mode" class="rounded-lg border border-stone-300 px-3 py-2">
-                <option value="everything">Everything</option>
-                <option value="vehicles">Vehicles</option>
-                <option value="parts">Parts</option>
-                <option value="numbers">Part numbers</option>
-                <option value="identifiers">Vehicle identifiers</option>
-            </select>
-            <input wire:model.live.debounce.300ms="search" autofocus class="rounded-lg border border-stone-300 px-4 py-2.5 text-base" placeholder="VIN, OE, MPN, EAN, make, model, engine, part...">
+    <div class="space-y-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div class="grid gap-3 lg:grid-cols-[14rem_1fr_auto]">
+            <select wire:model.live="mode" class="rounded-lg border border-stone-300 px-3 py-2"><option value="everything">Tot catalogul</option><option value="vehicles">Vehicule</option><option value="parts">Piese</option><option value="numbers">OE / MPN / IAM / EAN</option><option value="identifiers">Identificatori vehicul</option><option value="fitments">Fitments</option><option value="sources">Surse</option><option value="conflicts">Conflicte / QA</option></select>
+            <input wire:model.live.debounce.300ms="search" autofocus class="rounded-lg border border-stone-300 px-4 py-2.5" placeholder="VIN, OE, MPN, EAN, marcă, model, motor, piesă...">
+            <button wire:click="clearFilters" class="rounded-lg border px-4 py-2 text-sm">Reset filtre</button>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <select wire:model.live="make" class="rounded-lg border px-3 py-2"><option value="">Marcă auto</option>@foreach($makes as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="model" class="rounded-lg border px-3 py-2" @disabled(!$make)><option value="">Model</option>@foreach($models as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="generation" class="rounded-lg border px-3 py-2" @disabled(!$model)><option value="">Generație</option>@foreach($generations as $item)<option value="{{ $item->id }}">{{ $item->name }} ({{ $item->year_from }}–{{ $item->year_to ?? '...' }})</option>@endforeach</select>
+            <input wire:model.live.debounce.300ms="year" type="number" min="1900" max="2100" class="rounded-lg border px-3 py-2" placeholder="An">
+            <select wire:model.live="fuel" class="rounded-lg border px-3 py-2"><option value="">Combustibil</option>@foreach($fuels as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach</select>
+            <select wire:model.live="category" class="rounded-lg border px-3 py-2"><option value="">Categorie piesă</option>@foreach($categories as $item)<option value="{{ $item->id }}">{{ $item->full_path ?: $item->name }}</option>@endforeach</select>
+            <select wire:model.live="brand" class="rounded-lg border px-3 py-2"><option value="">Brand piesă</option>@foreach($brands as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="source" class="rounded-lg border px-3 py-2"><option value="">Sursă date</option>@foreach($sources as $item)<option value="{{ $item->id }}">{{ $item->code }} · {{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="position" class="rounded-lg border px-3 py-2"><option value="">Poziție</option>@foreach($positions as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach</select>
+            <input wire:model.live.debounce.300ms="minConfidence" type="number" min="0" max="100" step="1" class="rounded-lg border px-3 py-2" placeholder="Confidence minim">
         </div>
     </div>
 
-    @if ($search !== '')
-        <div class="grid gap-6 xl:grid-cols-2">
-            @if ($vehicles->isNotEmpty())
-                <section class="rounded-xl border border-stone-200 bg-white p-4">
-                    <h2 class="mb-3 font-bold">Vehicles <span class="text-stone-400">{{ $vehicles->count() }}</span></h2>
-                    <div class="divide-y divide-stone-100">
-                        @foreach ($vehicles as $vehicle)
-                            <a href="{{ route('admin.catalog-platform.vehicles.show', $vehicle) }}" class="block py-3 hover:bg-stone-50">
-                                <div class="font-semibold">{{ $vehicle->generation?->model?->make?->name }} {{ $vehicle->generation?->model?->name }} {{ $vehicle->generation?->name }}</div>
-                                <div class="text-sm text-stone-500">{{ $vehicle->commercial_name }} · {{ $vehicle->engine?->engine_code }} · {{ $vehicle->power_kw ? $vehicle->power_kw.' kW' : '' }} · {{ $vehicle->eu_type_approval }}</div>
-                            </a>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
+    @if($mode === 'sources')<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Surse ({{ $sourcesFound->count() }})</h2><div class="divide-y">@foreach($sourcesFound as $item)<div class="flex flex-wrap items-center justify-between gap-3 py-3"><div><a class="font-semibold underline" href="{{ route('admin.catalog-platform.sources.edit', $item) }}">{{ $item->code }} · {{ $item->name }}</a><div class="text-sm text-stone-500">{{ $item->source_type }} · {{ number_format($item->records_count) }} raw records · {{ $item->import_runs_count }} runs</div></div><a class="rounded border px-3 py-2 text-sm" href="{{ route('admin.catalog-platform.source-records', $item) }}">Raw records</a></div>@endforeach</div></section>@endif
 
-            @if ($parts->isNotEmpty())
-                <section class="rounded-xl border border-stone-200 bg-white p-4">
-                    <h2 class="mb-3 font-bold">Parts <span class="text-stone-400">{{ $parts->count() }}</span></h2>
-                    <div class="divide-y divide-stone-100">
-                        @foreach ($parts as $part)
-                            <a href="{{ route('admin.catalog-platform.parts.show', $part) }}" class="block py-3 hover:bg-stone-50">
-                                <div class="font-semibold">{{ $part->brand?->name }} {{ $part->mpn_raw }}</div>
-                                <div class="text-sm text-stone-500">{{ $part->name }} · {{ $part->category?->full_path }}</div>
-                            </a>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
+    @if($mode === 'conflicts')<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Conflicte ({{ $conflicts->count() }})</h2><div class="divide-y">@foreach($conflicts as $item)<div class="grid gap-2 py-3 text-sm md:grid-cols-[10rem_1fr_8rem_8rem]"><div class="font-semibold">{{ $item->entity_type }} #{{ $item->entity_id }}</div><div>{{ $item->field_or_relation }}</div><div>{{ $item->severity }}</div><div>{{ $item->status }}</div></div>@endforeach</div></section>@endif
 
-            @if ($numbers->isNotEmpty())
-                <section class="rounded-xl border border-stone-200 bg-white p-4 xl:col-span-2">
-                    <h2 class="mb-3 font-bold">Identifiers / numbers <span class="text-stone-400">{{ $numbers->count() }}</span></h2>
-                    <div class="divide-y divide-stone-100">
-                        @foreach ($numbers as $number)
-                            <div class="py-3">
-                                @if ($number instanceof \App\Models\CatalogPartNumber)
-                                    <a href="{{ route('admin.catalog-platform.parts.show', $number->part) }}" class="font-semibold hover:underline">{{ $number->scheme }}: {{ $number->number_raw }}</a>
-                                    <div class="text-sm text-stone-500">{{ $number->oeMake?->name }} · {{ $number->part?->brand?->name }} {{ $number->part?->mpn_raw }}</div>
-                                @else
-                                    <a href="{{ route('admin.catalog-platform.vehicles.show', $number->configuration) }}" class="font-semibold hover:underline">{{ $number->scheme }}: {{ $number->value_raw }}</a>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
+    @if($fitments->isNotEmpty())<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Fitments <span class="text-stone-400">{{ $fitments->count() }}</span></h2><div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="text-left text-stone-500"><tr><th class="p-2">Vehicul</th><th>Piesă</th><th>Categorie</th><th>Poziție</th><th>Confidence</th><th>Sursă</th><th>Condiții</th></tr></thead><tbody class="divide-y">@foreach($fitments as $fitment)<tr><td class="p-2"><a class="underline" href="{{ route('admin.catalog-platform.vehicles.show', $fitment->configuration) }}">{{ $fitment->configuration?->generation?->model?->make?->name }} {{ $fitment->configuration?->generation?->model?->name }} {{ $fitment->configuration?->year }}</a></td><td><a class="font-semibold underline" href="{{ route('admin.catalog-platform.parts.show', $fitment->part) }}">{{ $fitment->part?->brand?->name }} {{ $fitment->part?->mpn_raw }}</a></td><td>{{ $fitment->part?->category?->name }}</td><td>{{ $fitment->position }}</td><td>{{ $fitment->confidence }}</td><td>{{ $fitment->source?->code }}</td><td>{{ $fitment->constraints->count() }}</td></tr>@endforeach</tbody></table></div></section>@endif
 
-            @if ($vehicles->isEmpty() && $parts->isEmpty() && $numbers->isEmpty())
-                <div class="rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center text-stone-500 xl:col-span-2">No results in the selected segment.</div>
-            @endif
-        </div>
-    @endif
+    @if($vehicles->isNotEmpty() || $parts->isNotEmpty() || $numbers->isNotEmpty())<div class="grid gap-6 xl:grid-cols-2">
+        @if($vehicles->isNotEmpty())<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Vehicule <span class="text-stone-400">{{ $vehicles->count() }}</span></h2><div class="divide-y">@foreach($vehicles as $vehicle)<a href="{{ route('admin.catalog-platform.vehicles.show', $vehicle) }}" class="block py-3 hover:bg-stone-50"><div class="font-semibold">{{ $vehicle->generation?->model?->make?->name }} {{ $vehicle->generation?->model?->name }} {{ $vehicle->generation?->name }}</div><div class="text-sm text-stone-500">{{ $vehicle->year }} · {{ $vehicle->commercial_name }} · {{ $vehicle->engine?->engine_code ?: $vehicle->engine?->name }} · {{ $vehicle->power_kw ? $vehicle->power_kw.' kW' : '' }} · TVV {{ $vehicle->eu_type }}/{{ $vehicle->eu_variant }}/{{ $vehicle->eu_version }}</div></a>@endforeach</div></section>@endif
+        @if($parts->isNotEmpty())<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Piese <span class="text-stone-400">{{ $parts->count() }}</span></h2><div class="divide-y">@foreach($parts as $part)<a href="{{ route('admin.catalog-platform.parts.show', $part) }}" class="block py-3 hover:bg-stone-50"><div class="font-semibold">{{ $part->brand?->name }} {{ $part->mpn_raw }}</div><div class="text-sm text-stone-500">{{ $part->name }} · {{ $part->category?->full_path }}</div></a>@endforeach</div></section>@endif
+        @if($numbers->isNotEmpty())<section class="rounded-xl bg-white p-4 shadow-sm xl:col-span-2"><h2 class="mb-3 font-bold">Identificatori / numere <span class="text-stone-400">{{ $numbers->count() }}</span></h2><div class="divide-y">@foreach($numbers as $number)<div class="py-3">@if($number instanceof \App\Models\CatalogPartNumber)<a href="{{ route('admin.catalog-platform.parts.show', $number->part) }}" class="font-semibold underline">{{ $number->scheme }}: {{ $number->number_raw }}</a><div class="text-sm text-stone-500">{{ $number->oeMake?->name }} · {{ $number->part?->brand?->name }} {{ $number->part?->mpn_raw }} · {{ $number->source?->code }}</div>@else<a href="{{ route('admin.catalog-platform.vehicles.show', $number->configuration) }}" class="font-semibold underline">{{ $number->scheme }}: {{ $number->value_raw }}</a><div class="text-sm text-stone-500">{{ $number->source?->code }}</div>@endif</div>@endforeach</div></section>@endif
+    </div>@elseif($shouldQuery && !in_array($mode,['sources','conflicts'],true) && $fitments->isEmpty())<div class="rounded-xl border border-dashed bg-white p-8 text-center text-stone-500">Nu există rezultate pentru combinația de căutare și filtre.</div>@endif
 </div>
