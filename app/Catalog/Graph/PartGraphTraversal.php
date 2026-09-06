@@ -23,9 +23,11 @@ class PartGraphTraversal
         ?string $scheme = null,
         int $depth = 2,
         int $maxNodes = 100,
+        int $maxEdges = 800,
     ): array {
         $depth = max(0, min($depth, 4));
         $maxNodes = max(1, min($maxNodes, 250));
+        $maxEdges = max(1, min($maxEdges, 2000));
         $compact = $this->normalizer->compact($number);
         $normalized = $this->normalizer->normalize($number);
 
@@ -46,7 +48,7 @@ class PartGraphTraversal
 
         if ($seedIds->isEmpty()) {
             return [
-                'query' => ['number' => $number, 'scheme' => $scheme, 'depth' => $depth],
+                'query' => ['number' => $number, 'scheme' => $scheme, 'depth' => $depth, 'max_nodes' => $maxNodes, 'max_edges' => $maxEdges],
                 'seeds' => [],
                 'nodes' => [],
                 'edges' => [],
@@ -55,12 +57,14 @@ class PartGraphTraversal
         }
 
         $visited = $seedIds->mapWithKeys(fn ($id) => [(int) $id => 0])->all();
+        $pathConfidence = $seedIds->mapWithKeys(fn ($id) => [(int) $id => 100.0])->all();
         $frontier = $seedIds->map(fn ($id) => (int) $id)->all();
         $rawEdges = [];
         $edgeKeys = [];
 
         for ($level = 1; $level <= $depth && $frontier !== []; $level++) {
-            $edgeLimit = $maxNodes * 8;
+            $frontierLookup = array_fill_keys($frontier, true);
+            $fetchLimit = min(5000, max(100, $maxEdges * 4, $maxNodes * 8));
             $relations = CatalogPartRelation::query()
                 ->with('source')
                 ->whereHas('source', fn ($query) => $query->where('allow_api_redistribution', true))
@@ -69,12 +73,13 @@ class PartGraphTraversal
                         ->orWhereIn('target_part_id', $frontier);
                 })
                 ->orderByDesc('confidence')
-                ->limit($edgeLimit + 1)
+                ->orderBy('id')
+                ->limit($fetchLimit + 1)
                 ->get();
 
-            if ($relations->count() > $edgeLimit) {
+            if ($relations->count() > $fetchLimit) {
                 $truncated = true;
-                $relations = $relations->take($edgeLimit);
+                $relations = $relations->take($fetchLimit);
             }
 
             $candidateIds = collect();
@@ -94,6 +99,11 @@ class PartGraphTraversal
 
                 $edgeKey = implode(':', [$sourceId, $targetId, $relation->relation_type, $relation->catalog_source_id]);
                 if (! isset($edgeKeys[$edgeKey])) {
+                    if (count($rawEdges) >= $maxEdges) {
+                        $truncated = true;
+                        continue;
+                    }
+
                     $rawEdges[] = [
                         'from_id' => $sourceId,
                         'to_id' => $targetId,
@@ -105,20 +115,38 @@ class PartGraphTraversal
                     $edgeKeys[$edgeKey] = true;
                 }
 
-                foreach ([$sourceId, $targetId] as $partId) {
-                    if (isset($visited[$partId])) {
+                $relationConfidence = $relation->confidence !== null ? (float) $relation->confidence : null;
+                $directions = [];
+                if (isset($frontierLookup[$sourceId])) {
+                    $directions[] = [$sourceId, $targetId];
+                }
+                if (isset($frontierLookup[$targetId])) {
+                    $directions[] = [$targetId, $sourceId];
+                }
+
+                foreach ($directions as [$fromId, $candidateId]) {
+                    $fromConfidence = (float) ($pathConfidence[$fromId] ?? 100.0);
+                    $candidateConfidence = $relationConfidence !== null
+                        ? min($fromConfidence, $relationConfidence)
+                        : $fromConfidence;
+
+                    if (isset($visited[$candidateId])) {
+                        $pathConfidence[$candidateId] = max((float) ($pathConfidence[$candidateId] ?? 0), $candidateConfidence);
                         continue;
                     }
+
                     if (count($visited) >= $maxNodes) {
                         $truncated = true;
-                        break 2;
+                        continue;
                     }
-                    $visited[$partId] = $level;
-                    $nextFrontier[] = $partId;
+
+                    $visited[$candidateId] = $level;
+                    $pathConfidence[$candidateId] = $candidateConfidence;
+                    $nextFrontier[$candidateId] = true;
                 }
             }
 
-            $frontier = array_values(array_unique($nextFrontier));
+            $frontier = array_map('intval', array_keys($nextFrontier));
         }
 
         $parts = CatalogPart::query()
@@ -129,7 +157,7 @@ class PartGraphTraversal
         $publicIds = $parts->mapWithKeys(fn (CatalogPart $part) => [(int) $part->id => 'prt_'.$part->public_id]);
 
         $nodes = collect($visited)
-            ->map(function (int $distance, int|string $partId) use ($parts): ?array {
+            ->map(function (int $distance, int|string $partId) use ($parts, $pathConfidence): ?array {
                 $part = $parts->get((int) $partId);
                 if (! $part) {
                     return null;
@@ -137,6 +165,7 @@ class PartGraphTraversal
 
                 return [
                     'distance' => $distance,
+                    'path_confidence' => (float) ($pathConfidence[(int) $partId] ?? 0),
                     'part' => $this->serializer->part($part),
                 ];
             })
@@ -159,7 +188,13 @@ class PartGraphTraversal
             ->all();
 
         return [
-            'query' => ['number' => $number, 'scheme' => $scheme, 'depth' => $depth],
+            'query' => [
+                'number' => $number,
+                'scheme' => $scheme,
+                'depth' => $depth,
+                'max_nodes' => $maxNodes,
+                'max_edges' => $maxEdges,
+            ],
             'seeds' => $seedIds->map(fn ($id) => $publicIds->get((int) $id))->filter()->values()->all(),
             'nodes' => $nodes,
             'edges' => $edges,
