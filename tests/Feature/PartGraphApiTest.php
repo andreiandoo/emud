@@ -102,9 +102,9 @@ class PartGraphApiTest extends TestCase
         $this->assertCount(2, $depthTwo['edges']);
 
         $nodes = collect($depthTwo['nodes'])->keyBy(fn (array $node) => $node['part']['id']);
-        $this->assertSame(100.0, $nodes['prt_'.$a->public_id]['path_confidence']);
-        $this->assertSame(92.0, $nodes['prt_'.$b->public_id]['path_confidence']);
-        $this->assertSame(81.0, $nodes['prt_'.$c->public_id]['path_confidence']);
+        $this->assertEquals(100.0, $nodes['prt_'.$a->public_id]['path_confidence']);
+        $this->assertEquals(92.0, $nodes['prt_'.$b->public_id]['path_confidence']);
+        $this->assertEquals(81.0, $nodes['prt_'.$c->public_id]['path_confidence']);
     }
 
     public function test_graph_edge_budget_truncates_dense_components_without_exceeding_the_limit(): void
