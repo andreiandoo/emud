@@ -32,4 +32,9 @@ class CatalogFitment extends Model
     {
         return $this->hasMany(CatalogFitmentConstraint::class);
     }
+
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(CatalogSource::class, 'catalog_source_id');
+    }
 }

@@ -68,6 +68,10 @@ class SyncCatalogSource implements ShouldQueue
                 'finished_at' => now(),
             ]);
             $source->update(['last_successful_sync_at' => now()]);
+
+            if ((bool) ($source->settings['auto_canonicalize'] ?? false)) {
+                CanonicalizeCatalogSourceRecords::dispatch($source->id);
+            }
         } catch (Throwable $exception) {
             $run->update([
                 'status' => CatalogImportStatus::Failed,

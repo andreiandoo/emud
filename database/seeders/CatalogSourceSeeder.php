@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Catalog\Canonicalization\Vehicles\EeaVehicleCanonicalizer;
+use App\Catalog\Canonicalization\Vehicles\LifeOfCapoVehicleCanonicalizer;
+use App\Catalog\Sources\Connectors\StreamingCsvCatalogSourceConnector;
 use App\Models\CatalogSource;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -16,6 +19,8 @@ class CatalogSourceSeeder extends Seeder
                 'name' => 'European Environment Agency vehicle registrations',
                 'source_type' => 'open_vehicle_dataset',
                 'protocol' => 'http',
+                'connector_class' => StreamingCsvCatalogSourceConnector::class,
+                'canonicalizer_class' => EeaVehicleCanonicalizer::class,
                 'rights_class' => 'open_redistributable',
                 'allow_internal' => true,
                 'allow_ecommerce' => true,
@@ -25,7 +30,7 @@ class CatalogSourceSeeder extends Seeder
                 'is_active' => false,
                 'license_url' => 'https://www.eea.europa.eu/en/legal-notice',
                 'capabilities' => ['vehicles' => true, 'eu_tvv' => true],
-                'settings' => ['format' => 'csv'],
+                'settings' => ['format' => 'csv', 'auto_canonicalize' => true, 'timeout_seconds' => 1800],
             ],
             [
                 'code' => 'VPIC',
@@ -43,6 +48,7 @@ class CatalogSourceSeeder extends Seeder
                 'name' => 'lifeofcapo/car-api',
                 'source_type' => 'open_vehicle_taxonomy',
                 'protocol' => 'http',
+                'canonicalizer_class' => LifeOfCapoVehicleCanonicalizer::class,
                 'rights_class' => 'open_redistributable',
                 'allow_internal' => true,
                 'allow_ecommerce' => true,
@@ -52,6 +58,7 @@ class CatalogSourceSeeder extends Seeder
                 'license_name' => 'MIT',
                 'base_url' => 'https://github.com/lifeofcapo/car-api',
                 'capabilities' => ['vehicles' => true, 'generic_parts' => true],
+                'settings' => ['auto_canonicalize' => true],
             ],
             [
                 'code' => 'WIKIDATA',
