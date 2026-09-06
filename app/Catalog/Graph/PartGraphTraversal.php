@@ -40,8 +40,7 @@ class PartGraphTraversal
             $seedQuery->where('scheme', strtoupper($scheme));
         }
 
-        $seedIds = $seedQuery->pluck('catalog_part_id')->unique()->values();
-        $seedIds = $this->visiblePartIds($seedIds)->values();
+        $seedIds = $this->visiblePartIds($seedQuery->pluck('catalog_part_id')->unique())->values();
 
         if ($seedIds->isEmpty()) {
             return [
@@ -55,11 +54,12 @@ class PartGraphTraversal
 
         $visited = $seedIds->mapWithKeys(fn ($id) => [(int) $id => 0])->all();
         $frontier = $seedIds->map(fn ($id) => (int) $id)->all();
-        $edges = [];
+        $rawEdges = [];
         $edgeKeys = [];
         $truncated = false;
 
         for ($level = 1; $level <= $depth && $frontier !== []; $level++) {
+            $edgeLimit = $maxNodes * 8;
             $relations = CatalogPartRelation::query()
                 ->with('source')
                 ->whereHas('source', fn ($query) => $query->where('allow_api_redistribution', true))
@@ -68,8 +68,13 @@ class PartGraphTraversal
                         ->orWhereIn('target_part_id', $frontier);
                 })
                 ->orderByDesc('confidence')
-                ->limit($maxNodes * 8)
+                ->limit($edgeLimit + 1)
                 ->get();
+
+            if ($relations->count() > $edgeLimit) {
+                $truncated = true;
+                $relations = $relations->take($edgeLimit);
+            }
 
             $candidateIds = collect();
             foreach ($relations as $relation) {
@@ -88,9 +93,9 @@ class PartGraphTraversal
 
                 $edgeKey = implode(':', [$sourceId, $targetId, $relation->relation_type, $relation->catalog_source_id]);
                 if (! isset($edgeKeys[$edgeKey])) {
-                    $edges[] = [
-                        'from' => 'prt_'.$this->publicId($sourceId),
-                        'to' => 'prt_'.$this->publicId($targetId),
+                    $rawEdges[] = [
+                        'from_id' => $sourceId,
+                        'to_id' => $targetId,
                         'relation_type' => $relation->relation_type,
                         'directed' => (bool) $relation->is_directed,
                         'confidence' => $relation->confidence !== null ? (float) $relation->confidence : null,
@@ -120,6 +125,7 @@ class PartGraphTraversal
             ->with(['brand', 'category', 'numbers.brand', 'numbers.oeMake', 'numbers.source'])
             ->get()
             ->keyBy('id');
+        $publicIds = $parts->mapWithKeys(fn (CatalogPart $part) => [(int) $part->id => 'prt_'.$part->public_id]);
 
         $nodes = collect($visited)
             ->map(function (int $distance, int|string $partId) use ($parts): ?array {
@@ -138,9 +144,22 @@ class PartGraphTraversal
             ->values()
             ->all();
 
+        $edges = collect($rawEdges)
+            ->filter(fn (array $edge) => $publicIds->has($edge['from_id']) && $publicIds->has($edge['to_id']))
+            ->map(fn (array $edge) => [
+                'from' => $publicIds->get($edge['from_id']),
+                'to' => $publicIds->get($edge['to_id']),
+                'relation_type' => $edge['relation_type'],
+                'directed' => $edge['directed'],
+                'confidence' => $edge['confidence'],
+                'source' => $edge['source'],
+            ])
+            ->values()
+            ->all();
+
         return [
             'query' => ['number' => $number, 'scheme' => $scheme, 'depth' => $depth],
-            'seeds' => $seedIds->map(fn ($id) => 'prt_'.$this->publicId((int) $id))->all(),
+            'seeds' => $seedIds->map(fn ($id) => $publicIds->get((int) $id))->filter()->values()->all(),
             'nodes' => $nodes,
             'edges' => $edges,
             'truncated' => $truncated,
@@ -158,10 +177,5 @@ class PartGraphTraversal
         $this->publicationScope->visibleEntity($query, 'catalog_part', 'catalog_parts.id');
 
         return $query->pluck('id')->map(fn ($id) => (int) $id);
-    }
-
-    private function publicId(int $partId): string
-    {
-        return (string) CatalogPart::query()->whereKey($partId)->value('public_id');
     }
 }
