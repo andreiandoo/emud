@@ -58,7 +58,7 @@ class SyncSupplierFeed implements ShouldQueue
             $connector = $registry->for($supplier);
             foreach ($connector->records($supplier, $this->mode) as $record) {
                 try {
-                    $result = $importer->import($supplier, $record, $this->mode);
+                    $result = $importer->import($supplier, $record, $this->mode, $run);
                     $run->increment('processed');
                     if ($result['created']) {
                         $run->increment('created_count');
@@ -99,7 +99,9 @@ class SyncSupplierFeed implements ShouldQueue
             $supplier->update(['last_successful_sync_at' => now()]);
 
             if ($this->mode === 'catalog' && (bool) ($supplier->settings['match_catalog_parts'] ?? true)) {
-                MatchSupplierProductsToCatalog::dispatch($supplier->id);
+                MatchSupplierProductsToCatalog::dispatch($supplier->id, 10000, $run->id);
+            } elseif ($this->mode === 'catalog' && (bool) ($supplier->settings['technical_promotion_enabled'] ?? false)) {
+                PromoteSupplierTechnicalData::dispatch($supplier->id, $run->id);
             }
         } catch (Throwable $exception) {
             $run->update([
