@@ -40,7 +40,9 @@ class PartGraphTraversal
             $seedQuery->where('scheme', strtoupper($scheme));
         }
 
-        $seedIds = $this->visiblePartIds($seedQuery->pluck('catalog_part_id')->unique())->values();
+        $allSeedIds = $this->visiblePartIds($seedQuery->pluck('catalog_part_id')->unique())->values();
+        $truncated = $allSeedIds->count() > $maxNodes;
+        $seedIds = $allSeedIds->take($maxNodes)->values();
 
         if ($seedIds->isEmpty()) {
             return [
@@ -56,7 +58,6 @@ class PartGraphTraversal
         $frontier = $seedIds->map(fn ($id) => (int) $id)->all();
         $rawEdges = [];
         $edgeKeys = [];
-        $truncated = false;
 
         for ($level = 1; $level <= $depth && $frontier !== []; $level++) {
             $edgeLimit = $maxNodes * 8;
