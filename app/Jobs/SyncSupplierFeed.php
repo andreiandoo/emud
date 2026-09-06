@@ -4,8 +4,10 @@ namespace App\Jobs;
 
 use App\Enums\SyncStatus;
 use App\Models\Supplier;
+use App\Models\SupplierFeedArtifact;
 use App\Models\SupplierSyncRun;
 use App\Suppliers\ConnectorRegistry;
+use App\Suppliers\Contracts\SupplierFeedArtifactProvider;
 use App\Suppliers\SupplierCatalogImporter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,6 +16,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 class SyncSupplierFeed implements ShouldQueue
@@ -39,10 +42,15 @@ class SyncSupplierFeed implements ShouldQueue
     public function handle(ConnectorRegistry $registry, SupplierCatalogImporter $importer): void
     {
         $supplier = Supplier::query()->findOrFail($this->supplierId);
+        if (! $supplier->allow_internal_data) {
+            throw new RuntimeException("Supplier {$supplier->code} data rights do not permit internal ingestion.");
+        }
+
         $run = SupplierSyncRun::query()->create(['uuid' => (string) Str::uuid(), 'supplier_id' => $supplier->id, 'mode' => $this->mode, 'status' => SyncStatus::Running, 'started_at' => now()]);
 
         try {
-            foreach ($registry->for($supplier)->records($supplier, $this->mode) as $record) {
+            $connector = $registry->for($supplier);
+            foreach ($connector->records($supplier, $this->mode) as $record) {
                 try {
                     $result = $importer->import($supplier, $record, $this->mode);
                     $run->increment('processed');
@@ -61,6 +69,21 @@ class SyncSupplierFeed implements ShouldQueue
                 if ($run->processed % 100 === 0) {
                     $run->touch();
                 }
+            }
+
+            if ($connector instanceof SupplierFeedArtifactProvider && ($artifact = $connector->lastArtifact())) {
+                SupplierFeedArtifact::query()->create([
+                    'supplier_id' => $supplier->id,
+                    'supplier_sync_run_id' => $run->id,
+                    'mode' => $artifact['mode'] ?? $this->mode,
+                    'source_path' => $artifact['source_path'],
+                    'filename' => $artifact['filename'] ?? null,
+                    'size_bytes' => $artifact['size_bytes'] ?? null,
+                    'source_modified_at' => isset($artifact['source_modified_at']) ? now()->setTimestamp((int) $artifact['source_modified_at']) : null,
+                    'checksum_sha256' => $artifact['checksum_sha256'],
+                    'retrieved_at' => $artifact['retrieved_at'] ?? now(),
+                    'metadata' => $artifact['metadata'] ?? null,
+                ]);
             }
 
             $run->refresh()->update(['status' => $run->failed_count > 0 ? SyncStatus::CompletedWithErrors : SyncStatus::Completed, 'finished_at' => now()]);
