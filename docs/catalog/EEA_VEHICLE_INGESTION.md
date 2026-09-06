@@ -51,10 +51,10 @@ Before adding a new EEA dataset family, verify its own metadata/licensing and do
 ## Import modes
 
 ```bash
-php artisan catalog:source:sync EEA --mode=cars
-php artisan catalog:source:sync EEA --mode=vans
-php artisan catalog:source:sync EEA --mode=vehicles
-php artisan catalog:source:sync EEA --mode=catalog
+php artisan catalog:sources:sync EEA --mode=cars
+php artisan catalog:sources:sync EEA --mode=vans
+php artisan catalog:sources:sync EEA --mode=vehicles
+php artisan catalog:sources:sync EEA --mode=catalog
 ```
 
 `catalog` and `vehicles` import all configured EEA vehicle datasets. `cars` and `vans` restrict the import to one vehicle family.
