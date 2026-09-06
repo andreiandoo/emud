@@ -10,6 +10,7 @@ use App\Livewire\Admin\CatalogPlatform\ConflictsIndex as CatalogConflictsIndex;
 use App\Livewire\Admin\CatalogPlatform\Explorer as CatalogExplorer;
 use App\Livewire\Admin\CatalogPlatform\ImportRunsIndex as CatalogImportRunsIndex;
 use App\Livewire\Admin\CatalogPlatform\PartDetail as CatalogPartDetail;
+use App\Livewire\Admin\CatalogPlatform\PartRelationsQueue as CatalogPartRelationsQueue;
 use App\Livewire\Admin\CatalogPlatform\QualityDashboard as CatalogQualityDashboard;
 use App\Livewire\Admin\CatalogPlatform\SourceEditor as CatalogSourceEditor;
 use App\Livewire\Admin\CatalogPlatform\SourceRecordDetail as CatalogSourceRecordDetail;
@@ -65,6 +66,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/catalog-source-records/{record}', CatalogSourceRecordDetail::class)->name('catalog-platform.source-records.show');
     Route::get('/catalog-imports', CatalogImportRunsIndex::class)->name('catalog-platform.imports');
     Route::get('/catalog-conflicts', CatalogConflictsIndex::class)->name('catalog-platform.conflicts');
+    Route::get('/catalog-part-relations', CatalogPartRelationsQueue::class)->name('catalog-platform.part-relations');
     Route::get('/catalog-api', CatalogApiConsumersIndex::class)->name('catalog-platform.api');
     Route::get('/catalog-supplier-matching', CatalogSupplierMatchingIndex::class)->name('catalog-platform.supplier-matching');
     Route::get('/catalog-parts/{part}', CatalogPartDetail::class)->name('catalog-platform.parts.show');
