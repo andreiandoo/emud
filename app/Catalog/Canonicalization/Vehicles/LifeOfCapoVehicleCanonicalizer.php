@@ -20,6 +20,10 @@ class LifeOfCapoVehicleCanonicalizer implements CatalogRecordCanonicalizer
 
     public function canonicalize(CatalogSourceRecord $record): CanonicalizationResult
     {
+        if ($record->record_type === 'generic_part_taxonomy') {
+            return CanonicalizationResult::skipped('Generic part taxonomy is retained as source data and is not a technical CatalogPart.');
+        }
+
         $row = $record->raw_payload ?? [];
         $makeName = data_get($row, 'brand.name') ?? data_get($row, 'brand') ?? data_get($row, 'make');
         $modelName = data_get($row, 'model.name') ?? data_get($row, 'model');

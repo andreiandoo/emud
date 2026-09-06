@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Catalog\Sources\Connectors\LifeOfCapoCatalogSourceConnector;
 use App\Models\CatalogSource;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -49,6 +50,7 @@ class CatalogSourceSeeder extends Seeder
                 'name' => 'lifeofcapo/car-api',
                 'source_type' => 'open_vehicle_taxonomy',
                 'protocol' => 'http',
+                'connector_class' => LifeOfCapoCatalogSourceConnector::class,
                 'rights_class' => 'open_redistributable',
                 'allow_internal' => true,
                 'allow_ecommerce' => true,
@@ -56,7 +58,18 @@ class CatalogSourceSeeder extends Seeder
                 'allow_api_redistribution' => true,
                 'is_active' => false,
                 'license_name' => 'MIT',
+                'license_url' => 'https://github.com/lifeofcapo/car-api/blob/main/LICENSE',
                 'base_url' => 'https://github.com/lifeofcapo/car-api',
+                'field_mapping' => ['external_id' => 'external_id', 'record_type' => 'record_type'],
+                'settings' => [
+                    'repository_api_url' => 'https://api.github.com/repos/lifeofcapo/car-api',
+                    'raw_base_url' => 'https://raw.githubusercontent.com/lifeofcapo/car-api',
+                    'upstream_ref' => 'main',
+                    'brands_file' => 'car-brands.json',
+                    'parts_file' => 'car-parts.json',
+                    'auto_canonicalize' => true,
+                    'user_agent' => 'eMUD-Automotive-Catalog/1.0',
+                ],
                 'capabilities' => ['vehicles' => true, 'generic_parts' => true],
             ],
             [

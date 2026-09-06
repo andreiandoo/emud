@@ -4,9 +4,11 @@ namespace App\Jobs;
 
 use App\Catalog\Sources\CatalogSourceIngestor;
 use App\Catalog\Sources\CatalogSourceRegistry;
+use App\Catalog\Sources\Contracts\CatalogSourceReleaseProvider;
 use App\Enums\CatalogImportStatus;
 use App\Models\CatalogImportRun;
 use App\Models\CatalogSource;
+use App\Models\CatalogSourceRelease;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -50,7 +52,26 @@ class SyncCatalogSource implements ShouldQueue
         $source->update(['last_attempted_sync_at' => now()]);
 
         try {
-            foreach ($registry->for($source)->records($source, $this->mode) as $row) {
+            $connector = $registry->for($source);
+            if ($connector instanceof CatalogSourceReleaseProvider) {
+                $releasePayload = $connector->release($source, $this->mode);
+                $releaseKey = trim((string) ($releasePayload['release_key'] ?? ''));
+                if ($releaseKey !== '') {
+                    $release = CatalogSourceRelease::query()->updateOrCreate(
+                        ['catalog_source_id' => $source->id, 'release_key' => $releaseKey],
+                        [
+                            'published_at' => $releasePayload['published_at'] ?? null,
+                            'retrieved_at' => $releasePayload['retrieved_at'] ?? now(),
+                            'checksum_sha256' => $releasePayload['checksum_sha256'] ?? null,
+                            'raw_object_path' => $releasePayload['raw_object_path'] ?? null,
+                            'metadata' => $releasePayload['metadata'] ?? null,
+                        ],
+                    );
+                    $run->update(['catalog_source_release_id' => $release->id]);
+                }
+            }
+
+            foreach ($connector->records($source, $this->mode) as $row) {
                 try {
                     $ingestor->store($source, $run, (array) $row);
                     $run->increment('fetched_count');
