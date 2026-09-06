@@ -10,6 +10,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('catalog:sources:dispatch-schedules')->everyMinute()->withoutOverlapping();
 Schedule::command('suppliers:dispatch-schedules')->everyMinute()->withoutOverlapping();
+Schedule::command('catalog:relations:resolve --limit=50000')->hourly()->withoutOverlapping(55);
 
 // Legacy fallback cadence for active suppliers that do not define an enabled
 // per-supplier schedule for the corresponding mode.

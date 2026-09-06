@@ -21,6 +21,10 @@ class SupplierRecordMapperTest extends TestCase
                 'stock_status' => 'commercial.status',
                 'images' => 'media.images',
                 'fitments' => 'applications',
+                'oe_numbers' => 'references.oe',
+                'iam_numbers' => 'references.iam',
+                'cross_references' => 'references.cross',
+                'supersessions' => 'references.supersessions',
             ],
             'settings' => [
                 'number_thousands_separator' => '.',
@@ -28,6 +32,7 @@ class SupplierRecordMapperTest extends TestCase
                 'stock_status_map' => ['lagernd' => 'in_stock'],
                 'images_delimiter' => '|',
                 'fitments_delimiter' => ';',
+                'iam_numbers_delimiter' => '|',
             ],
         ]);
 
@@ -36,6 +41,12 @@ class SupplierRecordMapperTest extends TestCase
             'commercial' => ['cost' => '1.234,56 EUR', 'qty' => '1.250', 'status' => 'LAGERND'],
             'media' => ['images' => 'a.jpg|b.jpg'],
             'applications' => 'Toyota Hilux;Land Cruiser',
+            'references' => [
+                'oe' => [['make' => 'Toyota', 'number' => '90915-YZZD2', 'scheme' => 'OE']],
+                'iam' => 'ALT-1|ALT-2',
+                'cross' => [['brand' => 'MANN-FILTER', 'number' => 'W 68/3', 'scheme' => 'MPN']],
+                'supersessions' => [['number' => 'OC 456', 'brand' => 'MAHLE', 'direction' => 'superseded_by']],
+            ],
         ], 'sftp://supplier/catalog.csv');
 
         $this->assertNotNull($record);
@@ -46,6 +57,10 @@ class SupplierRecordMapperTest extends TestCase
         $this->assertSame('in_stock', $record->stockStatus);
         $this->assertSame(['a.jpg', 'b.jpg'], $record->images);
         $this->assertSame(['Toyota Hilux', 'Land Cruiser'], $record->fitments);
+        $this->assertSame([['make' => 'Toyota', 'number' => '90915-YZZD2', 'scheme' => 'OE']], $record->oeNumbers);
+        $this->assertSame(['ALT-1', 'ALT-2'], $record->iamNumbers);
+        $this->assertSame('W 68/3', $record->crossReferences[0]['number']);
+        $this->assertSame('OC 456', $record->supersessions[0]['number']);
         $this->assertSame('EUR', $record->currency);
         $this->assertSame('sftp://supplier/catalog.csv', $record->sourceUrl);
     }

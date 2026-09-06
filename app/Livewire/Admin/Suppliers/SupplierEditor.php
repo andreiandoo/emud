@@ -48,6 +48,10 @@ class SupplierEditor extends Component
 
     public bool $attributionRequired = false;
 
+    public bool $technicalPromotionEnabled = false;
+
+    public bool $technicalPromotionCreateParts = false;
+
     public bool $isActive = false;
 
     public ?string $licenseName = null;
@@ -92,6 +96,8 @@ class SupplierEditor extends Component
         $this->allowDerived = $supplier->allow_derived_data;
         $this->allowApiRedistribution = $supplier->allow_api_redistribution;
         $this->attributionRequired = $supplier->attribution_required;
+        $this->technicalPromotionEnabled = (bool) ($supplier->settings['technical_promotion_enabled'] ?? false);
+        $this->technicalPromotionCreateParts = (bool) ($supplier->settings['technical_promotion_create_parts'] ?? false);
         $this->isActive = $supplier->is_active;
         $this->licenseName = $supplier->license_name;
         $this->licenseUrl = $supplier->license_url;
@@ -143,6 +149,10 @@ class SupplierEditor extends Component
             }
         }
 
+        $settings = json_decode($this->settingsJson, true, flags: JSON_THROW_ON_ERROR);
+        $settings['technical_promotion_enabled'] = $this->technicalPromotionEnabled;
+        $settings['technical_promotion_create_parts'] = $this->technicalPromotionCreateParts;
+
         $payload = [
             'name' => trim($this->name),
             'code' => strtoupper(trim($this->code)),
@@ -153,7 +163,7 @@ class SupplierEditor extends Component
             'price_endpoint' => blank($this->priceEndpoint) ? null : trim((string) $this->priceEndpoint),
             'credentials' => json_decode($this->credentialsJson, true, flags: JSON_THROW_ON_ERROR),
             'field_mapping' => json_decode($this->mappingJson, true, flags: JSON_THROW_ON_ERROR),
-            'settings' => json_decode($this->settingsJson, true, flags: JSON_THROW_ON_ERROR),
+            'settings' => $settings,
             'default_currency' => strtoupper($this->defaultCurrency),
             'timezone' => $this->timezone,
             'priority' => $this->priority,

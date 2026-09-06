@@ -52,10 +52,28 @@
         <label class="mt-4 block space-y-1"><span class="text-sm">Legal notes</span><textarea wire:model="legalNotes" rows="5" class="w-full rounded border p-3"></textarea></label>
     </section>
 
+    <section class="rounded-xl border bg-white p-5">
+        <h2 class="font-bold">Technical catalog promotion</h2>
+        <p class="mt-1 text-xs text-stone-500">Promotes manufacturer identifiers, OE/IAM references, attributes, fitments, cross-references and supersessions into the technical catalog. Promotion is still blocked unless Derived data rights are enabled.</p>
+        <div class="mt-4 grid gap-3 md:grid-cols-2">
+            <label class="flex items-start gap-3 rounded-lg border p-4">
+                <input type="checkbox" wire:model="technicalPromotionEnabled" class="mt-1">
+                <span><strong class="block text-sm">Enable technical promotion</strong><span class="mt-1 block text-xs text-stone-500">Stages supplier technical fields through the canonical assertion/provenance pipeline after catalog matching.</span></span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <input type="checkbox" wire:model="technicalPromotionCreateParts" class="mt-1">
+                <span><strong class="block text-sm text-amber-950">Allow creation of new canonical parts</strong><span class="mt-1 block text-xs text-amber-900">Stronger mode. When disabled, supplier data can only augment an existing exact brand+MPN identity.</span></span>
+            </label>
+        </div>
+        @if($technicalPromotionEnabled && !$allowDerived)
+            <div class="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-800">Technical promotion is configured but will remain blocked because Derived data rights are disabled.</div>
+        @endif
+    </section>
+
     <section class="grid gap-4 rounded-xl border bg-white p-5 xl:grid-cols-3">
         <label class="space-y-1"><span class="text-sm font-medium">Encrypted credentials JSON</span><textarea wire:model="credentialsJson" rows="15" class="w-full rounded border p-3 font-mono text-xs"></textarea><span class="text-xs text-stone-500">Stored encrypted by Laravel. For SFTP use host, username, host_fingerprint and password/private_key; never commit real credentials.</span></label>
-        <label class="space-y-1"><span class="text-sm font-medium">Settings JSON</span><textarea wire:model="settingsJson" rows="15" class="w-full rounded border p-3 font-mono text-xs"></textarea></label>
-        <label class="space-y-1"><span class="text-sm font-medium">Field mapping JSON</span><textarea wire:model="mappingJson" rows="15" class="w-full rounded border p-3 font-mono text-xs"></textarea><span class="text-xs text-stone-500">Map actual vendor export headers only after inspecting a sample file.</span></label>
+        <label class="space-y-1"><span class="text-sm font-medium">Settings JSON</span><textarea wire:model="settingsJson" rows="15" class="w-full rounded border p-3 font-mono text-xs"></textarea><span class="text-xs text-stone-500">The promotion switches above are persisted into this settings object on save.</span></label>
+        <label class="space-y-1"><span class="text-sm font-medium">Field mapping JSON</span><textarea wire:model="mappingJson" rows="15" class="w-full rounded border p-3 font-mono text-xs"></textarea><span class="text-xs text-stone-500">Map actual vendor export headers only after inspecting a sample file. Technical keys include oe_numbers, iam_numbers, cross_references, supersessions, attributes and fitments.</span></label>
     </section>
 
     <section class="rounded-xl border bg-white p-5">

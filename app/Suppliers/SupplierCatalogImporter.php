@@ -10,6 +10,7 @@ use App\Models\ProductVariant;
 use App\Models\Supplier;
 use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
+use App\Models\SupplierSyncRun;
 use App\Suppliers\Data\SupplierRecord;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,9 +18,9 @@ use Illuminate\Support\Str;
 class SupplierCatalogImporter
 {
     /** @return array{created: bool, updated: bool} */
-    public function import(Supplier $supplier, SupplierRecord $record, string $mode): array
+    public function import(Supplier $supplier, SupplierRecord $record, string $mode, ?SupplierSyncRun $run = null): array
     {
-        $result = DB::transaction(function () use ($supplier, $record, $mode): array {
+        $result = DB::transaction(function () use ($supplier, $record, $mode, $run): array {
             $sourceHash = hash('sha256', json_encode($record->raw, JSON_THROW_ON_ERROR));
             $supplierProduct = SupplierProduct::query()->firstOrNew(['supplier_id' => $supplier->id, 'external_id' => $record->externalId]);
             $created = ! $supplierProduct->exists;
@@ -30,7 +31,7 @@ class SupplierCatalogImporter
                 $variant = $this->createCanonicalProduct($supplier, $record);
             }
 
-            $supplierProduct->fill([
+            $productPayload = [
                 'product_id' => $variant?->product_id,
                 'variant_id' => $variant?->id,
                 'supplier_sku' => $record->sku,
@@ -45,7 +46,19 @@ class SupplierCatalogImporter
                 'catalog_mapping_status' => $supplierProduct->catalog_mapping_status ?: 'unmapped',
                 'last_seen_at' => now(),
                 'discontinued_at' => null,
-            ])->save();
+            ];
+
+            if ($mode === 'catalog') {
+                $productPayload += [
+                    'technical_payload' => $this->technicalPayload($record),
+                    'last_supplier_sync_run_id' => $run?->id,
+                    'technical_promotion_status' => $this->technicalPromotionStatus($supplier, $record),
+                    'technical_promotion_error' => null,
+                    'technical_promoted_at' => null,
+                ];
+            }
+
+            $supplierProduct->fill($productPayload)->save();
 
             $offer = SupplierOffer::query()->firstOrNew(['supplier_product_id' => $supplierProduct->id]);
             $old = $offer->only(['cost_price', 'recommended_retail_price', 'stock_quantity', 'stock_status']);
@@ -75,6 +88,42 @@ class SupplierCatalogImporter
         }
 
         return ['created' => $result['created'], 'updated' => $result['updated']];
+    }
+
+    private function technicalPromotionStatus(Supplier $supplier, SupplierRecord $record): string
+    {
+        if (! $supplier->allow_derived_data) {
+            return 'blocked_rights';
+        }
+
+        if (! (bool) ($supplier->settings['technical_promotion_enabled'] ?? false)) {
+            return 'disabled';
+        }
+
+        if (! $record->brand || ! $record->manufacturerPartNumber) {
+            return 'insufficient_identity';
+        }
+
+        return 'pending';
+    }
+
+    /** @return array<string, mixed> */
+    private function technicalPayload(SupplierRecord $record): array
+    {
+        return array_filter([
+            'brand' => $record->brand,
+            'mpn' => $record->manufacturerPartNumber,
+            'ean' => $record->ean,
+            'name' => $record->name,
+            'description' => $record->description,
+            'category' => $record->categoryExternalId,
+            'oe_numbers' => $record->oeNumbers,
+            'iam_numbers' => $record->iamNumbers,
+            'cross_references' => $record->crossReferences,
+            'supersessions' => $record->supersessions,
+            'attributes' => $record->attributes,
+            'fitments' => $record->fitments,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
     }
 
     private function findCanonicalVariant(SupplierRecord $record): ?ProductVariant

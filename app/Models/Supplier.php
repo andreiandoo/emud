@@ -6,6 +6,7 @@ use App\Enums\CatalogRightsClass;
 use App\Enums\SupplierProtocol;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Supplier extends Model
 {
@@ -47,5 +48,10 @@ class Supplier extends Model
     public function feedArtifacts(): HasMany
     {
         return $this->hasMany(SupplierFeedArtifact::class);
+    }
+
+    public function technicalCatalogSource(): HasOne
+    {
+        return $this->hasOne(CatalogSource::class);
     }
 }
