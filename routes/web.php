@@ -5,6 +5,10 @@ use App\Livewire\Admin\Catalog\BrandsIndex;
 use App\Livewire\Admin\Catalog\CategoriesIndex;
 use App\Livewire\Admin\Catalog\ProductEditor;
 use App\Livewire\Admin\Catalog\ProductsIndex;
+use App\Livewire\Admin\CatalogPlatform\Explorer as CatalogExplorer;
+use App\Livewire\Admin\CatalogPlatform\PartDetail as CatalogPartDetail;
+use App\Livewire\Admin\CatalogPlatform\SourcesIndex as CatalogSourcesIndex;
+use App\Livewire\Admin\CatalogPlatform\VehicleDetail as CatalogVehicleDetail;
 use App\Livewire\Admin\CommerceSettings;
 use App\Livewire\Admin\Content\ArticleEditor;
 use App\Livewire\Admin\Content\ArticlesIndex;
@@ -49,6 +53,10 @@ Route::post('/admin/logout', function (Request $request) {
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', Dashboard::class)->name('dashboard');
+    Route::get('/catalog-explorer', CatalogExplorer::class)->name('catalog-platform.explorer');
+    Route::get('/catalog-sources', CatalogSourcesIndex::class)->name('catalog-platform.sources');
+    Route::get('/catalog-parts/{part}', CatalogPartDetail::class)->name('catalog-platform.parts.show');
+    Route::get('/catalog-vehicles/{vehicle}', CatalogVehicleDetail::class)->name('catalog-platform.vehicles.show');
     Route::get('/products', ProductsIndex::class)->name('products.index');
     Route::get('/products/create', ProductEditor::class)->name('products.create');
     Route::get('/products/{product}/edit', ProductEditor::class)->name('products.edit');
