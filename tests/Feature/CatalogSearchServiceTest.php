@@ -69,7 +69,7 @@ class CatalogSearchServiceTest extends TestCase
         $service = app(CatalogSearchService::class);
 
         $this->assertSame([$publicPart->id], $service->partIds('ABC-123'));
-        $this->assertNull($service->partIds('SECRET-999'));
+        $this->assertSame([], $service->partIds('SECRET-999'));
     }
 
     private function source(string $code, bool $redistributable): CatalogSource
