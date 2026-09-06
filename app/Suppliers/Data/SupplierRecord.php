@@ -23,6 +23,10 @@ readonly class SupplierRecord
         public array $images = [],
         public array $attributes = [],
         public array $fitments = [],
+        public array $oeNumbers = [],
+        public array $iamNumbers = [],
+        public array $crossReferences = [],
+        public array $supersessions = [],
         public array $raw = [],
     ) {}
 }
