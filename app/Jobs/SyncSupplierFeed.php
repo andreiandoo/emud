@@ -42,13 +42,19 @@ class SyncSupplierFeed implements ShouldQueue
     public function handle(ConnectorRegistry $registry, SupplierCatalogImporter $importer): void
     {
         $supplier = Supplier::query()->findOrFail($this->supplierId);
-        if (! $supplier->allow_internal_data) {
-            throw new RuntimeException("Supplier {$supplier->code} data rights do not permit internal ingestion.");
-        }
-
-        $run = SupplierSyncRun::query()->create(['uuid' => (string) Str::uuid(), 'supplier_id' => $supplier->id, 'mode' => $this->mode, 'status' => SyncStatus::Running, 'started_at' => now()]);
+        $run = SupplierSyncRun::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'supplier_id' => $supplier->id,
+            'mode' => $this->mode,
+            'status' => SyncStatus::Running,
+            'started_at' => now(),
+        ]);
 
         try {
+            if (! $supplier->allow_internal_data) {
+                throw new RuntimeException("Supplier {$supplier->code} data rights do not permit internal ingestion.");
+            }
+
             $connector = $registry->for($supplier);
             foreach ($connector->records($supplier, $this->mode) as $record) {
                 try {
@@ -86,14 +92,21 @@ class SyncSupplierFeed implements ShouldQueue
                 ]);
             }
 
-            $run->refresh()->update(['status' => $run->failed_count > 0 ? SyncStatus::CompletedWithErrors : SyncStatus::Completed, 'finished_at' => now()]);
+            $run->refresh()->update([
+                'status' => $run->failed_count > 0 ? SyncStatus::CompletedWithErrors : SyncStatus::Completed,
+                'finished_at' => now(),
+            ]);
             $supplier->update(['last_successful_sync_at' => now()]);
 
             if ($this->mode === 'catalog' && (bool) ($supplier->settings['match_catalog_parts'] ?? true)) {
                 MatchSupplierProductsToCatalog::dispatch($supplier->id);
             }
         } catch (Throwable $exception) {
-            $run->update(['status' => SyncStatus::Failed, 'error_message' => Str::limit($exception->getMessage(), 4000), 'finished_at' => now()]);
+            $run->update([
+                'status' => SyncStatus::Failed,
+                'error_message' => Str::limit($exception->getMessage(), 4000),
+                'finished_at' => now(),
+            ]);
             throw $exception;
         }
     }
