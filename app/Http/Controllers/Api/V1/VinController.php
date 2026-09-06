@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Catalog\Api\CatalogSerializer;
-use App\Catalog\Vehicles\Vin\VpicHttpVinResolver;
+use App\Catalog\Vehicles\Vin\VpicVinResolver;
 use App\Http\Controllers\Controller;
 use App\Models\VehicleConfiguration;
 use Illuminate\Http\JsonResponse;
 
 class VinController extends Controller
 {
-    public function __invoke(string $vin, VpicHttpVinResolver $resolver, CatalogSerializer $serializer): JsonResponse
+    public function __invoke(string $vin, VpicVinResolver $resolver, CatalogSerializer $serializer): JsonResponse
     {
         $result = $resolver->resolve($vin, publicContext: true);
         $vehicle = $result->vehicleConfigurationId
