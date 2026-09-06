@@ -8,7 +8,6 @@ use App\Models\CatalogSource;
 use App\Models\CatalogSourceRecord;
 use App\Models\VehicleAlias;
 use App\Models\VehicleGeneration;
-use App\Models\VehicleMake;
 use App\Models\VehicleModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
