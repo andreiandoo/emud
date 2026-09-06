@@ -12,18 +12,31 @@ use Livewire\Component;
 class AttributesIndex extends Component
 {
     public ?int $editingId = null;
+
     public string $name = '';
+
     public string $code = '';
+
     public string $type = 'select';
+
     public string $unit = '';
+
     public string $helpText = '';
+
     public bool $isGlobal = false;
+
     public bool $isActive = true;
+
     public bool $isFilterable = true;
+
     public bool $isComparable = true;
+
     public bool $isRequired = false;
+
     public bool $isVariantDefining = false;
+
     public array $categoryIds = [];
+
     public string $optionsText = '';
 
     public function updatedName(): void

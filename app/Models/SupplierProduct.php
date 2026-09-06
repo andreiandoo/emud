@@ -22,10 +22,33 @@ class SupplierProduct extends Model
         ];
     }
 
-    public function supplier(): BelongsTo { return $this->belongsTo(Supplier::class); }
-    public function product(): BelongsTo { return $this->belongsTo(Product::class); }
-    public function variant(): BelongsTo { return $this->belongsTo(ProductVariant::class, 'variant_id'); }
-    public function offer(): HasOne { return $this->hasOne(SupplierOffer::class); }
-    public function catalogPart(): BelongsTo { return $this->belongsTo(CatalogPart::class); }
-    public function catalogCandidates(): HasMany { return $this->hasMany(SupplierProductMatchCandidate::class); }
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'variant_id');
+    }
+
+    public function offer(): HasOne
+    {
+        return $this->hasOne(SupplierOffer::class);
+    }
+
+    public function catalogPart(): BelongsTo
+    {
+        return $this->belongsTo(CatalogPart::class);
+    }
+
+    public function catalogCandidates(): HasMany
+    {
+        return $this->hasMany(SupplierProductMatchCandidate::class);
+    }
 }

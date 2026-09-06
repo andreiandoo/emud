@@ -11,7 +11,7 @@ class IdentifierNormalizerTest extends TestCase
     #[DataProvider('numbers')]
     public function test_it_normalizes_and_compacts_part_numbers(string $input, string $normalized, string $compact): void
     {
-        $service = new IdentifierNormalizer();
+        $service = new IdentifierNormalizer;
 
         self::assertSame($normalized, $service->normalize($input));
         self::assertSame($compact, $service->compact($input));

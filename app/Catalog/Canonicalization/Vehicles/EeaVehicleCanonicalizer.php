@@ -13,7 +13,6 @@ use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 
 class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
 {
@@ -147,6 +146,7 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
                 return trim((string) $value);
             }
         }
+
         return null;
     }
 
@@ -158,6 +158,7 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
         if (preg_match('/(19|20)\d{2}/', $value, $match)) {
             return (int) $match[0];
         }
+
         return null;
     }
 
@@ -167,6 +168,7 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
             return null;
         }
         $normalized = preg_replace('/[^0-9.-]/', '', str_replace(',', '.', $value));
+
         return is_numeric($normalized) ? (int) round((float) $normalized) : null;
     }
 
@@ -176,6 +178,7 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
             return null;
         }
         $normalized = preg_replace('/[^0-9.-]/', '', str_replace(',', '.', $value));
+
         return is_numeric($normalized) ? round((float) $normalized, 2) : null;
     }
 }

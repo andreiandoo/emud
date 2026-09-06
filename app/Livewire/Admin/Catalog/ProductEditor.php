@@ -19,27 +19,49 @@ class ProductEditor extends Component
     use WithFileUploads;
 
     public ?Product $product = null;
+
     public string $name = '';
+
     public string $slug = '';
+
     public string $sku = '';
+
     public string $manufacturerPartNumber = '';
+
     public ?int $brandId = null;
+
     public string $status = 'draft';
+
     public string $shortDescription = '';
+
     public string $description = '';
+
     public bool $isUniversal = false;
+
     public bool $isFeatured = false;
+
     public ?int $warrantyMonths = null;
+
     public $weightKg = null;
+
     public array $categoryIds = [];
+
     public array $variants = [];
+
     public array $attributeValues = [];
+
     public array $fitments = [];
+
     public array $images = [];
+
     public string $seoTitle = '';
+
     public string $seoDescription = '';
+
     public string $canonicalUrl = '';
+
     public bool $robotsIndex = true;
+
     public bool $robotsFollow = true;
 
     public function mount(?Product $product = null): void

@@ -81,7 +81,7 @@ class StreamingCsvCatalogSourceConnector implements CatalogSourceConnector
         }
 
         throw_unless(class_exists(ZipArchive::class), RuntimeException::class, 'ZIP extension is required for this source.');
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         throw_unless($zip->open($download) === true, RuntimeException::class, 'Could not open source ZIP archive.');
 
         try {
@@ -93,6 +93,7 @@ class StreamingCsvCatalogSourceConnector implements CatalogSourceConnector
                     $csvPath = tempnam(sys_get_temp_dir(), 'catalog-csv-');
                     throw_if($csvPath === false, RuntimeException::class, 'Could not create CSV temp file.');
                     file_put_contents($csvPath, $contents);
+
                     return $csvPath;
                 }
             }

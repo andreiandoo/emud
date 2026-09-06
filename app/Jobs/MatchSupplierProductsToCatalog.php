@@ -16,6 +16,7 @@ class MatchSupplierProductsToCatalog implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 3600;
+
     public int $tries = 2;
 
     public function __construct(public readonly ?int $supplierId = null, public readonly int $limit = 10000)

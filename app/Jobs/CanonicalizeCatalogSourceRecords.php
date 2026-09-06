@@ -20,7 +20,9 @@ class CanonicalizeCatalogSourceRecords implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 7200;
+
     public int $tries = 2;
+
     public array $backoff = [120, 600];
 
     public function __construct(public readonly int $sourceId, public readonly int $limit = 50000)

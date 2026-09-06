@@ -13,34 +13,60 @@ use Livewire\Component;
 class SourceEditor extends Component
 {
     public ?CatalogSource $source = null;
+
     public string $name = '';
+
     public string $code = '';
+
     public string $sourceType = 'open_dataset';
+
     public string $protocol = 'http';
+
     public ?string $connectorClass = null;
+
     public ?string $canonicalizerClass = null;
+
     public ?string $baseUrl = null;
+
     public ?string $catalogEndpoint = null;
+
     public string $rightsClass = 'unknown_pending_review';
+
     public bool $allowInternal = true;
+
     public bool $allowEcommerce = false;
+
     public bool $allowDerived = false;
+
     public bool $allowApiRedistribution = false;
+
     public bool $allowBulkExport = false;
+
     public bool $allowMediaRedistribution = false;
+
     public bool $attributionRequired = false;
+
     public bool $isActive = true;
+
     public ?string $licenseName = null;
+
     public ?string $licenseUrl = null;
+
     public ?string $legalNotes = null;
+
     public string $credentialsJson = '{}';
+
     public string $settingsJson = '{}';
+
     public string $mappingJson = '{}';
+
     public string $capabilitiesJson = '{}';
 
     public function mount(?CatalogSource $source = null): void
     {
-        if (! $source?->exists) { return; }
+        if (! $source?->exists) {
+            return;
+        }
         $this->source = $source;
         $this->name = $source->name;
         $this->code = $source->code;

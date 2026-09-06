@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\CatalogPlatform;
 
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
+use App\Models\SupplierProductMatchCandidate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -14,9 +15,14 @@ class SupplierMatchingIndex extends Component
 {
     use WithPagination;
 
-    #[Url] public ?int $supplier = null;
-    #[Url] public string $status = 'candidate';
-    #[Url] public string $search = '';
+    #[Url]
+    public ?int $supplier = null;
+
+    #[Url]
+    public string $status = 'candidate';
+
+    #[Url]
+    public string $search = '';
 
     public function confirm(int $supplierProductId, int $catalogPartId): void
     {
@@ -34,7 +40,7 @@ class SupplierMatchingIndex extends Component
 
     public function reject(int $candidateId): void
     {
-        \App\Models\SupplierProductMatchCandidate::query()->findOrFail($candidateId)->update(['status' => 'rejected']);
+        SupplierProductMatchCandidate::query()->findOrFail($candidateId)->update(['status' => 'rejected']);
     }
 
     public function render()
@@ -48,7 +54,7 @@ class SupplierMatchingIndex extends Component
 
         return view('livewire.admin.catalog-platform.supplier-matching-index', [
             'products' => $products,
-            'suppliers' => Supplier::query()->orderBy('name')->get(['id','name','code']),
+            'suppliers' => Supplier::query()->orderBy('name')->get(['id', 'name', 'code']),
         ]);
     }
 }

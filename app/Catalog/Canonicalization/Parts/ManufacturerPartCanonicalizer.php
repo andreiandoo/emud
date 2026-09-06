@@ -68,10 +68,18 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
             $part->save();
         } else {
             $updates = [];
-            if (! $part->category_id && $category) { $updates['category_id'] = $category->id; }
-            if (! $part->name && $name) { $updates['name'] = $name; }
-            if (! $part->description && $description) { $updates['description'] = $description; }
-            if ($updates) { $part->update($updates); }
+            if (! $part->category_id && $category) {
+                $updates['category_id'] = $category->id;
+            }
+            if (! $part->name && $name) {
+                $updates['name'] = $name;
+            }
+            if (! $part->description && $description) {
+                $updates['description'] = $description;
+            }
+            if ($updates) {
+                $part->update($updates);
+            }
         }
 
         $confidence = (float) ($record->source->settings['part_confidence'] ?? 95);
@@ -210,6 +218,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
                     'status' => 'open',
                     'details' => ['source_record_id' => $record->id, 'fitment' => $fitmentRow],
                 ], ['severity' => 'warning']);
+
                 continue;
             }
 
@@ -231,7 +240,9 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
 
             $fitment->constraints()->delete();
             foreach (($fitmentRow['constraints'] ?? []) as $constraint) {
-                if (! is_array($constraint) || empty($constraint['type'])) { continue; }
+                if (! is_array($constraint) || empty($constraint['type'])) {
+                    continue;
+                }
                 $fitment->constraints()->create([
                     'constraint_type' => $constraint['type'],
                     'operator' => $constraint['operator'] ?? null,
@@ -260,6 +271,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
                 ->where('scheme', strtoupper((string) $scheme))
                 ->where('value_normalized', $normalized)
                 ->first();
+
             return $identifier?->configuration;
         }
 
@@ -271,6 +283,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
         if (! is_string($make) || trim($make) === '') {
             return null;
         }
+
         return VehicleMake::query()->where('name', 'ilike', trim($make))->value('id');
     }
 
@@ -294,12 +307,14 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
                 $result[] = $item;
             }
         }
+
         return $result;
     }
 
     private function stringValue(array $row, array $mapping, string $field): ?string
     {
         $value = $this->value($row, $mapping, $field);
+
         return is_scalar($value) && trim((string) $value) !== '' ? trim((string) $value) : null;
     }
 

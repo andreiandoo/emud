@@ -31,6 +31,7 @@ class VpicHttpVinResolver
             $response = Http::acceptJson()->timeout(30)->retry(2, 500)->get($url)->throw()->json();
             $row = data_get($response, 'Results.0');
             throw_unless(is_array($row), RuntimeException::class, 'vPIC returned no decodable result.');
+
             return $row;
         });
 

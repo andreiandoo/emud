@@ -15,19 +15,33 @@ class ArticleEditor extends Component
     use WithFileUploads;
 
     public ?Article $article = null;
+
     public string $title = '';
+
     public string $slug = '';
+
     public ?int $articleCategoryId = null;
+
     public string $excerpt = '';
+
     public string $content = '';
+
     public string $status = 'draft';
+
     public bool $isFeatured = false;
+
     public $featuredImage;
+
     public string $featuredImageAlt = '';
+
     public string $seoTitle = '';
+
     public string $seoDescription = '';
+
     public string $canonicalUrl = '';
+
     public bool $robotsIndex = true;
+
     public bool $robotsFollow = true;
 
     public function mount(?Article $article = null): void

@@ -79,7 +79,10 @@ class SupplierCatalogImporter
 
     private function findCanonicalVariant(SupplierRecord $record): ?ProductVariant
     {
-        if (! $record->ean && ! $record->manufacturerPartNumber) { return null; }
+        if (! $record->ean && ! $record->manufacturerPartNumber) {
+            return null;
+        }
+
         return ProductVariant::query()
             ->when($record->ean, fn ($query) => $query->where('barcode', $record->ean))
             ->when(! $record->ean && $record->manufacturerPartNumber, fn ($query) => $query->where('manufacturer_part_number', $record->manufacturerPartNumber))

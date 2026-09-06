@@ -35,7 +35,7 @@ class SupplierCatalogPartMatcher
 
             CatalogPart::query()
                 ->with('brand')
-                ->where(fn ($q) => $q->where('mpn_normalized', $normalized)->orWhereHas('numbers', fn ($n) => $n->whereIn('scheme', ['MPN','IAM'])->where('number_compact', $compact)))
+                ->where(fn ($q) => $q->where('mpn_normalized', $normalized)->orWhereHas('numbers', fn ($n) => $n->whereIn('scheme', ['MPN', 'IAM'])->where('number_compact', $compact)))
                 ->limit(50)
                 ->get()
                 ->each(function (CatalogPart $part) use ($scores, $supplierProduct): void {
@@ -73,6 +73,7 @@ class SupplierCatalogPartMatcher
                 'catalog_mapping_reason' => ['reasons' => $best['reasons']],
                 'catalog_mapped_at' => now(),
             ]);
+
             return;
         }
 
@@ -87,7 +88,9 @@ class SupplierCatalogPartMatcher
 
     private function add(Collection $scores, ?CatalogPart $part, float $score, string $reason): void
     {
-        if (! $part) { return; }
+        if (! $part) {
+            return;
+        }
         $existing = $scores->get($part->id, ['part' => $part, 'score' => 0.0, 'reasons' => []]);
         $existing['score'] = max($existing['score'], $score);
         $existing['reasons'] = array_values(array_unique([...$existing['reasons'], $reason]));

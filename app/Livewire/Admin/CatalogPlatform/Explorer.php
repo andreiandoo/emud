@@ -22,18 +22,41 @@ use Livewire\Component;
 #[Layout('layouts::admin')]
 class Explorer extends Component
 {
-    #[Url] public string $mode = 'everything';
-    #[Url] public string $search = '';
-    #[Url] public ?int $make = null;
-    #[Url] public ?int $model = null;
-    #[Url] public ?int $generation = null;
-    #[Url] public ?int $year = null;
-    #[Url] public string $fuel = '';
-    #[Url] public ?int $category = null;
-    #[Url] public ?int $brand = null;
-    #[Url] public ?int $source = null;
-    #[Url] public string $position = '';
-    #[Url] public ?float $minConfidence = null;
+    #[Url]
+    public string $mode = 'everything';
+
+    #[Url]
+    public string $search = '';
+
+    #[Url]
+    public ?int $make = null;
+
+    #[Url]
+    public ?int $model = null;
+
+    #[Url]
+    public ?int $generation = null;
+
+    #[Url]
+    public ?int $year = null;
+
+    #[Url]
+    public string $fuel = '';
+
+    #[Url]
+    public ?int $category = null;
+
+    #[Url]
+    public ?int $brand = null;
+
+    #[Url]
+    public ?int $source = null;
+
+    #[Url]
+    public string $position = '';
+
+    #[Url]
+    public ?float $minConfidence = null;
 
     public function updatedMake(): void
     {

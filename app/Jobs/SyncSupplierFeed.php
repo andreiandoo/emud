@@ -21,12 +21,20 @@ class SyncSupplierFeed implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 1800;
+
     public int $tries = 3;
+
     public array $backoff = [60, 300, 900];
 
-    public function __construct(public readonly int $supplierId, public readonly string $mode = 'catalog') { $this->onQueue('imports'); }
+    public function __construct(public readonly int $supplierId, public readonly string $mode = 'catalog')
+    {
+        $this->onQueue('imports');
+    }
 
-    public function middleware(): array { return [(new WithoutOverlapping("supplier:{$this->supplierId}:{$this->mode}"))->expireAfter(1900)]; }
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping("supplier:{$this->supplierId}:{$this->mode}"))->expireAfter(1900)];
+    }
 
     public function handle(ConnectorRegistry $registry, SupplierCatalogImporter $importer): void
     {
@@ -38,13 +46,21 @@ class SyncSupplierFeed implements ShouldQueue
                 try {
                     $result = $importer->import($supplier, $record, $this->mode);
                     $run->increment('processed');
-                    if ($result['created']) { $run->increment('created_count'); }
-                    elseif ($result['updated']) { $run->increment('updated_count'); }
-                    else { $run->increment('skipped_count'); }
+                    if ($result['created']) {
+                        $run->increment('created_count');
+                    } elseif ($result['updated']) {
+                        $run->increment('updated_count');
+                    } else {
+                        $run->increment('skipped_count');
+                    }
                 } catch (Throwable $exception) {
-                    report($exception); $run->increment('processed'); $run->increment('failed_count');
+                    report($exception);
+                    $run->increment('processed');
+                    $run->increment('failed_count');
                 }
-                if ($run->processed % 100 === 0) { $run->touch(); }
+                if ($run->processed % 100 === 0) {
+                    $run->touch();
+                }
             }
 
             $run->refresh()->update(['status' => $run->failed_count > 0 ? SyncStatus::CompletedWithErrors : SyncStatus::Completed, 'finished_at' => now()]);

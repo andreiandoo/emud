@@ -12,9 +12,13 @@ use Livewire\Component;
 class ApiConsumersIndex extends Component
 {
     public string $name = '';
+
     public string $email = '';
+
     public string $plan = 'basic';
+
     public int $monthlyQuota = 1000;
+
     public ?string $issuedToken = null;
 
     public function createConsumer(): void

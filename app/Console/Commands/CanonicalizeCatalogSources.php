@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 class CanonicalizeCatalogSources extends Command
 {
     protected $signature = 'catalog:sources:canonicalize {source? : Source code} {--all} {--limit=50000}';
+
     protected $description = 'Queue canonicalization of staged catalog source records.';
 
     public function handle(): int
@@ -20,12 +21,14 @@ class CanonicalizeCatalogSources extends Command
             $query->where('code', $code);
         } elseif (! $this->option('all')) {
             $this->error('Provide a source code or use --all.');
+
             return self::FAILURE;
         }
 
         $sources = $query->get();
         if ($sources->isEmpty()) {
             $this->warn('No active matching catalog sources.');
+
             return self::FAILURE;
         }
 
