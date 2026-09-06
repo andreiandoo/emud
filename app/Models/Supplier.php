@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogRightsClass;
 use App\Enums\SupplierProtocol;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +18,12 @@ class Supplier extends Model
             'credentials' => 'encrypted:array',
             'field_mapping' => 'array',
             'settings' => 'array',
+            'data_rights_class' => CatalogRightsClass::class,
+            'allow_internal_data' => 'boolean',
+            'allow_ecommerce_data' => 'boolean',
+            'allow_derived_data' => 'boolean',
+            'allow_api_redistribution' => 'boolean',
+            'attribution_required' => 'boolean',
             'is_active' => 'boolean',
             'last_successful_sync_at' => 'datetime',
         ];
@@ -30,5 +37,10 @@ class Supplier extends Model
     public function syncRuns(): HasMany
     {
         return $this->hasMany(SupplierSyncRun::class);
+    }
+
+    public function feedArtifacts(): HasMany
+    {
+        return $this->hasMany(SupplierFeedArtifact::class);
     }
 }
