@@ -29,6 +29,7 @@ class CatalogSourceIngestor
         ]);
 
         $record->fill([
+            'catalog_source_release_id' => $run->catalog_source_release_id,
             'catalog_import_run_id' => $run->id,
             'checksum_sha256' => $checksum,
             'raw_payload' => $row,
