@@ -35,8 +35,10 @@ class CatalogPartRelationResolver
         $effectiveConfidence = is_numeric($reference['confidence'] ?? null) ? (float) $reference['confidence'] : $confidence;
         $target = $this->resolveTarget($scheme, $number, $brandRaw);
 
-        if ($target && $target->id !== $sourcePart->id) {
-            $this->persistResolved($record, $sourcePart, $target, $relationType, $effectiveConfidence);
+        if ($target) {
+            if ($target->id !== $sourcePart->id) {
+                $this->persistResolved($record, $sourcePart, $target, $relationType, $effectiveConfidence);
+            }
 
             return;
         }
