@@ -84,11 +84,8 @@ class CatalogPartRelationResolver
 
     public function resolveOne(CatalogUnresolvedPartRelation|int $pending): bool
     {
-        if (is_int($pending)) {
-            $pending = CatalogUnresolvedPartRelation::query()->findOrFail($pending);
-        }
-
-        if ($pending->status !== 'pending') {
+        $pending = $this->pending($pending);
+        if (! $pending || $pending->status !== 'pending') {
             return false;
         }
 
@@ -99,6 +96,27 @@ class CatalogPartRelationResolver
         );
 
         if (! $target || $target->id === $pending->source_part_id) {
+            return false;
+        }
+
+        return $this->resolveTo($pending, $target);
+    }
+
+    public function resolveTo(
+        CatalogUnresolvedPartRelation|int $pending,
+        CatalogPart|int $target,
+        ?float $confidence = null,
+    ): bool {
+        $pending = $this->pending($pending);
+        if (! $pending || ! in_array($pending->status, ['pending', 'ignored'], true)) {
+            return false;
+        }
+
+        if (is_int($target)) {
+            $target = CatalogPart::query()->findOrFail($target);
+        }
+
+        if ($target->id === $pending->source_part_id) {
             return false;
         }
 
@@ -113,7 +131,7 @@ class CatalogPartRelationResolver
             $sourcePart,
             $target,
             $pending->relation_type,
-            (float) ($pending->confidence ?? 0),
+            $confidence ?? (float) ($pending->confidence ?? 0),
         );
 
         $pending->update([
@@ -123,6 +141,13 @@ class CatalogPartRelationResolver
         ]);
 
         return true;
+    }
+
+    private function pending(CatalogUnresolvedPartRelation|int $pending): ?CatalogUnresolvedPartRelation
+    {
+        return is_int($pending)
+            ? CatalogUnresolvedPartRelation::query()->find($pending)
+            : $pending;
     }
 
     private function persistResolved(
