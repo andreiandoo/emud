@@ -17,10 +17,14 @@ class PartDetail extends Component
             'brand',
             'category',
             'numbers.oeMake',
+            'numbers.source',
             'fitments.configuration.generation.model.make',
             'fitments.constraints',
             'outgoingRelations.targetPart.brand',
+            'outgoingRelations.source',
             'incomingRelations.sourcePart.brand',
+            'incomingRelations.source',
+            'unresolvedRelations.source',
         ]);
     }
 
