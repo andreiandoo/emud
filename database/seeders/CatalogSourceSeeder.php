@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Catalog\Sources\Connectors\EeaVehicleCatalogSourceConnector;
 use App\Catalog\Sources\Connectors\LifeOfCapoCatalogSourceConnector;
 use App\Models\CatalogSource;
 use Illuminate\Database\Seeder;
@@ -17,6 +18,7 @@ class CatalogSourceSeeder extends Seeder
                 'name' => 'European Environment Agency vehicle registrations',
                 'source_type' => 'open_vehicle_dataset',
                 'protocol' => 'http',
+                'connector_class' => EeaVehicleCatalogSourceConnector::class,
                 'rights_class' => 'open_redistributable',
                 'allow_internal' => true,
                 'allow_ecommerce' => true,
@@ -24,9 +26,44 @@ class CatalogSourceSeeder extends Seeder
                 'allow_api_redistribution' => true,
                 'attribution_required' => true,
                 'is_active' => false,
+                'license_name' => 'EEA reuse policy / CC BY',
                 'license_url' => 'https://www.eea.europa.eu/en/legal-notice',
-                'capabilities' => ['vehicles' => true, 'eu_tvv' => true],
-                'settings' => ['format' => 'csv'],
+                'base_url' => 'https://www.eea.europa.eu/en/datahub/datahubitem-view/fa8b1229-3db6-495d-b18e-9c9b3267c02b',
+                'field_mapping' => ['external_id' => 'external_id', 'record_type' => 'record_type'],
+                'capabilities' => [
+                    'vehicles' => true,
+                    'passenger_cars' => true,
+                    'vans' => true,
+                    'eu_type_approval' => true,
+                    'eu_tvv' => true,
+                    'engine_capacity' => true,
+                    'power_kw' => true,
+                ],
+                'settings' => [
+                    'api_url' => 'https://discodata.eea.europa.eu/sql',
+                    'release_label' => '2025P',
+                    'dataset_published_at' => '2026-06-25',
+                    'datasets' => [
+                        [
+                            'kind' => 'cars',
+                            'table' => '[CO2Emission].[latest].[co2cars_2025Pv31]',
+                            'year' => 2025,
+                            'status' => 'P',
+                        ],
+                        [
+                            'kind' => 'vans',
+                            'table' => '[CO2Emission].[latest].[co2vans_2025Pv27]',
+                            'year' => 2025,
+                            'status' => 'P',
+                        ],
+                    ],
+                    'page_size' => 1000,
+                    'auto_canonicalize' => true,
+                    'timeout_seconds' => 120,
+                    'retry_times' => 4,
+                    'retry_sleep_ms' => 2000,
+                    'user_agent' => 'eMUD-Automotive-Catalog/1.0 (https://github.com/andreiandoo/emud)',
+                ],
             ],
             [
                 'code' => 'VPIC',

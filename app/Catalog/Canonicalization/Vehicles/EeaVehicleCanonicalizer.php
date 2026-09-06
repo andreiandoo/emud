@@ -26,19 +26,31 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
         $row = $record->raw_payload ?? [];
         $makeName = $this->first($row, ['Mk', 'make', 'Make', 'MAKE']);
         $modelName = $this->first($row, ['Cn', 'commercial_name', 'model', 'Model']);
-        $year = $this->year($this->first($row, ['r', 'year', 'registration_year', 'year_of_registration']));
+        $year = $this->year($this->first($row, ['year', 'registration_year', 'year_of_registration']));
 
         if (! $makeName || ! $modelName || ! $year) {
             return CanonicalizationResult::skipped('EEA record requires make, commercial name/model and registration year.');
         }
 
-        $typeApproval = $this->first($row, ['Tan', 'type_approval', 'typeApproval']);
+        $typeApproval = $this->first($row, ['Tan', 'TAN', 'type_approval', 'typeApproval']);
         $type = $this->first($row, ['T', 'type']);
         $variant = $this->first($row, ['Va', 'variant']);
         $version = $this->first($row, ['Ve', 'version']);
+        $vehicleCategory = $this->first($row, ['Ct', 'vehicle_category']);
+        $registeredCategory = $this->first($row, ['Cr', 'registered_category']);
         $fuel = $this->first($row, ['Ft', 'fuel', 'fuel_type']);
+        $fuelMode = $this->first($row, ['Fm', 'fuel_mode']);
         $displacement = $this->integer($this->first($row, ['ec (cm3)', 'ec', 'engine_capacity', 'displacement_cc']));
         $powerKw = $this->decimal($this->first($row, ['ep (KW)', 'ep', 'power_kw']));
+        $massKg = $this->integer($this->first($row, ['mass_kg', 'm (kg)', 'm']));
+        $testMassKg = $this->integer($this->first($row, ['test_mass_kg', 'Mt']));
+        $co2Wltp = $this->decimal($this->first($row, ['co2_wltp', 'Ewltp (g/km)', 'Ewltp']));
+        $co2Nedc = $this->decimal($this->first($row, ['co2_nedc', 'Enedc (g/km)', 'Enedc']));
+        $electricConsumption = $this->decimal($this->first($row, ['electric_consumption_wh_km', 'z (Wh/km)', 'z']));
+        $ecoReductionWltp = $this->decimal($this->first($row, ['eco_reduction_wltp', 'Erwltp (g/km)', 'Erwltp']));
+        $sourceVehicleKind = $this->first($row, ['source_vehicle_kind']);
+        $sourceTable = $this->first($row, ['source_table']);
+        $sourceStatus = $this->first($row, ['source_status']);
 
         $makeSlug = $this->normalizer->slug($makeName);
         $make = VehicleMake::query()->firstOrCreate(
@@ -67,13 +79,13 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
 
         $engine = null;
         if ($displacement || $powerKw || $fuel) {
-            $engineQuery = VehicleEngine::query()
+            $engine = VehicleEngine::query()
                 ->where('generation_id', $generation->id)
                 ->where('displacement_cc', $displacement)
                 ->where('power_kw', $powerKw)
-                ->where('fuel_type', $fuel);
+                ->where('fuel_type', $fuel)
+                ->first();
 
-            $engine = $engineQuery->first();
             if (! $engine) {
                 $engineName = trim(implode(' ', array_filter([
                     $displacement ? number_format($displacement / 1000, 1).'L' : null,
@@ -94,8 +106,19 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
         }
 
         $fingerprintPayload = [
-            $make->id, $model->id, $typeApproval, $type, $variant, $version,
-            $fuel, $displacement, $powerKw, $year,
+            $make->id,
+            $model->id,
+            $typeApproval,
+            $type,
+            $variant,
+            $version,
+            $vehicleCategory,
+            $registeredCategory,
+            $fuel,
+            $fuelMode,
+            $displacement,
+            $powerKw,
+            $year,
         ];
         $fingerprint = hash('sha256', json_encode($fingerprintPayload, JSON_THROW_ON_ERROR));
 
@@ -118,7 +141,21 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
                 'eu_variant' => $variant,
                 'eu_version' => $version,
                 'quality_score' => 92,
-                'metadata' => ['origin' => 'EEA'],
+                'metadata' => array_filter([
+                    'origin' => 'EEA',
+                    'vehicle_category' => $vehicleCategory,
+                    'registered_category' => $registeredCategory,
+                    'fuel_mode' => $fuelMode,
+                    'mass_kg' => $massKg,
+                    'test_mass_kg' => $testMassKg,
+                    'co2_wltp_g_km' => $co2Wltp,
+                    'co2_nedc_g_km' => $co2Nedc,
+                    'electric_consumption_wh_km' => $electricConsumption,
+                    'eco_reduction_wltp_g_km' => $ecoReductionWltp,
+                    'source_vehicle_kind' => $sourceVehicleKind,
+                    'source_table' => $sourceTable,
+                    'source_status' => $sourceStatus,
+                ], static fn (mixed $value): bool => $value !== null && $value !== ''),
             ],
         );
 
@@ -130,9 +167,18 @@ class EeaVehicleCanonicalizer implements CatalogRecordCanonicalizer
             'eu_type' => $type,
             'eu_variant' => $variant,
             'eu_version' => $version,
+            'vehicle_category' => $vehicleCategory,
+            'registered_category' => $registeredCategory,
             'fuel_type' => $fuel,
+            'fuel_mode' => $fuelMode,
             'displacement_cc' => $displacement,
             'power_kw' => $powerKw,
+            'mass_kg' => $massKg,
+            'test_mass_kg' => $testMassKg,
+            'co2_wltp_g_km' => $co2Wltp,
+            'co2_nedc_g_km' => $co2Nedc,
+            'electric_consumption_wh_km' => $electricConsumption,
+            'eco_reduction_wltp_g_km' => $ecoReductionWltp,
         ], 92);
 
         return CanonicalizationResult::published('vehicle_configuration', $configuration->id, 92);
