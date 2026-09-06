@@ -14,8 +14,9 @@ return new class extends Migration
 
         Schema::table('catalog_source_records', function (Blueprint $table): void {
             $table->foreignId('supplier_product_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('supplier_sync_run_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('supplier_feed_artifact_id')->nullable()->constrained()->nullOnDelete();
-            $table->index(['supplier_product_id', 'supplier_feed_artifact_id'], 'catalog_source_records_supplier_provenance_idx');
+            $table->index(['supplier_product_id', 'supplier_sync_run_id', 'supplier_feed_artifact_id'], 'catalog_source_records_supplier_provenance_idx');
         });
 
         Schema::table('supplier_products', function (Blueprint $table): void {
@@ -93,6 +94,7 @@ return new class extends Migration
         Schema::table('catalog_source_records', function (Blueprint $table): void {
             $table->dropIndex('catalog_source_records_supplier_provenance_idx');
             $table->dropConstrainedForeignId('supplier_feed_artifact_id');
+            $table->dropConstrainedForeignId('supplier_sync_run_id');
             $table->dropConstrainedForeignId('supplier_product_id');
         });
 
