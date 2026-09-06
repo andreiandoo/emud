@@ -24,6 +24,7 @@ use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\MediaLibrary;
 use App\Livewire\Admin\OrderEditor;
 use App\Livewire\Admin\OrdersIndex;
+use App\Livewire\Admin\Suppliers\SupplierEditor;
 use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
 use App\Livewire\Admin\VehiclesIndex;
@@ -80,6 +81,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/articles/{article}/edit', ArticleEditor::class)->name('articles.edit');
     Route::get('/vehicles', VehiclesIndex::class)->name('vehicles.index');
     Route::get('/suppliers', SuppliersIndex::class)->name('suppliers.index');
+    Route::get('/suppliers/create', SupplierEditor::class)->name('suppliers.create');
+    Route::get('/suppliers/{supplier}/edit', SupplierEditor::class)->name('suppliers.edit');
     Route::get('/supplier-syncs', SyncRunsIndex::class)->name('suppliers.sync-runs');
     Route::get('/orders', OrdersIndex::class)->name('orders.index');
     Route::get('/orders/{order}', OrderEditor::class)->name('orders.edit');
