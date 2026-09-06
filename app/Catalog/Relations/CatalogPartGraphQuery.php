@@ -65,7 +65,7 @@ class CatalogPartGraphQuery
 
             foreach ($relations as $relation) {
                 foreach ($this->traversableDirections($relation, $frontier) as $direction) {
-                    if (count($edges) >= $maxEdges) {
+                    if (! isset($edges[$relation->id]) && count($edges) >= $maxEdges) {
                         $truncated = true;
                         break 3;
                     }
@@ -76,11 +76,10 @@ class CatalogPartGraphQuery
                         continue;
                     }
 
-                    $edgeKey = $relation->id.':'.$fromId;
-                    $edges[$edgeKey] ??= [
+                    $edges[$relation->id] ??= [
                         'relation' => $relation,
-                        'from_part_id' => $fromId,
-                        'to_part_id' => $nextId,
+                        'from_part_id' => $relation->source_part_id,
+                        'to_part_id' => $relation->target_part_id,
                         'traversal_direction' => $direction['direction'],
                     ];
 
