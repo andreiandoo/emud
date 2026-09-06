@@ -36,6 +36,11 @@ class CatalogSourceRecord extends Model
         return $this->belongsTo(SupplierProduct::class);
     }
 
+    public function supplierSyncRun(): BelongsTo
+    {
+        return $this->belongsTo(SupplierSyncRun::class);
+    }
+
     public function supplierFeedArtifact(): BelongsTo
     {
         return $this->belongsTo(SupplierFeedArtifact::class);
