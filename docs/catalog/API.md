@@ -53,12 +53,13 @@ Query parameters:
 
 - `scheme` — optional identifier namespace such as `MPN`, `OE`, `IAM`, `EAN_GTIN`;
 - `depth` — `0..4`, default `2`;
-- `max_nodes` — `1..250`, default `100`.
+- `max_nodes` — `1..250`, default `100`;
+- `max_edges` — `1..2000`, default `800`.
 
 Example:
 
 ```http
-GET /api/v1/parts/by-number/OC%20123/graph?scheme=MPN&depth=2&max_nodes=100
+GET /api/v1/parts/by-number/OC%20123/graph?scheme=MPN&depth=2&max_nodes=100&max_edges=800
 ```
 
 The response preserves graph structure:
@@ -66,11 +67,17 @@ The response preserves graph structure:
 ```json
 {
   "data": {
-    "query": {"number": "OC 123", "scheme": "MPN", "depth": 2},
+    "query": {
+      "number": "OC 123",
+      "scheme": "MPN",
+      "depth": 2,
+      "max_nodes": 100,
+      "max_edges": 800
+    },
     "seeds": ["prt_..."],
     "nodes": [
-      {"distance": 0, "part": {"id": "prt_..."}},
-      {"distance": 1, "part": {"id": "prt_..."}}
+      {"distance": 0, "path_confidence": 100, "part": {"id": "prt_..."}},
+      {"distance": 1, "path_confidence": 98, "part": {"id": "prt_..."}}
     ],
     "edges": [
       {
@@ -87,9 +94,13 @@ The response preserves graph structure:
 }
 ```
 
+`path_confidence` is the confidence of the strongest path discovered to that node. For a path with several edges, its confidence is the minimum edge confidence along that path; when several paths reach the same part, the highest such path confidence is retained. Seed nodes start at `100`.
+
 The traversal is cycle-safe and bounded. An edge is returned only when the relation source permits API redistribution, and both endpoint parts must independently satisfy the public publication scope. This prevents a public identifier from being used as a bridge into restricted technical data.
 
-`truncated=true` means the result reached `max_nodes` or the bounded per-level relation scan and should not be interpreted as a complete connected component.
+`truncated=true` means the result reached the node budget, edge budget, or bounded relation scan and should not be interpreted as a complete connected component. The explicit edge budget is important for highly connected aftermarket cross-reference components where the number of relations can grow much faster than the number of parts.
+
+Reverse relation lookup is indexed separately so traversal remains efficient whether a part appears as the source or target of a canonical relation.
 
 ## API consumer administration
 

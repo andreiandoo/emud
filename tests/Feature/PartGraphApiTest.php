@@ -63,23 +63,29 @@ class PartGraphApiTest extends TestCase
         $this->assertNotContains('prt_'.$c->public_id, array_column(array_column($data['nodes'], 'part'), 'id'));
     }
 
-    public function test_graph_depth_limits_transitive_cross_reference_expansion(): void
+    public function test_graph_depth_limits_transitive_expansion_and_reports_best_path_confidence(): void
     {
         $source = $this->source('PUBLIC', true);
         $a = $this->part('A', 'A-1', $source);
         $b = $this->part('B', 'B-1', $source);
         $c = $this->part('C', 'C-1', $source);
 
-        foreach ([[$a, $b], [$b, $c]] as [$from, $to]) {
-            CatalogPartRelation::query()->create([
-                'source_part_id' => $from->id,
-                'target_part_id' => $to->id,
-                'relation_type' => 'equivalent',
-                'is_directed' => false,
-                'catalog_source_id' => $source->id,
-                'confidence' => 95,
-            ]);
-        }
+        CatalogPartRelation::query()->create([
+            'source_part_id' => $a->id,
+            'target_part_id' => $b->id,
+            'relation_type' => 'equivalent',
+            'is_directed' => false,
+            'catalog_source_id' => $source->id,
+            'confidence' => 92,
+        ]);
+        CatalogPartRelation::query()->create([
+            'source_part_id' => $b->id,
+            'target_part_id' => $c->id,
+            'relation_type' => 'superseded_by',
+            'is_directed' => true,
+            'catalog_source_id' => $source->id,
+            'confidence' => 81,
+        ]);
 
         $token = $this->apiToken();
         $depthOne = $this->withHeader('X-API-Key', $token)
@@ -94,6 +100,48 @@ class PartGraphApiTest extends TestCase
             ->json('data');
         $this->assertCount(3, $depthTwo['nodes']);
         $this->assertCount(2, $depthTwo['edges']);
+
+        $nodes = collect($depthTwo['nodes'])->keyBy(fn (array $node) => $node['part']['id']);
+        $this->assertEquals(100.0, $nodes['prt_'.$a->public_id]['path_confidence']);
+        $this->assertEquals(92.0, $nodes['prt_'.$b->public_id]['path_confidence']);
+        $this->assertEquals(81.0, $nodes['prt_'.$c->public_id]['path_confidence']);
+    }
+
+    public function test_graph_edge_budget_truncates_dense_components_without_exceeding_the_limit(): void
+    {
+        $source = $this->source('PUBLIC', true);
+        $a = $this->part('A', 'A-1', $source);
+        $b = $this->part('B', 'B-1', $source);
+        $c = $this->part('C', 'C-1', $source);
+
+        CatalogPartRelation::query()->create([
+            'source_part_id' => $a->id,
+            'target_part_id' => $b->id,
+            'relation_type' => 'equivalent',
+            'is_directed' => false,
+            'catalog_source_id' => $source->id,
+            'confidence' => 99,
+        ]);
+        CatalogPartRelation::query()->create([
+            'source_part_id' => $a->id,
+            'target_part_id' => $c->id,
+            'relation_type' => 'equivalent',
+            'is_directed' => false,
+            'catalog_source_id' => $source->id,
+            'confidence' => 80,
+        ]);
+
+        $data = $this->withHeader('X-API-Key', $this->apiToken())
+            ->getJson('/api/v1/parts/by-number/A-1/graph?scheme=MPN&depth=1&max_nodes=10&max_edges=1')
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame(1, $data['query']['max_edges']);
+        $this->assertCount(1, $data['edges']);
+        $this->assertTrue($data['truncated']);
+        $this->assertSame('prt_'.$b->public_id, $data['edges'][0]['to']);
+        $this->assertContains('prt_'.$b->public_id, array_column(array_column($data['nodes'], 'part'), 'id'));
+        $this->assertNotContains('prt_'.$c->public_id, array_column(array_column($data['nodes'], 'part'), 'id'));
     }
 
     public function test_graph_endpoint_validates_bounds_and_requires_an_api_key(): void
@@ -106,6 +154,12 @@ class PartGraphApiTest extends TestCase
             ->assertUnprocessable();
         $this->withHeader('X-API-Key', $token)
             ->getJson('/api/v1/parts/by-number/A-1/graph?max_nodes=251')
+            ->assertUnprocessable();
+        $this->withHeader('X-API-Key', $token)
+            ->getJson('/api/v1/parts/by-number/A-1/graph?max_edges=2001')
+            ->assertUnprocessable();
+        $this->withHeader('X-API-Key', $token)
+            ->getJson('/api/v1/parts/by-number/A-1/graph?max_edges=0')
             ->assertUnprocessable();
     }
 
