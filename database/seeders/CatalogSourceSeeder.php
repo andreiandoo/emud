@@ -70,11 +70,12 @@ class CatalogSourceSeeder extends Seeder
             ],
         ];
 
-        foreach ($sources as $source) {
-            CatalogSource::query()->updateOrCreate(
-                ['code' => $source['code']],
-                ['public_id' => (string) Str::ulid(), ...$source],
-            );
+        foreach ($sources as $payload) {
+            $source = CatalogSource::query()->firstOrNew(['code' => $payload['code']]);
+            if (! $source->exists) {
+                $source->public_id = (string) Str::ulid();
+            }
+            $source->fill($payload)->save();
         }
     }
 }

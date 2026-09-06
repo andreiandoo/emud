@@ -13,7 +13,6 @@ use Livewire\Component;
 class SourceEditor extends Component
 {
     public ?CatalogSource $source = null;
-
     public string $name = '';
     public string $code = '';
     public string $sourceType = 'open_dataset';
@@ -33,6 +32,7 @@ class SourceEditor extends Component
     public ?string $licenseName = null;
     public ?string $licenseUrl = null;
     public ?string $legalNotes = null;
+    public string $credentialsJson = '{}';
     public string $settingsJson = '{}';
     public string $mappingJson = '{}';
     public string $capabilitiesJson = '{}';
@@ -63,6 +63,7 @@ class SourceEditor extends Component
         $this->licenseName = $source->license_name;
         $this->licenseUrl = $source->license_url;
         $this->legalNotes = $source->legal_notes;
+        $this->credentialsJson = json_encode($source->credentials ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
         $this->settingsJson = json_encode($source->settings ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
         $this->mappingJson = json_encode($source->field_mapping ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
         $this->capabilitiesJson = json_encode($source->capabilities ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
@@ -79,6 +80,7 @@ class SourceEditor extends Component
             'baseUrl' => ['nullable', 'url'],
             'catalogEndpoint' => ['nullable', 'url'],
             'licenseUrl' => ['nullable', 'url'],
+            'credentialsJson' => ['required', 'json'],
             'settingsJson' => ['required', 'json'],
             'mappingJson' => ['required', 'json'],
             'capabilitiesJson' => ['required', 'json'],
@@ -105,6 +107,7 @@ class SourceEditor extends Component
             'license_name' => $this->licenseName,
             'license_url' => $this->licenseUrl,
             'legal_notes' => $this->legalNotes,
+            'credentials' => json_decode($this->credentialsJson, true, flags: JSON_THROW_ON_ERROR),
             'settings' => json_decode($this->settingsJson, true, flags: JSON_THROW_ON_ERROR),
             'field_mapping' => json_decode($this->mappingJson, true, flags: JSON_THROW_ON_ERROR),
             'capabilities' => json_decode($this->capabilitiesJson, true, flags: JSON_THROW_ON_ERROR),
@@ -120,8 +123,6 @@ class SourceEditor extends Component
 
     public function render()
     {
-        return view('livewire.admin.catalog-platform.source-editor', [
-            'rightsClasses' => CatalogRightsClass::cases(),
-        ]);
+        return view('livewire.admin.catalog-platform.source-editor', ['rightsClasses' => CatalogRightsClass::cases()]);
     }
 }
