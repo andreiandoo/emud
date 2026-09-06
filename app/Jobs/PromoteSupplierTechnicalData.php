@@ -89,13 +89,13 @@ class PromoteSupplierTechnicalData implements ShouldQueue
         try {
             SupplierProduct::query()
                 ->where('supplier_id', $supplier->id)
+                ->where('last_supplier_sync_run_id', $syncRun->id)
                 ->where('technical_promotion_status', 'pending')
                 ->whereNotNull('technical_payload')
-                ->when($this->supplierSyncRunId, fn ($query) => $query->where('last_supplier_sync_run_id', $syncRun->id))
                 ->orderBy('id')
                 ->limit($this->limit)
                 ->get()
-                ->each(function (SupplierProduct $product) use ($bridge, $canonicalizer, $supplier, $syncRun, $artifact, $release, $run, $allowCreateParts): void {
+                ->each(function (SupplierProduct $product) use ($bridge, $canonicalizer, $supplier, $source, $syncRun, $artifact, $release, $run, $allowCreateParts): void {
                     $run->increment('fetched_count');
                     $run->increment('parsed_count');
 
@@ -111,7 +111,7 @@ class PromoteSupplierTechnicalData implements ShouldQueue
                             return;
                         }
 
-                        $record = $bridge->stage($supplier->technicalCatalogSource ?? $bridge->sourceFor($supplier), $run, $product, $syncRun, $artifact, $release);
+                        $record = $bridge->stage($source, $run, $product, $syncRun, $artifact, $release);
                         $result = $canonicalizer->canonicalize($record);
                         $record->update([
                             'mapping_status' => $result->status,
@@ -159,7 +159,7 @@ class PromoteSupplierTechnicalData implements ShouldQueue
                             'catalog_part_id' => $result->entityId,
                             'mapping_confidence' => max((float) ($product->mapping_confidence ?? 0), (float) ($result->confidence ?? 0)),
                             'catalog_mapping_status' => $product->catalog_mapping_status === 'mapped_auto' ? 'mapped_auto' : 'mapped_promoted',
-                            'catalog_mapping_reason' => array_replace($product->catalog_mapping_reason ?? [], ['technical_source' => $record->source->code]),
+                            'catalog_mapping_reason' => array_replace($product->catalog_mapping_reason ?? [], ['technical_source' => $source->code]),
                             'catalog_mapped_at' => $product->catalog_mapped_at ?? now(),
                             'technical_promotion_status' => 'promoted',
                             'technical_promotion_error' => null,
