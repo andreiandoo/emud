@@ -37,7 +37,9 @@ Route::middleware('guest')->group(function (): void {
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withErrors(['email' => 'Datele de autentificare nu sunt corecte.']);
-        } $request->session()->regenerate();
+        }
+
+        $request->session()->regenerate();
 
         return redirect()->intended(route('admin.dashboard'));
     })->name('admin.login.store');
@@ -79,5 +81,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/supplier-syncs', SyncRunsIndex::class)->name('suppliers.sync-runs');
     Route::get('/orders', OrdersIndex::class)->name('orders.index');
     Route::get('/orders/{order}', OrderEditor::class)->name('orders.edit');
-    Route::get('/commerce-settings',CommerceSettings::class)->name('commerce.settings');
+    Route::get('/commerce-settings', CommerceSettings::class)->name('commerce.settings');
 });
