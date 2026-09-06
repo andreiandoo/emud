@@ -19,49 +19,27 @@ class ProductEditor extends Component
     use WithFileUploads;
 
     public ?Product $product = null;
-
     public string $name = '';
-
     public string $slug = '';
-
     public string $sku = '';
-
     public string $manufacturerPartNumber = '';
-
     public ?int $brandId = null;
-
     public string $status = 'draft';
-
     public string $shortDescription = '';
-
     public string $description = '';
-
     public bool $isUniversal = false;
-
     public bool $isFeatured = false;
-
     public ?int $warrantyMonths = null;
-
     public $weightKg = null;
-
     public array $categoryIds = [];
-
     public array $variants = [];
-
     public array $attributeValues = [];
-
     public array $fitments = [];
-
     public array $images = [];
-
     public string $seoTitle = '';
-
     public string $seoDescription = '';
-
     public string $canonicalUrl = '';
-
     public bool $robotsIndex = true;
-
     public bool $robotsFollow = true;
 
     public function mount(?Product $product = null): void
@@ -83,18 +61,27 @@ class ProductEditor extends Component
             $this->weightKg = $product->weight_kg;
             $this->categoryIds = $product->categories->modelKeys();
             $this->variants = $product->variants->map(fn ($variant): array => [
-                'id' => $variant->id, 'name' => $variant->name, 'sku' => $variant->sku,
-                'barcode' => $variant->barcode, 'mpn' => $variant->manufacturer_part_number,
-                'price' => $variant->retail_price, 'compare_at_price' => $variant->compare_at_price,
-                'currency' => $variant->currency, 'weight_kg' => $variant->weight_kg, 'is_active' => $variant->is_active,
+                'id' => $variant->id,
+                'name' => $variant->name,
+                'sku' => $variant->sku,
+                'barcode' => $variant->barcode,
+                'mpn' => $variant->manufacturer_part_number,
+                'price' => $variant->retail_price,
+                'compare_at_price' => $variant->compare_at_price,
+                'currency' => $variant->currency,
+                'weight_kg' => $variant->weight_kg,
+                'is_active' => $variant->is_active,
             ])->all();
             $this->attributeValues = $product->attributeValues->mapWithKeys(fn ($value): array => [
                 $value->attribute_id => $value->option_id ?: ($value->value_boolean ?? $value->value_number ?? $value->value_text),
             ])->all();
             $this->fitments = $product->fitments->map(fn ($fitment): array => [
-                'id' => $fitment->id, 'generation_id' => $fitment->generation_id,
-                'year_from' => $fitment->year_from, 'year_to' => $fitment->year_to,
-                'position' => $fitment->position, 'requires_modification' => $fitment->requires_modification,
+                'id' => $fitment->id,
+                'generation_id' => $fitment->generation_id,
+                'year_from' => $fitment->year_from,
+                'year_to' => $fitment->year_to,
+                'position' => $fitment->position,
+                'requires_modification' => $fitment->requires_modification,
                 'notes' => $fitment->notes,
             ])->all();
             $this->seoTitle = $product->seo_title ?? '';
@@ -147,8 +134,10 @@ class ProductEditor extends Component
             'manufacturerPartNumber' => ['nullable', 'string', 'max:255'],
             'brandId' => ['nullable', 'exists:brands,id'],
             'status' => ['required', 'in:draft,review,active,archived'],
-            'categoryIds' => ['array', 'min:1'], 'categoryIds.*' => ['exists:categories,id'],
-            'variants' => ['array', 'min:1'], 'variants.*.sku' => ['required', 'string', 'max:255'],
+            'categoryIds' => ['array', 'min:1'],
+            'categoryIds.*' => ['exists:categories,id'],
+            'variants' => ['array', 'min:1'],
+            'variants.*.sku' => ['required', 'string', 'max:255'],
             'variants.*.price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.compare_at_price' => ['nullable', 'numeric', 'min:0'],
             'fitments.*.generation_id' => ['nullable', 'exists:vehicle_generations,id'],
@@ -161,28 +150,57 @@ class ProductEditor extends Component
         ]);
 
         DB::transaction(function () use ($validated): void {
-            $product = Product::updateOrCreate(['id' => $this->product?->id], [
-                'name' => $validated['name'], 'slug' => $validated['slug'], 'sku' => $validated['sku'] ?: null,
+            $payload = [
+                'name' => $validated['name'],
+                'slug' => $validated['slug'],
+                'sku' => $validated['sku'] ?: null,
                 'manufacturer_part_number' => $validated['manufacturerPartNumber'] ?: null,
-                'brand_id' => $validated['brandId'], 'status' => $validated['status'],
-                'short_description' => $this->shortDescription ?: null, 'description' => $this->description ?: null,
-                'is_universal' => $this->isUniversal, 'is_featured' => $this->isFeatured,
-                'warranty_months' => $this->warrantyMonths, 'weight_kg' => $this->weightKg ?: null,
-                'seo_title' => $validated['seoTitle'] ?: null, 'seo_description' => $validated['seoDescription'] ?: null,
-                'canonical_url' => $validated['canonicalUrl'] ?: null, 'robots_index' => $this->robotsIndex,
+                'brand_id' => $validated['brandId'],
+                'status' => $validated['status'],
+                'short_description' => $this->shortDescription ?: null,
+                'description' => $this->description ?: null,
+                'is_universal' => $this->isUniversal,
+                'is_featured' => $this->isFeatured,
+                'warranty_months' => $this->warrantyMonths,
+                'weight_kg' => $this->weightKg ?: null,
+                'seo_title' => $validated['seoTitle'] ?: null,
+                'seo_description' => $validated['seoDescription'] ?: null,
+                'canonical_url' => $validated['canonicalUrl'] ?: null,
+                'robots_index' => $this->robotsIndex,
                 'robots_follow' => $this->robotsFollow,
                 'published_at' => $validated['status'] === 'active' ? ($this->product?->published_at ?? now()) : null,
-            ]);
+            ];
+
+            if ($this->product?->exists) {
+                $product = $this->product;
+                $product->update($payload);
+            } else {
+                $product = Product::query()->create($payload);
+            }
+
             $product->categories()->sync(collect($this->categoryIds)->mapWithKeys(fn ($id, $index): array => [$id => ['is_primary' => $index === 0]])->all());
 
             $keptVariantIds = [];
             foreach ($this->variants as $position => $row) {
-                $variant = $product->variants()->updateOrCreate(['id' => $row['id'] ?? null], [
-                    'name' => $row['name'] ?: null, 'sku' => $row['sku'], 'barcode' => $row['barcode'] ?: null,
-                    'manufacturer_part_number' => $row['mpn'] ?: null, 'retail_price' => $row['price'] ?: null,
-                    'compare_at_price' => $row['compare_at_price'] ?: null, 'currency' => $row['currency'] ?: 'RON',
-                    'weight_kg' => $row['weight_kg'] ?: null, 'is_active' => (bool) $row['is_active'], 'position' => $position,
-                ]);
+                $variantPayload = [
+                    'name' => $row['name'] ?: null,
+                    'sku' => $row['sku'],
+                    'barcode' => $row['barcode'] ?: null,
+                    'manufacturer_part_number' => $row['mpn'] ?: null,
+                    'retail_price' => $row['price'] ?: null,
+                    'compare_at_price' => $row['compare_at_price'] ?: null,
+                    'currency' => $row['currency'] ?: 'RON',
+                    'weight_kg' => $row['weight_kg'] ?: null,
+                    'is_active' => (bool) $row['is_active'],
+                    'position' => $position,
+                ];
+
+                if ($row['id'] ?? null) {
+                    $variant = $product->variants()->whereKey($row['id'])->firstOrFail();
+                    $variant->update($variantPayload);
+                } else {
+                    $variant = $product->variants()->create($variantPayload);
+                }
                 $keptVariantIds[] = $variant->id;
             }
             $product->variants()->whereNotIn('id', $keptVariantIds)->delete();
@@ -214,18 +232,36 @@ class ProductEditor extends Component
                     continue;
                 }
                 $generation = VehicleGeneration::with('model')->findOrFail($row['generation_id']);
-                $fitment = $product->fitments()->updateOrCreate(['id' => $row['id'] ?? null], [
-                    'make_id' => $generation->model->make_id, 'model_id' => $generation->model_id,
-                    'generation_id' => $generation->id, 'year_from' => $row['year_from'] ?: $generation->year_from,
-                    'year_to' => $row['year_to'] ?: $generation->year_to, 'position' => $row['position'] ?: null,
-                    'requires_modification' => (bool) $row['requires_modification'], 'notes' => $row['notes'] ?: null, 'source' => 'admin',
-                ]);
+                $fitmentPayload = [
+                    'make_id' => $generation->model->make_id,
+                    'model_id' => $generation->model_id,
+                    'generation_id' => $generation->id,
+                    'year_from' => $row['year_from'] ?: $generation->year_from,
+                    'year_to' => $row['year_to'] ?: $generation->year_to,
+                    'position' => $row['position'] ?: null,
+                    'requires_modification' => (bool) $row['requires_modification'],
+                    'notes' => $row['notes'] ?: null,
+                    'source' => 'admin',
+                ];
+
+                if ($row['id'] ?? null) {
+                    $fitment = $product->fitments()->whereKey($row['id'])->firstOrFail();
+                    $fitment->update($fitmentPayload);
+                } else {
+                    $fitment = $product->fitments()->create($fitmentPayload);
+                }
                 $keptFitmentIds[] = $fitment->id;
             }
             $product->fitments()->whereNotIn('id', $keptFitmentIds)->delete();
 
             foreach ($this->images as $index => $image) {
-                $product->media()->create(['type' => 'image', 'disk' => 'public', 'path' => $image->store('products', 'public'), 'alt_text' => $product->name, 'position' => $product->media()->count() + $index]);
+                $product->media()->create([
+                    'type' => 'image',
+                    'disk' => 'public',
+                    'path' => $image->store('products', 'public'),
+                    'alt_text' => $product->name,
+                    'position' => $product->media()->count() + $index,
+                ]);
             }
             $this->product = $product;
         });
