@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Catalog\Matching\SupplierCatalogPartMatcher;
+use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,8 +20,11 @@ class MatchSupplierProductsToCatalog implements ShouldQueue
 
     public int $tries = 2;
 
-    public function __construct(public readonly ?int $supplierId = null, public readonly int $limit = 10000)
-    {
+    public function __construct(
+        public readonly ?int $supplierId = null,
+        public readonly int $limit = 10000,
+        public readonly ?int $supplierSyncRunId = null,
+    ) {
         $this->onQueue('catalog-matching');
     }
 
@@ -33,10 +37,22 @@ class MatchSupplierProductsToCatalog implements ShouldQueue
     {
         SupplierProduct::query()
             ->when($this->supplierId, fn ($q) => $q->where('supplier_id', $this->supplierId))
+            ->when($this->supplierSyncRunId, fn ($q) => $q->where('last_supplier_sync_run_id', $this->supplierSyncRunId))
             ->whereIn('catalog_mapping_status', ['unmapped', 'unmatched', 'candidate'])
             ->where(fn ($q) => $q->whereNotNull('ean')->orWhereNotNull('manufacturer_part_number'))
             ->orderBy('id')
             ->limit($this->limit)
             ->each(fn (SupplierProduct $product) => $matcher->match($product));
+
+        if (! $this->supplierId || ! $this->supplierSyncRunId) {
+            return;
+        }
+
+        $supplier = Supplier::query()->find($this->supplierId);
+        if ($supplier
+            && $supplier->allow_derived_data
+            && (bool) ($supplier->settings['technical_promotion_enabled'] ?? false)) {
+            PromoteSupplierTechnicalData::dispatch($supplier->id, $this->supplierSyncRunId);
+        }
     }
 }
