@@ -62,15 +62,9 @@ class SeedAutomotiveCatalogDemo extends Command
         $this->warn('All DEMO-* identifiers are synthetic fixtures and are not authoritative OEM/TecDoc data.');
 
         $vehicles = VehicleConfiguration::query()
-            ->where('canonical_fingerprint', 'like', hash('sha256', 'demo:').'%')
+            ->where('commercial_name', 'like', '%DEMO%')
+            ->orderBy('id')
             ->get();
-        if ($vehicles->isEmpty()) {
-            // SHA-256 fingerprints are intentionally opaque, so identify fixture rows through metadata instead.
-            $vehicles = VehicleConfiguration::query()
-                ->where('commercial_name', 'like', '%DEMO%')
-                ->orderBy('id')
-                ->get();
-        }
 
         $this->table(['Vehicle ID', 'Configuration'], $vehicles->map(fn (VehicleConfiguration $vehicle) => [
             $vehicle->id,
@@ -87,8 +81,17 @@ class SeedAutomotiveCatalogDemo extends Command
             $part->name,
         ])->all());
 
+        $hilux = $vehicles->firstWhere('commercial_name', 'Hilux 2.8 4WD DEMO');
+        $liftKit = $parts->firstWhere('mpn_raw', 'DEMO-LFT-410');
+
         $this->line('Try part graph: GET /api/v1/parts/by-number/DEMO-FLT-100/graph?scheme=MPN&depth=3');
         $this->line('Try vehicle search: GET /api/v1/vehicles/search?q=Duster');
+        if ($hilux && $liftKit) {
+            $this->line('Try compatibility: POST /api/v1/compatibility/check with '.json_encode([
+                'vehicle_id' => $hilux->id,
+                'part_id' => 'prt_'.$liftKit->public_id,
+            ]));
+        }
         $this->line('QA queue: /admin/catalog-unresolved-relations');
         $this->line('Supplier mapping: /admin/catalog-supplier-matching');
         $this->line('Pending DEMO relations: '.CatalogUnresolvedPartRelation::query()->where('target_number_raw', 'like', 'DEMO-%')->where('status', 'pending')->count());
