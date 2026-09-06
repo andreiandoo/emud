@@ -9,6 +9,10 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('catalog:sources:dispatch-schedules')->everyMinute()->withoutOverlapping();
+Schedule::command('suppliers:dispatch-schedules')->everyMinute()->withoutOverlapping();
+
+// Legacy fallback cadence for active suppliers that do not define an enabled
+// per-supplier schedule for the corresponding mode.
 Schedule::command('suppliers:sync --mode=stock')->everyFifteenMinutes()->withoutOverlapping(14);
 Schedule::command('suppliers:sync --mode=prices')->hourly()->withoutOverlapping(55);
 Schedule::command('suppliers:sync --mode=catalog')->dailyAt('02:10')->withoutOverlapping(180);
