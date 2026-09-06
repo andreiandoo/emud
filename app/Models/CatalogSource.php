@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CatalogRightsClass;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CatalogSource extends Model
@@ -30,6 +31,11 @@ class CatalogSource extends Model
             'last_successful_sync_at' => 'datetime',
             'last_attempted_sync_at' => 'datetime',
         ];
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     public function schedules(): HasMany
