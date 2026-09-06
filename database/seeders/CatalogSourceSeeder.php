@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Catalog\Sources\Connectors\EeaVehicleCatalogSourceConnector;
 use App\Catalog\Sources\Connectors\LifeOfCapoCatalogSourceConnector;
+use App\Catalog\Sources\Connectors\VpicReferenceCatalogSourceConnector;
 use App\Models\CatalogSource;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -70,6 +71,7 @@ class CatalogSourceSeeder extends Seeder
                 'name' => 'NHTSA vPIC',
                 'source_type' => 'government_vehicle_database',
                 'protocol' => 'database',
+                'connector_class' => VpicReferenceCatalogSourceConnector::class,
                 'rights_class' => 'public_information',
                 'allow_internal' => true,
                 'allow_ecommerce' => true,
@@ -81,10 +83,17 @@ class CatalogSourceSeeder extends Seeder
                 'license_url' => 'https://www.nhtsa.gov/about-nhtsa/terms-use',
                 'legal_notes' => 'NHTSA states that information presented on its website is public information and may be distributed or copied. Preserve source attribution and do not imply NHTSA endorsement.',
                 'base_url' => 'https://vpic.nhtsa.dot.gov/',
+                'field_mapping' => ['external_id' => 'external_id', 'record_type' => 'record_type'],
                 'capabilities' => [
                     'vehicles' => true,
                     'vin' => true,
                     'wmi' => true,
+                    'manufacturers' => true,
+                    'makes' => true,
+                    'models' => true,
+                    'model_years' => true,
+                    'vehicle_types' => true,
+                    'make_manufacturer_relations' => true,
                     'standalone_vin_decoder' => true,
                     'postgresql_standalone' => true,
                 ],
@@ -98,6 +107,17 @@ class CatalogSourceSeeder extends Seeder
                     'download_page_timeout_seconds' => 30,
                     'download_timeout_seconds' => 1800,
                     'restore_timeout_seconds' => 1800,
+                    'auto_canonicalize' => true,
+                    'reference_timeout_seconds' => 180,
+                    'reference_retry_times' => 4,
+                    'reference_retry_sleep_ms' => 1500,
+                    'reference_request_interval_ms' => 250,
+                    'manufacturer_link_batch_size' => 25,
+                    'vehicle_type_batch_size' => 50,
+                    'model_year_make_batch_size' => 5,
+                    'model_year_from' => 1996,
+                    'model_year_to' => null,
+                    'reference_checkpoints' => [],
                     'user_agent' => 'eMUD-Automotive-Catalog/1.0 (https://github.com/andreiandoo/emud)',
                 ],
             ],
