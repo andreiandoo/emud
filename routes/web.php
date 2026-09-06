@@ -16,6 +16,7 @@ use App\Livewire\Admin\CatalogPlatform\SourceRecordDetail as CatalogSourceRecord
 use App\Livewire\Admin\CatalogPlatform\SourceRecordsIndex as CatalogSourceRecordsIndex;
 use App\Livewire\Admin\CatalogPlatform\SourcesIndex as CatalogSourcesIndex;
 use App\Livewire\Admin\CatalogPlatform\SupplierMatchingIndex as CatalogSupplierMatchingIndex;
+use App\Livewire\Admin\CatalogPlatform\UnresolvedRelationsIndex as CatalogUnresolvedRelationsIndex;
 use App\Livewire\Admin\CatalogPlatform\VehicleDetail as CatalogVehicleDetail;
 use App\Livewire\Admin\CommerceSettings;
 use App\Livewire\Admin\Content\ArticleEditor;
@@ -65,6 +66,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/catalog-source-records/{record}', CatalogSourceRecordDetail::class)->name('catalog-platform.source-records.show');
     Route::get('/catalog-imports', CatalogImportRunsIndex::class)->name('catalog-platform.imports');
     Route::get('/catalog-conflicts', CatalogConflictsIndex::class)->name('catalog-platform.conflicts');
+    Route::get('/catalog-unresolved-relations', CatalogUnresolvedRelationsIndex::class)->name('catalog-platform.unresolved-relations');
     Route::get('/catalog-api', CatalogApiConsumersIndex::class)->name('catalog-platform.api');
     Route::get('/catalog-supplier-matching', CatalogSupplierMatchingIndex::class)->name('catalog-platform.supplier-matching');
     Route::get('/catalog-parts/{part}', CatalogPartDetail::class)->name('catalog-platform.parts.show');
