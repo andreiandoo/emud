@@ -20,11 +20,15 @@ class LifeOfCapoCatalogSourceConnector implements CatalogSourceConnector, Catalo
         $ref = (string) ($release['release_key'] ?? $source->settings['upstream_ref'] ?? 'main');
 
         if (in_array($mode, ['catalog', 'vehicles'], true)) {
-            yield from $this->vehicleRecords($source, $ref);
+            foreach ($this->vehicleRecords($source, $ref) as $record) {
+                yield $record;
+            }
         }
 
         if (in_array($mode, ['catalog', 'generic_parts'], true)) {
-            yield from $this->genericPartRecords($source, $ref);
+            foreach ($this->genericPartRecords($source, $ref) as $record) {
+                yield $record;
+            }
         }
 
         if (! in_array($mode, ['catalog', 'vehicles', 'generic_parts'], true)) {
