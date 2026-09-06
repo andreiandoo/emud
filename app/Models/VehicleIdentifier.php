@@ -13,4 +13,9 @@ class VehicleIdentifier extends Model
     {
         return $this->belongsTo(VehicleConfiguration::class, 'configuration_id');
     }
+
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(CatalogSource::class, 'catalog_source_id');
+    }
 }

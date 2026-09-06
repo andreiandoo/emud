@@ -9,7 +9,9 @@ class CatalogSerializer
 {
     public function vehicle(VehicleConfiguration $vehicle): array
     {
-        $vehicle->loadMissing(['generation.model.make', 'engine', 'identifiers']);
+        $vehicle->loadMissing(['generation.model.make', 'engine', 'identifiers.source']);
+        $identifiers = $vehicle->identifiers
+            ->filter(fn ($identifier) => (bool) $identifier->source?->allow_api_redistribution);
 
         return [
             'id' => 'veh_'.$vehicle->id,
@@ -34,7 +36,7 @@ class CatalogSerializer
                 'variant' => $vehicle->eu_variant,
                 'version' => $vehicle->eu_version,
             ],
-            'identifiers' => $vehicle->identifiers->map(fn ($identifier) => [
+            'identifiers' => $identifiers->map(fn ($identifier) => [
                 'scheme' => $identifier->scheme,
                 'namespace' => $identifier->namespace,
                 'value' => $identifier->value_raw,
@@ -45,7 +47,9 @@ class CatalogSerializer
 
     public function part(CatalogPart $part): array
     {
-        $part->loadMissing(['brand', 'category', 'numbers']);
+        $part->loadMissing(['brand', 'category', 'numbers.brand', 'numbers.oeMake', 'numbers.source']);
+        $numbers = $part->numbers
+            ->filter(fn ($number) => (bool) $number->source?->allow_api_redistribution);
 
         return [
             'id' => 'prt_'.$part->public_id,
@@ -54,7 +58,7 @@ class CatalogSerializer
             'name' => $part->name,
             'category' => $part->category ? ['id' => $part->category->id, 'name' => $part->category->name, 'path' => $part->category->full_path] : null,
             'lifecycle_status' => $part->lifecycle_status,
-            'numbers' => $part->numbers->map(fn ($number) => [
+            'numbers' => $numbers->map(fn ($number) => [
                 'scheme' => $number->scheme,
                 'number' => $number->number_raw,
                 'brand' => $number->brand?->name,
