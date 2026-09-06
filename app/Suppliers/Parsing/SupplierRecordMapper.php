@@ -39,6 +39,10 @@ class SupplierRecordMapper
             images: $this->arrayValue($this->value($row, $mapping, 'images'), $settings['images_delimiter'] ?? null),
             attributes: $this->associativeArrayValue($this->value($row, $mapping, 'attributes')),
             fitments: $this->arrayValue($this->value($row, $mapping, 'fitments'), $settings['fitments_delimiter'] ?? null),
+            oeNumbers: $this->arrayValue($this->value($row, $mapping, 'oe_numbers'), $settings['oe_numbers_delimiter'] ?? null),
+            iamNumbers: $this->arrayValue($this->value($row, $mapping, 'iam_numbers'), $settings['iam_numbers_delimiter'] ?? null),
+            crossReferences: $this->arrayValue($this->value($row, $mapping, 'cross_references'), $settings['cross_references_delimiter'] ?? null),
+            supersessions: $this->arrayValue($this->value($row, $mapping, 'supersessions'), $settings['supersessions_delimiter'] ?? null),
             raw: $row,
         );
     }
