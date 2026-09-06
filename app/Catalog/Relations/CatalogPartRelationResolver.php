@@ -83,7 +83,7 @@ class CatalogPartRelationResolver
                 }
 
                 $record = $pending->sourceRecord;
-                if (! $record) {
+                if (! $record || ! $pending->sourcePart) {
                     return;
                 }
 
@@ -113,7 +113,7 @@ class CatalogPartRelationResolver
         string $relationType,
         float $confidence,
     ): CatalogPartRelation {
-        $relation = CatalogPartRelation::query()->updateOrCreate([
+        return CatalogPartRelation::query()->updateOrCreate([
             'source_part_id' => $sourcePart->id,
             'target_part_id' => $targetPart->id,
             'relation_type' => $relationType,
@@ -123,19 +123,6 @@ class CatalogPartRelationResolver
             'is_directed' => $relationType !== 'equivalent',
             'confidence' => $confidence,
         ]);
-
-        CatalogUnresolvedPartRelation::query()
-            ->where('source_part_id', $sourcePart->id)
-            ->where('relation_type', $relationType)
-            ->where('catalog_source_id', $record->catalog_source_id)
-            ->where('target_number_compact', function ($query) use ($targetPart): void {
-                $query->select('number_compact')
-                    ->from('catalog_part_numbers')
-                    ->whereColumn('catalog_part_numbers.catalog_part_id', 'catalog_unresolved_part_relations.resolved_target_part_id')
-                    ->limit(1);
-            });
-
-        return $relation;
     }
 
     private function resolveTarget(string $scheme, string $number, ?string $brandRaw): ?CatalogPart
