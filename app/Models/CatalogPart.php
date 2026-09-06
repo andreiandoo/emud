@@ -33,6 +33,11 @@ class CatalogPart extends Model
         return $this->hasMany(CatalogPartNumber::class);
     }
 
+    public function attributes(): HasMany
+    {
+        return $this->hasMany(CatalogPartAttribute::class);
+    }
+
     public function fitments(): HasMany
     {
         return $this->hasMany(CatalogFitment::class);

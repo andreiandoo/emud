@@ -21,7 +21,9 @@ class SyncCatalogSource implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 7200;
+
     public int $tries = 3;
+
     public array $backoff = [60, 300, 900];
 
     public function __construct(public readonly int $sourceId, public readonly string $mode = 'catalog')
@@ -68,6 +70,10 @@ class SyncCatalogSource implements ShouldQueue
                 'finished_at' => now(),
             ]);
             $source->update(['last_successful_sync_at' => now()]);
+
+            if ((bool) ($source->settings['auto_canonicalize'] ?? false)) {
+                CanonicalizeCatalogSourceRecords::dispatch($source->id);
+            }
         } catch (Throwable $exception) {
             $run->update([
                 'status' => CatalogImportStatus::Failed,

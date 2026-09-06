@@ -21,9 +21,18 @@ class ArticlesIndex extends Component
     public function saveCategory(): void
     {
         $data = $this->validate(['categoryName' => ['required', 'string', 'max:255']]);
-        ArticleCategory::updateOrCreate(['id' => $this->editingCategoryId], [
-            'name' => $data['categoryName'], 'slug' => Str::slug($data['categoryName']), 'is_active' => true,
-        ]);
+        $payload = [
+            'name' => $data['categoryName'],
+            'slug' => Str::slug($data['categoryName']),
+            'is_active' => true,
+        ];
+
+        if ($this->editingCategoryId) {
+            ArticleCategory::query()->findOrFail($this->editingCategoryId)->update($payload);
+        } else {
+            ArticleCategory::query()->create($payload);
+        }
+
         $this->reset(['categoryName', 'editingCategoryId']);
     }
 

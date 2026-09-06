@@ -79,7 +79,7 @@ class AttributesIndex extends Component
             'optionsText' => ['nullable', 'string'],
         ]);
 
-        $attribute = Attribute::updateOrCreate(['id' => $this->editingId], [
+        $payload = [
             'name' => $validated['name'],
             'code' => $validated['code'],
             'type' => $validated['type'],
@@ -87,7 +87,14 @@ class AttributesIndex extends Component
             'help_text' => $validated['helpText'] ?: null,
             'is_global' => $this->isGlobal,
             'is_active' => $this->isActive,
-        ]);
+        ];
+
+        if ($this->editingId) {
+            $attribute = Attribute::query()->findOrFail($this->editingId);
+            $attribute->update($payload);
+        } else {
+            $attribute = Attribute::query()->create($payload);
+        }
 
         $pivot = [];
         foreach ($this->categoryIds as $position => $categoryId) {
@@ -100,12 +107,24 @@ class AttributesIndex extends Component
             ];
         }
         $attribute->categories()->sync($pivot);
-        $attribute->options()->delete();
+
         if (in_array($this->type, ['select', 'multiselect', 'color'], true)) {
-            collect(preg_split('/\r\n|\r|\n/', trim($this->optionsText)))->filter()->values()->each(function (string $line, int $position) use ($attribute): void {
-                [$label, $value] = array_pad(array_map('trim', explode('|', $line, 2)), 2, null);
-                $attribute->options()->create(['label' => $label, 'value' => $value ?: Str::slug($label), 'position' => $position]);
-            });
+            $wantedValues = [];
+            collect(preg_split('/\r\n|\r|\n/', trim($this->optionsText)))
+                ->filter()
+                ->values()
+                ->each(function (string $line, int $position) use ($attribute, &$wantedValues): void {
+                    [$label, $value] = array_pad(array_map('trim', explode('|', $line, 2)), 2, null);
+                    $value = $value ?: Str::slug($label);
+                    $wantedValues[] = $value;
+                    $attribute->options()->updateOrCreate(
+                        ['value' => $value],
+                        ['label' => $label, 'position' => $position],
+                    );
+                });
+            $attribute->options()->whereNotIn('value', $wantedValues)->delete();
+        } else {
+            $attribute->options()->delete();
         }
 
         $this->resetForm();

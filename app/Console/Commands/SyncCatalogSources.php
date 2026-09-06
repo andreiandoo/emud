@@ -21,12 +21,14 @@ class SyncCatalogSources extends Command
             $query->where('code', $code);
         } elseif (! $this->option('all')) {
             $this->error('Provide a source code or use --all.');
+
             return self::FAILURE;
         }
 
         $sources = $query->get();
         if ($sources->isEmpty()) {
             $this->warn('No matching active catalog sources.');
+
             return self::FAILURE;
         }
 

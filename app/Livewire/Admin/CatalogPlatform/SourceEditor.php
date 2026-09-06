@@ -13,28 +13,53 @@ use Livewire\Component;
 class SourceEditor extends Component
 {
     public ?CatalogSource $source = null;
+
     public string $name = '';
+
     public string $code = '';
+
     public string $sourceType = 'open_dataset';
+
     public string $protocol = 'http';
+
     public ?string $connectorClass = null;
+
+    public ?string $canonicalizerClass = null;
+
     public ?string $baseUrl = null;
+
     public ?string $catalogEndpoint = null;
+
     public string $rightsClass = 'unknown_pending_review';
+
     public bool $allowInternal = true;
+
     public bool $allowEcommerce = false;
+
     public bool $allowDerived = false;
+
     public bool $allowApiRedistribution = false;
+
     public bool $allowBulkExport = false;
+
     public bool $allowMediaRedistribution = false;
+
     public bool $attributionRequired = false;
+
     public bool $isActive = true;
+
     public ?string $licenseName = null;
+
     public ?string $licenseUrl = null;
+
     public ?string $legalNotes = null;
+
     public string $credentialsJson = '{}';
+
     public string $settingsJson = '{}';
+
     public string $mappingJson = '{}';
+
     public string $capabilitiesJson = '{}';
 
     public function mount(?CatalogSource $source = null): void
@@ -42,13 +67,13 @@ class SourceEditor extends Component
         if (! $source?->exists) {
             return;
         }
-
         $this->source = $source;
         $this->name = $source->name;
         $this->code = $source->code;
         $this->sourceType = $source->source_type;
         $this->protocol = $source->protocol;
         $this->connectorClass = $source->connector_class;
+        $this->canonicalizerClass = $source->canonicalizer_class;
         $this->baseUrl = $source->base_url;
         $this->catalogEndpoint = $source->catalog_endpoint;
         $this->rightsClass = $source->rights_class->value;
@@ -76,6 +101,8 @@ class SourceEditor extends Component
             'code' => ['required', 'string', 'max:64', Rule::unique('catalog_sources', 'code')->ignore($this->source?->id)],
             'sourceType' => ['required', 'string', 'max:48'],
             'protocol' => ['required', 'string', 'max:24'],
+            'connectorClass' => ['nullable', 'string', 'max:255'],
+            'canonicalizerClass' => ['nullable', 'string', 'max:255'],
             'rightsClass' => ['required', Rule::enum(CatalogRightsClass::class)],
             'baseUrl' => ['nullable', 'url'],
             'catalogEndpoint' => ['nullable', 'url'],
@@ -93,6 +120,7 @@ class SourceEditor extends Component
             'source_type' => $this->sourceType,
             'protocol' => $this->protocol,
             'connector_class' => blank($this->connectorClass) ? null : $this->connectorClass,
+            'canonicalizer_class' => blank($this->canonicalizerClass) ? null : $this->canonicalizerClass,
             'base_url' => blank($this->baseUrl) ? null : $this->baseUrl,
             'catalog_endpoint' => blank($this->catalogEndpoint) ? null : $this->catalogEndpoint,
             'rights_class' => $this->rightsClass,

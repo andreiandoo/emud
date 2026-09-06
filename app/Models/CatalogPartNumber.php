@@ -23,4 +23,9 @@ class CatalogPartNumber extends Model
     {
         return $this->belongsTo(VehicleMake::class, 'oe_make_id');
     }
+
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(CatalogSource::class, 'catalog_source_id');
+    }
 }

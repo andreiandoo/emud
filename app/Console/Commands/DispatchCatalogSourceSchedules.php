@@ -41,6 +41,7 @@ class DispatchCatalogSourceSchedules extends Command
             });
 
         $this->info("Dispatched {$count} catalog source schedule(s).");
+
         return self::SUCCESS;
     }
 }
