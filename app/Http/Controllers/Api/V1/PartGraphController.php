@@ -15,6 +15,7 @@ class PartGraphController extends Controller
             'scheme' => ['nullable', 'string', 'max:32'],
             'depth' => ['nullable', 'integer', 'min:0', 'max:4'],
             'max_nodes' => ['nullable', 'integer', 'min:1', 'max:250'],
+            'max_edges' => ['nullable', 'integer', 'min:1', 'max:2000'],
         ]);
 
         return response()->json([
@@ -23,6 +24,7 @@ class PartGraphController extends Controller
                 $validated['scheme'] ?? null,
                 (int) ($validated['depth'] ?? 2),
                 (int) ($validated['max_nodes'] ?? 100),
+                (int) ($validated['max_edges'] ?? 800),
             ),
         ]);
     }
