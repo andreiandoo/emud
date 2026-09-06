@@ -8,6 +8,7 @@ use App\Models\CatalogPart;
 use App\Models\CatalogPartNumber;
 use App\Models\CatalogSource;
 use App\Models\CatalogSourceRecord;
+use App\Models\CatalogUnresolvedPartRelation;
 use App\Models\VehicleConfiguration;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
@@ -16,7 +17,7 @@ use Livewire\Component;
 #[Layout('layouts::admin')]
 class QualityDashboard extends Component
 {
-    private const CACHE_KEY = 'catalog:quality-dashboard:v1';
+    private const CACHE_KEY = 'catalog:quality-dashboard:v2';
 
     public function refreshMetrics(): void
     {
@@ -38,6 +39,11 @@ class QualityDashboard extends Component
                 ->where(fn ($query) => $query->whereNull('confidence')->orWhere('confidence', '<', 70))
                 ->count();
             $openConflicts = CatalogConflict::query()->where('status', 'open')->count();
+            $pendingRelations = CatalogUnresolvedPartRelation::query()->where('status', 'pending')->count();
+            $stalePendingRelations = CatalogUnresolvedPartRelation::query()
+                ->where('status', 'pending')
+                ->where('resolution_attempts', '>=', 3)
+                ->count();
             $backlogStatuses = ['unprocessed', 'candidate', 'ambiguous', 'failed'];
             $backlogByStatus = CatalogSourceRecord::query()
                 ->whereIn('mapping_status', $backlogStatuses)
@@ -58,6 +64,8 @@ class QualityDashboard extends Component
                 'candidate_fitments' => $candidateFitments,
                 'low_confidence_fitments' => $lowConfidenceFitments,
                 'open_conflicts' => $openConflicts,
+                'pending_relations' => $pendingRelations,
+                'stale_pending_relations' => $stalePendingRelations,
                 'part_fitment_coverage' => $this->percent($parts - $partsWithoutFitments, $parts),
                 'vehicle_fitment_coverage' => $this->percent($vehicles - $vehiclesWithoutFitments, $vehicles),
                 'backlog_by_status' => $backlogByStatus,
