@@ -15,6 +15,9 @@ class CatalogPartGraphQuery
     /**
      * Resolve an identifier and traverse permissioned canonical part relations.
      *
+     * Traversal is breadth-first and batched per depth so graph resolution stays
+     * query-bounded even when a component contains many cross-reference edges.
+     *
      * @return array{seeds: Collection<int, CatalogPart>, nodes: array<int, array<string, mixed>>, edges: array<int, array<string, mixed>>, truncated: bool}
      */
     public function resolve(
@@ -35,11 +38,16 @@ class CatalogPartGraphQuery
 
         $nodes = [];
         $edges = [];
-        $queue = [];
         $visitedDepth = [];
         $truncated = false;
+        $frontier = [];
 
         foreach ($seeds as $part) {
+            if (count($nodes) >= $maxNodes) {
+                $truncated = true;
+                break;
+            }
+
             $nodes[$part->id] = [
                 'part' => $part,
                 'depth' => 0,
@@ -47,71 +55,84 @@ class CatalogPartGraphQuery
                 'seed' => true,
             ];
             $visitedDepth[$part->id] = 0;
-            $queue[] = [$part->id, 0, 100.0];
+            $frontier[$part->id] = 100.0;
         }
 
-        while ($queue !== []) {
-            [$partId, $currentDepth, $pathConfidence] = array_shift($queue);
-            if ($currentDepth >= $depth) {
-                continue;
-            }
+        for ($currentDepth = 0; $currentDepth < $depth && $frontier !== []; $currentDepth++) {
+            $frontierIds = array_keys($frontier);
+            $relations = $this->relationsForParts($frontierIds, max(1000, $maxEdges - count($edges)));
+            $candidates = [];
 
-            $relations = $this->relationsForPart($partId);
             foreach ($relations as $relation) {
-                if (count($edges) >= $maxEdges) {
-                    $truncated = true;
-                    break 2;
-                }
-
-                $forward = $relation->source_part_id === $partId;
-                $nextId = $forward ? $relation->target_part_id : $relation->source_part_id;
-                if (! $nextId || $nextId === $partId) {
-                    continue;
-                }
-
-                $edgeKey = $relation->id.':'.($forward ? 'forward' : 'reverse');
-                if (! isset($edges[$edgeKey])) {
-                    $edges[$edgeKey] = [
-                        'relation' => $relation,
-                        'from_part_id' => $partId,
-                        'to_part_id' => $nextId,
-                        'traversal_direction' => $forward ? 'forward' : 'reverse',
-                    ];
-                }
-
-                $nextDepth = $currentDepth + 1;
-                $edgeConfidence = (float) ($relation->confidence ?? 0);
-                $nextConfidence = min($pathConfidence, $edgeConfidence > 0 ? $edgeConfidence : $pathConfidence);
-
-                if (! isset($nodes[$nextId])) {
-                    if (count($nodes) >= $maxNodes) {
+                foreach ($this->traversableDirections($relation, $frontier) as $direction) {
+                    if (count($edges) >= $maxEdges) {
                         $truncated = true;
+                        break 3;
+                    }
+
+                    $fromId = $direction['from'];
+                    $nextId = $direction['to'];
+                    if ($nextId === $fromId) {
                         continue;
                     }
 
-                    $part = CatalogPart::query()
-                        ->with(['brand', 'category', 'numbers.brand', 'numbers.oeMake', 'numbers.source'])
-                        ->find($nextId);
+                    $edgeKey = $relation->id.':'.$fromId;
+                    $edges[$edgeKey] ??= [
+                        'relation' => $relation,
+                        'from_part_id' => $fromId,
+                        'to_part_id' => $nextId,
+                        'traversal_direction' => $direction['direction'],
+                    ];
+
+                    $edgeConfidence = (float) ($relation->confidence ?? 0);
+                    $pathConfidence = (float) ($frontier[$fromId] ?? 100.0);
+                    $nextConfidence = min($pathConfidence, $edgeConfidence > 0 ? $edgeConfidence : $pathConfidence);
+                    $nextDepth = $currentDepth + 1;
+
+                    if (isset($nodes[$nextId])) {
+                        $nodes[$nextId]['path_confidence'] = max((float) $nodes[$nextId]['path_confidence'], $nextConfidence);
+                        $nodes[$nextId]['depth'] = min((int) $nodes[$nextId]['depth'], $nextDepth);
+                    }
+
+                    if (! isset($visitedDepth[$nextId]) || $nextDepth < $visitedDepth[$nextId]) {
+                        $candidates[$nextId] = max((float) ($candidates[$nextId] ?? 0), $nextConfidence);
+                    }
+                }
+            }
+
+            if ($candidates === []) {
+                break;
+            }
+
+            $missingIds = array_values(array_diff(array_keys($candidates), array_keys($nodes)));
+            $remainingNodeCapacity = $maxNodes - count($nodes);
+            if (count($missingIds) > $remainingNodeCapacity) {
+                $truncated = true;
+                $missingIds = array_slice($missingIds, 0, max(0, $remainingNodeCapacity));
+            }
+
+            $loaded = $this->partsByIds($missingIds)->keyBy('id');
+            $nextFrontier = [];
+            foreach ($candidates as $nextId => $nextConfidence) {
+                if (! isset($nodes[$nextId])) {
+                    $part = $loaded->get($nextId);
                     if (! $part) {
                         continue;
                     }
 
                     $nodes[$nextId] = [
                         'part' => $part,
-                        'depth' => $nextDepth,
+                        'depth' => $currentDepth + 1,
                         'path_confidence' => $nextConfidence,
                         'seed' => false,
                     ];
-                } else {
-                    $nodes[$nextId]['path_confidence'] = max((float) $nodes[$nextId]['path_confidence'], $nextConfidence);
-                    $nodes[$nextId]['depth'] = min((int) $nodes[$nextId]['depth'], $nextDepth);
                 }
 
-                if (! isset($visitedDepth[$nextId]) || $nextDepth < $visitedDepth[$nextId]) {
-                    $visitedDepth[$nextId] = $nextDepth;
-                    $queue[] = [$nextId, $nextDepth, $nextConfidence];
-                }
+                $visitedDepth[$nextId] = $currentDepth + 1;
+                $nextFrontier[$nextId] = max((float) ($nextFrontier[$nextId] ?? 0), $nextConfidence);
             }
+
+            $frontier = $nextFrontier;
         }
 
         return [
@@ -145,18 +166,58 @@ class CatalogPartGraphQuery
     }
 
     /** @return Collection<int, CatalogPartRelation> */
-    private function relationsForPart(int $partId): Collection
+    private function relationsForParts(array $partIds, int $limit): Collection
     {
         return CatalogPartRelation::query()
-            ->with(['source', 'sourcePart.brand', 'targetPart.brand'])
+            ->with('source')
             ->whereHas('source', fn ($query) => $query->where('allow_api_redistribution', true))
-            ->where(function ($query) use ($partId): void {
-                $query->where('source_part_id', $partId)
-                    ->orWhere('target_part_id', $partId);
+            ->where(function ($query) use ($partIds): void {
+                $query->whereIn('source_part_id', $partIds)
+                    ->orWhereIn('target_part_id', $partIds);
             })
             ->orderByDesc('confidence')
             ->orderBy('id')
-            ->limit(1000)
+            ->limit(min(max($limit, 1), 5000))
+            ->get();
+    }
+
+    /**
+     * @param array<int, float> $frontier
+     * @return array<int, array{from:int,to:int,direction:string}>
+     */
+    private function traversableDirections(CatalogPartRelation $relation, array $frontier): array
+    {
+        $directions = [];
+
+        if (isset($frontier[$relation->source_part_id])) {
+            $directions[] = [
+                'from' => $relation->source_part_id,
+                'to' => $relation->target_part_id,
+                'direction' => 'forward',
+            ];
+        }
+
+        if (isset($frontier[$relation->target_part_id])) {
+            $directions[] = [
+                'from' => $relation->target_part_id,
+                'to' => $relation->source_part_id,
+                'direction' => 'reverse',
+            ];
+        }
+
+        return $directions;
+    }
+
+    /** @return Collection<int, CatalogPart> */
+    private function partsByIds(array $ids): Collection
+    {
+        if ($ids === []) {
+            return collect();
+        }
+
+        return CatalogPart::query()
+            ->with(['brand', 'category', 'numbers.brand', 'numbers.oeMake', 'numbers.source'])
+            ->whereKey($ids)
             ->get();
     }
 }
