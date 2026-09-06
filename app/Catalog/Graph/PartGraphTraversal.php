@@ -24,7 +24,8 @@ class PartGraphTraversal
         int $depth = 2,
         int $maxNodes = 100,
         int $maxEdges = 800,
-    ): array {
+    ): array
+    {
         $depth = max(0, min($depth, 4));
         $maxNodes = max(1, min($maxNodes, 250));
         $maxEdges = max(1, min($maxEdges, 2000));
