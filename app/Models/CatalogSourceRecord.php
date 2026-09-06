@@ -31,6 +31,16 @@ class CatalogSourceRecord extends Model
         return $this->belongsTo(CatalogImportRun::class, 'catalog_import_run_id');
     }
 
+    public function supplierProduct(): BelongsTo
+    {
+        return $this->belongsTo(SupplierProduct::class);
+    }
+
+    public function supplierFeedArtifact(): BelongsTo
+    {
+        return $this->belongsTo(SupplierFeedArtifact::class);
+    }
+
     public function assertions(): HasMany
     {
         return $this->hasMany(CatalogSourceAssertion::class, 'catalog_source_record_id');
