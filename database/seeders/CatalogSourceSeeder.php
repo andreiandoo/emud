@@ -116,7 +116,6 @@ class CatalogSourceSeeder extends Seeder
                     'vehicle_type_batch_size' => 50,
                     'model_year_make_batch_size' => 5,
                     'model_year_from' => 1996,
-                    'model_year_to' => null,
                     'reference_checkpoints' => [],
                     'user_agent' => 'eMUD-Automotive-Catalog/1.0 (https://github.com/andreiandoo/emud)',
                 ],
