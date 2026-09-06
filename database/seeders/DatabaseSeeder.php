@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             AttributeSeeder::class,
             CommerceProviderSeeder::class,
             CatalogSourceSeeder::class,
+            SupplierProfileSeeder::class,
         ]);
 
         if (filled(env('ADMIN_EMAIL')) && filled(env('ADMIN_PASSWORD'))) {

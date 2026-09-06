@@ -39,6 +39,11 @@ class Supplier extends Model
         return $this->hasMany(SupplierSyncRun::class);
     }
 
+    public function syncSchedules(): HasMany
+    {
+        return $this->hasMany(SupplierSyncSchedule::class);
+    }
+
     public function feedArtifacts(): HasMany
     {
         return $this->hasMany(SupplierFeedArtifact::class);

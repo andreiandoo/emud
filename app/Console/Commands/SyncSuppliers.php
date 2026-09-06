@@ -21,9 +21,14 @@ class SyncSuppliers extends Command
             return self::INVALID;
         }
 
+        $supplierCode = $this->argument('supplier');
         $suppliers = Supplier::query()
             ->where('is_active', true)
-            ->when($this->argument('supplier'), fn ($query, $code) => $query->where('code', $code))
+            ->when($supplierCode, fn ($query, $code) => $query->where('code', $code))
+            ->when(! $supplierCode, fn ($query) => $query->whereDoesntHave(
+                'syncSchedules',
+                fn ($scheduleQuery) => $scheduleQuery->where('mode', $mode)->where('is_enabled', true),
+            ))
             ->get();
 
         if ($suppliers->isEmpty()) {

@@ -18,7 +18,9 @@ return new class extends Migration
             $table->text('catalog_endpoint')->nullable();
             $table->text('stock_endpoint')->nullable();
             $table->text('price_endpoint')->nullable();
-            $table->jsonb('credentials')->nullable();
+            // Laravel's encrypted:array cast persists opaque ciphertext, not JSON.
+            // Keep this as text so PostgreSQL does not reject encrypted values.
+            $table->longText('credentials')->nullable();
             $table->jsonb('field_mapping')->nullable();
             $table->jsonb('settings')->nullable();
             $table->string('default_currency', 3)->default('RON');

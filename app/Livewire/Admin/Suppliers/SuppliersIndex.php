@@ -26,7 +26,11 @@ class SuppliersIndex extends Component
     public function render()
     {
         return view('livewire.admin.suppliers.suppliers-index', [
-            'suppliers' => Supplier::query()->withCount('products')->latest()->get(),
+            'suppliers' => Supplier::query()
+                ->with('syncSchedules')
+                ->withCount('products')
+                ->latest()
+                ->get(),
         ]);
     }
 }
