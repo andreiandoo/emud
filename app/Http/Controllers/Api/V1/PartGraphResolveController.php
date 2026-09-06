@@ -31,6 +31,10 @@ class PartGraphResolveController extends Controller
             (int) ($validated['max_edges'] ?? 250),
         );
 
+        $publicIds = collect($result['nodes'])->mapWithKeys(
+            fn (array $node): array => [$node['part']->id => 'prt_'.$node['part']->public_id],
+        );
+
         $nodes = collect($result['nodes'])->map(function (array $node) use ($serializer): array {
             return [
                 'part' => $serializer->part($node['part']),
@@ -40,13 +44,13 @@ class PartGraphResolveController extends Controller
             ];
         })->values();
 
-        $edges = collect($result['edges'])->map(function (array $edge): array {
+        $edges = collect($result['edges'])->map(function (array $edge) use ($publicIds): array {
             $relation = $edge['relation'];
 
             return [
                 'id' => 'rel_'.$relation->id,
-                'from_part_id' => 'prt_'.$edge['from_part_id'],
-                'to_part_id' => 'prt_'.$edge['to_part_id'],
+                'from_part_id' => $publicIds->get($edge['from_part_id']),
+                'to_part_id' => $publicIds->get($edge['to_part_id']),
                 'relation_type' => $relation->relation_type,
                 'directed' => (bool) $relation->is_directed,
                 'traversal_direction' => $edge['traversal_direction'],
