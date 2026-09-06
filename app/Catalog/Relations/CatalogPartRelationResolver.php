@@ -70,7 +70,8 @@ class CatalogPartRelationResolver
 
         CatalogUnresolvedPartRelation::query()
             ->where('status', 'pending')
-            ->orderByRaw('last_resolution_attempt_at nulls first')
+            ->orderByRaw('CASE WHEN last_resolution_attempt_at IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('last_resolution_attempt_at')
             ->orderBy('id')
             ->limit($limit)
             ->get()
@@ -104,6 +105,19 @@ class CatalogPartRelationResolver
             return false;
         }
 
+        return $this->resolveTo($pending, $target);
+    }
+
+    public function resolveTo(
+        CatalogUnresolvedPartRelation $pending,
+        CatalogPart $target,
+        ?int $reviewedBy = null,
+        ?string $reviewNote = null,
+    ): bool {
+        if ($pending->status !== 'pending' || $target->id === $pending->source_part_id) {
+            return false;
+        }
+
         $record = $pending->sourceRecord;
         $sourcePart = $pending->sourcePart;
         if (! $record || ! $sourcePart) {
@@ -122,6 +136,9 @@ class CatalogPartRelationResolver
             'status' => 'resolved',
             'resolved_target_part_id' => $target->id,
             'resolved_at' => now(),
+            'reviewed_by' => $reviewedBy,
+            'reviewed_at' => $reviewedBy || $reviewNote ? now() : $pending->reviewed_at,
+            'review_note' => $reviewNote ?? $pending->review_note,
         ]);
 
         return true;
