@@ -193,7 +193,7 @@ SELECT DISTINCT
     [year] AS [year]
 SQL;
 
-        $where = ["[Mk] IS NOT NULL", "[Cn] IS NOT NULL"];
+        $where = ['[Mk] IS NOT NULL', '[Cn] IS NOT NULL'];
         if ($year !== null && $year > 0) {
             $where[] = '[year] = '.$year;
         }
