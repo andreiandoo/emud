@@ -6,6 +6,7 @@ use App\Catalog\Canonicalization\CanonicalizationResult;
 use App\Catalog\Canonicalization\Contracts\CatalogRecordCanonicalizer;
 use App\Catalog\Canonicalization\SourceAssertionWriter;
 use App\Catalog\Normalization\IdentifierNormalizer;
+use App\Catalog\Relations\CatalogPartRelationResolver;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\CatalogChangeEvent;
@@ -28,6 +29,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
     public function __construct(
         private readonly IdentifierNormalizer $normalizer,
         private readonly SourceAssertionWriter $assertions,
+        private readonly CatalogPartRelationResolver $relations,
     ) {}
 
     public function canonicalize(CatalogSourceRecord $record): CanonicalizationResult
@@ -90,17 +92,35 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
             $this->upsertNumber($record, $part, 'EAN_GTIN', $ean, null, null, $confidence);
         }
 
-        foreach ($this->referenceList($this->value($row, $mapping, 'oe_numbers')) as $reference) {
+        $oeNumbers = $this->referenceList($this->value($row, $mapping, 'oe_numbers'));
+        foreach ($oeNumbers as $reference) {
             $makeId = $this->resolveOeMake($reference['make'] ?? null);
             $this->upsertNumber($record, $part, strtoupper($reference['scheme'] ?? 'OE'), (string) $reference['number'], null, $makeId, $confidence);
         }
 
-        foreach ($this->referenceList($this->value($row, $mapping, 'iam_numbers')) as $reference) {
+        $iamNumbers = $this->referenceList($this->value($row, $mapping, 'iam_numbers'));
+        foreach ($iamNumbers as $reference) {
             $this->upsertNumber($record, $part, strtoupper($reference['scheme'] ?? 'IAM'), (string) $reference['number'], null, null, $confidence);
         }
 
-        $this->upsertAttributes($record, $part, $this->value($row, $mapping, 'attributes'));
-        $this->upsertFitments($record, $part, $this->value($row, $mapping, 'fitments'));
+        $relationConfidence = (float) ($record->source->settings['relation_confidence'] ?? $confidence);
+        $crossReferences = $this->referenceList($this->value($row, $mapping, 'cross_references'));
+        foreach ($crossReferences as $reference) {
+            $this->relations->capture($record, $part, $reference, 'equivalent', $relationConfidence);
+        }
+
+        $supersessions = $this->referenceList($this->value($row, $mapping, 'supersessions'));
+        foreach ($supersessions as $reference) {
+            $defaultRelation = strtolower((string) ($reference['direction'] ?? '')) === 'supersedes'
+                ? 'supersedes'
+                : 'superseded_by';
+            $this->relations->capture($record, $part, $reference, $defaultRelation, $relationConfidence);
+        }
+
+        $rawAttributes = $this->value($row, $mapping, 'attributes');
+        $rawFitments = $this->value($row, $mapping, 'fitments');
+        $this->upsertAttributes($record, $part, $rawAttributes);
+        $this->upsertFitments($record, $part, $rawFitments);
 
         $this->assertions->write($record, 'catalog_part', $part->id, [
             'brand' => $brandName,
@@ -108,6 +128,12 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
             'name' => $name,
             'description' => $description,
             'category_id' => $category?->id,
+            'oe_numbers' => $oeNumbers ?: null,
+            'iam_numbers' => $iamNumbers ?: null,
+            'cross_references' => $crossReferences ?: null,
+            'supersessions' => $supersessions ?: null,
+            'attributes' => is_array($rawAttributes) && $rawAttributes !== [] ? $rawAttributes : null,
+            'fitments' => is_array($rawFitments) && $rawFitments !== [] ? $rawFitments : null,
         ], $confidence);
 
         CatalogChangeEvent::query()->create([
@@ -165,6 +191,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
             'oe_make_id' => $oeMakeId,
             'number_raw' => $raw,
             'number_compact' => $this->normalizer->compact($raw),
+            'catalog_source_record_id' => $record->id,
             'confidence' => $confidence,
         ]);
     }
@@ -181,7 +208,11 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
                 continue;
             }
 
-            $payload = ['catalog_source_id' => $record->catalog_source_id, 'confidence' => (float) ($record->source->settings['attribute_confidence'] ?? 95)];
+            $payload = [
+                'catalog_source_id' => $record->catalog_source_id,
+                'catalog_source_record_id' => $record->id,
+                'confidence' => (float) ($record->source->settings['attribute_confidence'] ?? 95),
+            ];
             if (is_numeric($value) && $attribute->type === 'number') {
                 $payload['value_number'] = $value;
             } elseif (is_array($value)) {
@@ -236,6 +267,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
                 'valid_to' => $fitmentRow['valid_to'] ?? null,
                 'status' => $fitmentRow['status'] ?? 'confirmed',
                 'confidence' => $confidence,
+                'catalog_source_record_id' => $record->id,
             ]);
 
             $fitment->constraints()->delete();
@@ -287,6 +319,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
         return VehicleMake::query()->where('name', 'ilike', trim($make))->value('id');
     }
 
+    /** @return array<int, array<string, mixed>> */
     private function referenceList(mixed $value): array
     {
         if ($value === null || $value === '') {
