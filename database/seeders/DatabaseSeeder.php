@@ -10,12 +10,14 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        $this->call([CategorySeeder::class, AttributeSeeder::class, CommerceProviderSeeder::class]);
+        $this->call([
+            CategorySeeder::class,
+            AttributeSeeder::class,
+            CommerceProviderSeeder::class,
+            CatalogSourceSeeder::class,
+        ]);
 
         if (filled(env('ADMIN_EMAIL')) && filled(env('ADMIN_PASSWORD'))) {
             User::query()->updateOrCreate(
