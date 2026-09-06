@@ -15,10 +15,12 @@ class SupplierProduct extends Model
     {
         return [
             'raw_payload' => 'array',
+            'technical_payload' => 'array',
             'catalog_mapping_reason' => 'array',
             'last_seen_at' => 'datetime',
             'discontinued_at' => 'datetime',
             'catalog_mapped_at' => 'datetime',
+            'technical_promoted_at' => 'datetime',
         ];
     }
 
@@ -45,6 +47,11 @@ class SupplierProduct extends Model
     public function catalogPart(): BelongsTo
     {
         return $this->belongsTo(CatalogPart::class);
+    }
+
+    public function lastSupplierSyncRun(): BelongsTo
+    {
+        return $this->belongsTo(SupplierSyncRun::class, 'last_supplier_sync_run_id');
     }
 
     public function catalogCandidates(): HasMany
