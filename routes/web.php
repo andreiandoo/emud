@@ -5,6 +5,13 @@ use App\Livewire\Admin\Catalog\BrandsIndex;
 use App\Livewire\Admin\Catalog\CategoriesIndex;
 use App\Livewire\Admin\Catalog\ProductEditor;
 use App\Livewire\Admin\Catalog\ProductsIndex;
+use App\Livewire\Admin\CatalogPlatform\ConflictsIndex as CatalogConflictsIndex;
+use App\Livewire\Admin\CatalogPlatform\Explorer as CatalogExplorer;
+use App\Livewire\Admin\CatalogPlatform\ImportRunsIndex as CatalogImportRunsIndex;
+use App\Livewire\Admin\CatalogPlatform\PartDetail as CatalogPartDetail;
+use App\Livewire\Admin\CatalogPlatform\SourceEditor as CatalogSourceEditor;
+use App\Livewire\Admin\CatalogPlatform\SourcesIndex as CatalogSourcesIndex;
+use App\Livewire\Admin\CatalogPlatform\VehicleDetail as CatalogVehicleDetail;
 use App\Livewire\Admin\CommerceSettings;
 use App\Livewire\Admin\Content\ArticleEditor;
 use App\Livewire\Admin\Content\ArticlesIndex;
@@ -20,35 +27,19 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
-
-Route::middleware('guest')->group(function (): void {
-    Route::view('/admin/login', 'auth.admin-login')->name('login');
-    Route::post('/admin/login', function (Request $request) {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            return back()->withErrors(['email' => 'Datele de autentificare nu sunt corecte.']);
-        }
-
-        $request->session()->regenerate();
-
-        return redirect()->intended(route('admin.dashboard'));
-    })->name('admin.login.store');
-});
-
-Route::post('/admin/logout', function (Request $request) {
-    Auth::logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-
-    return redirect()->route('login');
-})->middleware('auth')->name('admin.logout');
+Route::middleware('guest')->group(function (): void { Route::view('/admin/login', 'auth.admin-login')->name('login'); Route::post('/admin/login', function (Request $request) { $credentials = $request->validate(['email' => ['required','email'],'password' => ['required','string']]); if (! Auth::attempt($credentials, $request->boolean('remember'))) { return back()->withErrors(['email' => 'Datele de autentificare nu sunt corecte.']); } $request->session()->regenerate(); return redirect()->intended(route('admin.dashboard')); })->name('admin.login.store'); });
+Route::post('/admin/logout', function (Request $request) { Auth::logout(); $request->session()->invalidate(); $request->session()->regenerateToken(); return redirect()->route('login'); })->middleware('auth')->name('admin.logout');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', Dashboard::class)->name('dashboard');
+    Route::get('/catalog-explorer', CatalogExplorer::class)->name('catalog-platform.explorer');
+    Route::get('/catalog-sources', CatalogSourcesIndex::class)->name('catalog-platform.sources');
+    Route::get('/catalog-sources/create', CatalogSourceEditor::class)->name('catalog-platform.sources.create');
+    Route::get('/catalog-sources/{source}/edit', CatalogSourceEditor::class)->name('catalog-platform.sources.edit');
+    Route::get('/catalog-imports', CatalogImportRunsIndex::class)->name('catalog-platform.imports');
+    Route::get('/catalog-conflicts', CatalogConflictsIndex::class)->name('catalog-platform.conflicts');
+    Route::get('/catalog-parts/{part}', CatalogPartDetail::class)->name('catalog-platform.parts.show');
+    Route::get('/catalog-vehicles/{vehicle}', CatalogVehicleDetail::class)->name('catalog-platform.vehicles.show');
     Route::get('/products', ProductsIndex::class)->name('products.index');
     Route::get('/products/create', ProductEditor::class)->name('products.create');
     Route::get('/products/{product}/edit', ProductEditor::class)->name('products.edit');
