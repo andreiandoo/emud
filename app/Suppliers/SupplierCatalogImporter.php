@@ -21,14 +21,11 @@ class SupplierCatalogImporter
     {
         $result = DB::transaction(function () use ($supplier, $record, $mode): array {
             $sourceHash = hash('sha256', json_encode($record->raw, JSON_THROW_ON_ERROR));
-            $supplierProduct = SupplierProduct::query()->firstOrNew([
-                'supplier_id' => $supplier->id,
-                'external_id' => $record->externalId,
-            ]);
+            $supplierProduct = SupplierProduct::query()->firstOrNew(['supplier_id' => $supplier->id, 'external_id' => $record->externalId]);
             $created = ! $supplierProduct->exists;
             $changed = $created || $supplierProduct->source_hash !== $sourceHash;
-
             $variant = $this->findCanonicalVariant($record);
+
             if (! $variant && ($supplier->settings['auto_create_products'] ?? false)) {
                 $variant = $this->createCanonicalProduct($supplier, $record);
             }
@@ -38,11 +35,14 @@ class SupplierCatalogImporter
                 'variant_id' => $variant?->id,
                 'supplier_sku' => $record->sku,
                 'ean' => $record->ean,
+                'manufacturer_part_number' => $record->manufacturerPartNumber,
+                'raw_brand' => $record->brand,
                 'name' => $record->name,
                 'source_url' => $record->sourceUrl,
                 'source_hash' => $sourceHash,
                 'raw_payload' => $record->raw,
                 'mapping_status' => $variant ? 'mapped' : 'unmapped',
+                'catalog_mapping_status' => $supplierProduct->catalog_mapping_status ?: 'unmapped',
                 'last_seen_at' => now(),
                 'discontinued_at' => null,
             ])->save();
@@ -64,18 +64,10 @@ class SupplierCatalogImporter
             $new = $offer->only(['cost_price', 'recommended_retail_price', 'stock_quantity', 'stock_status']);
             $offerChanged = $offer->wasRecentlyCreated || $old !== $new;
             if (! $offer->wasRecentlyCreated && $offerChanged) {
-                DB::table('supplier_offer_history')->insert($new + [
-                    'supplier_offer_id' => $offer->id,
-                    'recorded_at' => now(),
-                ]);
+                DB::table('supplier_offer_history')->insert($new + ['supplier_offer_id' => $offer->id, 'recorded_at' => now()]);
             }
 
-            return [
-                'created' => $created,
-                'updated' => ! $created && $changed,
-                'product_id' => $variant?->product_id,
-                'offer_changed' => $offerChanged,
-            ];
+            return ['created' => $created, 'updated' => ! $created && $changed, 'product_id' => $variant?->product_id, 'offer_changed' => $offerChanged];
         }, attempts: 3);
 
         if ($result['product_id'] && $result['offer_changed']) {
@@ -87,10 +79,7 @@ class SupplierCatalogImporter
 
     private function findCanonicalVariant(SupplierRecord $record): ?ProductVariant
     {
-        if (! $record->ean && ! $record->manufacturerPartNumber) {
-            return null;
-        }
-
+        if (! $record->ean && ! $record->manufacturerPartNumber) { return null; }
         return ProductVariant::query()
             ->when($record->ean, fn ($query) => $query->where('barcode', $record->ean))
             ->when(! $record->ean && $record->manufacturerPartNumber, fn ($query) => $query->where('manufacturer_part_number', $record->manufacturerPartNumber))
@@ -99,10 +88,7 @@ class SupplierCatalogImporter
 
     private function createCanonicalProduct(Supplier $supplier, SupplierRecord $record): ProductVariant
     {
-        $brand = filled($record->brand)
-            ? Brand::query()->firstOrCreate(['slug' => Str::slug($record->brand)], ['name' => $record->brand])
-            : null;
-
+        $brand = filled($record->brand) ? Brand::query()->firstOrCreate(['slug' => Str::slug($record->brand)], ['name' => $record->brand]) : null;
         $product = Product::query()->create([
             'brand_id' => $brand?->id,
             'name' => $record->name,
