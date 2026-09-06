@@ -74,38 +74,55 @@ class CatalogPartRelationResolver
             ->limit($limit)
             ->get()
             ->each(function (CatalogUnresolvedPartRelation $pending) use (&$resolved): void {
-                $target = $this->resolveTarget(
-                    $pending->target_scheme,
-                    $pending->target_number_raw,
-                    $pending->target_brand_raw,
-                );
-
-                if (! $target || $target->id === $pending->source_part_id) {
-                    return;
+                if ($this->resolveOne($pending)) {
+                    $resolved++;
                 }
-
-                $record = $pending->sourceRecord;
-                if (! $record || ! $pending->sourcePart) {
-                    return;
-                }
-
-                $this->persistResolved(
-                    $record,
-                    $pending->sourcePart,
-                    $target,
-                    $pending->relation_type,
-                    (float) ($pending->confidence ?? 0),
-                );
-
-                $pending->update([
-                    'status' => 'resolved',
-                    'resolved_target_part_id' => $target->id,
-                    'resolved_at' => now(),
-                ]);
-                $resolved++;
             });
 
         return $resolved;
+    }
+
+    public function resolveOne(CatalogUnresolvedPartRelation|int $pending): bool
+    {
+        if (is_int($pending)) {
+            $pending = CatalogUnresolvedPartRelation::query()->findOrFail($pending);
+        }
+
+        if ($pending->status !== 'pending') {
+            return false;
+        }
+
+        $target = $this->resolveTarget(
+            $pending->target_scheme,
+            $pending->target_number_raw,
+            $pending->target_brand_raw,
+        );
+
+        if (! $target || $target->id === $pending->source_part_id) {
+            return false;
+        }
+
+        $record = $pending->sourceRecord;
+        $sourcePart = $pending->sourcePart;
+        if (! $record || ! $sourcePart) {
+            return false;
+        }
+
+        $this->persistResolved(
+            $record,
+            $sourcePart,
+            $target,
+            $pending->relation_type,
+            (float) ($pending->confidence ?? 0),
+        );
+
+        $pending->update([
+            'status' => 'resolved',
+            'resolved_target_part_id' => $target->id,
+            'resolved_at' => now(),
+        ]);
+
+        return true;
     }
 
     private function persistResolved(
