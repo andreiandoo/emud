@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\ChangesController;
 use App\Http\Controllers\Api\V1\CompatibilityController;
 use App\Http\Controllers\Api\V1\CoverageController;
 use App\Http\Controllers\Api\V1\PartByNumberController;
+use App\Http\Controllers\Api\V1\PartGraphController;
 use App\Http\Controllers\Api\V1\PartSearchController;
 use App\Http\Controllers\Api\V1\PartShowController;
 use App\Http\Controllers\Api\V1\VehiclePartsController;
@@ -21,6 +22,7 @@ Route::prefix('v1')->middleware(['catalog.api', 'throttle:api'])->group(function
     Route::get('/vehicles/{vehicle}', VehicleShowController::class)->whereNumber('vehicle');
     Route::get('/vehicles/{vehicle}/parts', VehiclePartsController::class)->whereNumber('vehicle');
     Route::get('/parts/search', PartSearchController::class);
+    Route::get('/parts/by-number/{number}/graph', PartGraphController::class);
     Route::get('/parts/by-number/{number}', PartByNumberController::class);
     Route::get('/parts/{part}', PartShowController::class);
     Route::post('/compatibility/check', CompatibilityController::class);

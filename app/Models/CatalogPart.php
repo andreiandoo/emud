@@ -52,4 +52,9 @@ class CatalogPart extends Model
     {
         return $this->hasMany(CatalogPartRelation::class, 'target_part_id');
     }
+
+    public function unresolvedRelations(): HasMany
+    {
+        return $this->hasMany(CatalogUnresolvedPartRelation::class, 'source_part_id');
+    }
 }

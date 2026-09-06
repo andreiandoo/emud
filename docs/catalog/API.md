@@ -22,7 +22,7 @@ Keys are stored as SHA-256 hashes. The plaintext key is returned only once when 
 
 An entity is publicly searchable only when at least one published `catalog_source_assertion` for that entity is marked `api_redistributable=true`.
 
-Fitment and number endpoints additionally require the underlying source to have `allow_api_redistribution=true`.
+Fitment, number and part-relation graph endpoints additionally require the underlying source evidence to have `allow_api_redistribution=true`.
 
 Internal admin/ecommerce visibility can therefore be broader than public API visibility.
 
@@ -35,6 +35,7 @@ GET  /api/v1/vehicles/{id}/parts
 
 GET  /api/v1/parts/search
 GET  /api/v1/parts/by-number/{number}
+GET  /api/v1/parts/by-number/{number}/graph
 GET  /api/v1/parts/{publicId}
 
 POST /api/v1/compatibility/check
@@ -42,9 +43,59 @@ GET  /api/v1/coverage
 GET  /api/v1/changes
 ```
 
-## API key creation (temporary CLI/Tinker workflow)
+The machine-readable contract is published in `public/openapi/catalog-v1.yaml`.
 
-Until the API-consumer admin UI is added:
+## Cross-reference / supersession graph
+
+`GET /api/v1/parts/by-number/{number}/graph` resolves a known identifier to seed canonical parts, then traverses canonical part relations.
+
+Query parameters:
+
+- `scheme` — optional identifier namespace such as `MPN`, `OE`, `IAM`, `EAN_GTIN`;
+- `depth` — `0..4`, default `2`;
+- `max_nodes` — `1..250`, default `100`.
+
+Example:
+
+```http
+GET /api/v1/parts/by-number/OC%20123/graph?scheme=MPN&depth=2&max_nodes=100
+```
+
+The response preserves graph structure:
+
+```json
+{
+  "data": {
+    "query": {"number": "OC 123", "scheme": "MPN", "depth": 2},
+    "seeds": ["prt_..."],
+    "nodes": [
+      {"distance": 0, "part": {"id": "prt_..."}},
+      {"distance": 1, "part": {"id": "prt_..."}}
+    ],
+    "edges": [
+      {
+        "from": "prt_...",
+        "to": "prt_...",
+        "relation_type": "equivalent",
+        "directed": false,
+        "confidence": 98,
+        "source": "SUPPLIER_MAHLE"
+      }
+    ],
+    "truncated": false
+  }
+}
+```
+
+The traversal is cycle-safe and bounded. An edge is returned only when the relation source permits API redistribution, and both endpoint parts must independently satisfy the public publication scope. This prevents a public identifier from being used as a bridge into restricted technical data.
+
+`truncated=true` means the result reached `max_nodes` or the bounded per-level relation scan and should not be interpreted as a complete connected component.
+
+## API consumer administration
+
+API consumers and keys are managed from the Catalog API admin surface. Keys should be issued with the minimum required scope/quota and rotated if exposed.
+
+Programmatic issuance remains available for development:
 
 ```php
 $consumer = App\Models\CatalogApiConsumer::create([
@@ -73,4 +124,22 @@ Canonicalization:
 php artisan catalog:sources:canonicalize EEA
 ```
 
+Deferred relation resolution:
+
+```bash
+php artisan catalog:relations:resolve --limit=50000
+```
+
 If a source has `settings.auto_canonicalize=true`, canonicalization is queued automatically after a successful source download.
+
+## Relation QA
+
+The admin surface `/admin/catalog-unresolved-relations` shows cross-references and supersessions that could not yet be mapped to a canonical target. Operators can:
+
+- retry automatic matching;
+- inspect source/record provenance and confidence;
+- manually link a known canonical part without changing the raw source row;
+- reject a bad source reference and record a reviewer note;
+- reopen rejected references later.
+
+Retry attempts and reviewer metadata are retained so the queue distinguishes never-reviewed data from repeatedly unresolved data.

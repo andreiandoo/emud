@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: eMUD Automotive Catalog API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Rights-filtered automotive catalog API. Only canonical facts backed by source
     evidence explicitly approved for API redistribution are exposed.
@@ -122,6 +122,30 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/Part' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /parts/by-number/{number}/graph:
+    get:
+      summary: Traverse API-redistributable equivalents and supersessions from a known part number
+      description: >-
+        Resolves the supplied number to one or more canonical seed parts, then performs a bounded
+        cycle-safe traversal over canonical part relations. Both relation evidence and every returned
+        part must independently be approved for API redistribution.
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: string } }
+        - { name: scheme, in: query, schema: { type: string, example: MPN } }
+        - { name: depth, in: query, schema: { type: integer, minimum: 0, maximum: 4, default: 2 } }
+        - { name: max_nodes, in: query, schema: { type: integer, minimum: 1, maximum: 250, default: 100 } }
+      responses:
+        '200':
+          description: Bounded canonical part relation graph
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PartGraph' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: Validation error }
         '429': { $ref: '#/components/responses/RateLimited' }
   /parts/{part}:
     get:
@@ -279,6 +303,38 @@ components:
         numbers:
           type: array
           items: { type: object, additionalProperties: true }
+    PartGraph:
+      type: object
+      required: [query, seeds, nodes, edges, truncated]
+      properties:
+        query:
+          type: object
+          properties:
+            number: { type: string }
+            scheme: { type: [string, 'null'] }
+            depth: { type: integer }
+        seeds:
+          type: array
+          items: { type: string, example: prt_01K... }
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              distance: { type: integer, minimum: 0 }
+              part: { $ref: '#/components/schemas/Part' }
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from: { type: string }
+              to: { type: string }
+              relation_type: { type: string, example: equivalent }
+              directed: { type: boolean }
+              confidence: { type: [number, 'null'] }
+              source: { type: [string, 'null'] }
+        truncated: { type: boolean }
     VinResolution:
       type: object
       properties:

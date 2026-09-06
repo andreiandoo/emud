@@ -70,42 +70,78 @@ class CatalogPartRelationResolver
 
         CatalogUnresolvedPartRelation::query()
             ->where('status', 'pending')
+            ->orderByRaw('CASE WHEN last_resolution_attempt_at IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('last_resolution_attempt_at')
             ->orderBy('id')
             ->limit($limit)
             ->get()
             ->each(function (CatalogUnresolvedPartRelation $pending) use (&$resolved): void {
-                $target = $this->resolveTarget(
-                    $pending->target_scheme,
-                    $pending->target_number_raw,
-                    $pending->target_brand_raw,
-                );
-
-                if (! $target || $target->id === $pending->source_part_id) {
-                    return;
+                if ($this->resolveOne($pending)) {
+                    $resolved++;
                 }
-
-                $record = $pending->sourceRecord;
-                if (! $record || ! $pending->sourcePart) {
-                    return;
-                }
-
-                $this->persistResolved(
-                    $record,
-                    $pending->sourcePart,
-                    $target,
-                    $pending->relation_type,
-                    (float) ($pending->confidence ?? 0),
-                );
-
-                $pending->update([
-                    'status' => 'resolved',
-                    'resolved_target_part_id' => $target->id,
-                    'resolved_at' => now(),
-                ]);
-                $resolved++;
             });
 
         return $resolved;
+    }
+
+    public function resolveOne(CatalogUnresolvedPartRelation $pending): bool
+    {
+        if ($pending->status !== 'pending') {
+            return false;
+        }
+
+        $pending->forceFill([
+            'resolution_attempts' => ((int) $pending->resolution_attempts) + 1,
+            'last_resolution_attempt_at' => now(),
+        ])->save();
+
+        $target = $this->resolveTarget(
+            $pending->target_scheme,
+            $pending->target_number_raw,
+            $pending->target_brand_raw,
+        );
+
+        if (! $target || $target->id === $pending->source_part_id) {
+            return false;
+        }
+
+        return $this->resolveTo($pending, $target);
+    }
+
+    public function resolveTo(
+        CatalogUnresolvedPartRelation $pending,
+        CatalogPart $target,
+        ?int $reviewedBy = null,
+        ?string $reviewNote = null,
+    ): bool {
+        if ($pending->status !== 'pending' || $target->id === $pending->source_part_id) {
+            return false;
+        }
+
+        $record = $pending->sourceRecord;
+        $sourcePart = $pending->sourcePart;
+        if (! $record || ! $sourcePart) {
+            return false;
+        }
+
+        $this->persistResolved(
+            $record,
+            $sourcePart,
+            $target,
+            $pending->relation_type,
+            (float) ($pending->confidence ?? 0),
+        );
+
+        $pending->update([
+            'status' => 'resolved',
+            'resolved_target_part_id' => $target->id,
+            'resolved_at' => now(),
+            'reviewed_by' => $reviewedBy,
+            'reviewed_at' => $reviewedBy || $reviewNote ? now() : $pending->reviewed_at,
+            'review_note' => $reviewNote ?? $pending->review_note,
+        ]);
+
+        return true;
     }
 
     private function persistResolved(

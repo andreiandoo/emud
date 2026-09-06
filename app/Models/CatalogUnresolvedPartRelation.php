@@ -14,6 +14,8 @@ class CatalogUnresolvedPartRelation extends Model
         return [
             'metadata' => 'array',
             'resolved_at' => 'datetime',
+            'last_resolution_attempt_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 
@@ -35,5 +37,10 @@ class CatalogUnresolvedPartRelation extends Model
     public function sourceRecord(): BelongsTo
     {
         return $this->belongsTo(CatalogSourceRecord::class, 'catalog_source_record_id');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 }

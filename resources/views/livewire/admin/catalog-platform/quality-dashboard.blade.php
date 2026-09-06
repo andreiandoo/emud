@@ -44,7 +44,9 @@
                 <div><dt class="text-stone-500">Piese fără numere</dt><dd class="mt-1 text-xl font-bold">{{ number_format($metrics['parts_without_numbers'], 0, ',', '.') }}</dd></div>
                 <div><dt class="text-stone-500">Fitment candidate</dt><dd class="mt-1 text-xl font-bold">{{ number_format($metrics['candidate_fitments'], 0, ',', '.') }}</dd></div>
                 <div><dt class="text-stone-500">Fitment &lt; 70% confidence</dt><dd class="mt-1 text-xl font-bold">{{ number_format($metrics['low_confidence_fitments'], 0, ',', '.') }}</dd></div>
-                <div><dt class="text-stone-500">Conflicte deschise</dt><dd class="mt-1 text-xl font-bold">{{ number_format($metrics['open_conflicts'], 0, ',', '.') }}</dd></div>
+                <div><dt class="text-stone-500">Conflicte deschise</dt><dd class="mt-1 text-xl font-bold"><a href="{{ route('admin.catalog-platform.conflicts') }}" class="hover:underline">{{ number_format($metrics['open_conflicts'], 0, ',', '.') }}</a></dd></div>
+                <div><dt class="text-stone-500">Relații nerezolvate</dt><dd class="mt-1 text-xl font-bold"><a href="{{ route('admin.catalog-platform.unresolved-relations') }}" class="hover:underline">{{ number_format($metrics['pending_relations'], 0, ',', '.') }}</a></dd></div>
+                <div><dt class="text-stone-500">Relații cu ≥3 încercări</dt><dd class="mt-1 text-xl font-bold"><a href="{{ route('admin.catalog-platform.unresolved-relations') }}" class="hover:underline">{{ number_format($metrics['stale_pending_relations'], 0, ',', '.') }}</a></dd></div>
             </dl>
         </div>
     </section>
