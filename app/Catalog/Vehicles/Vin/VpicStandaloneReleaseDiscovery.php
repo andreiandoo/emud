@@ -4,12 +4,13 @@ namespace App\Catalog\Vehicles\Vin;
 
 use App\Models\CatalogSource;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 class VpicStandaloneReleaseDiscovery
 {
-    /** @return array{release_key:string,version:string,filename:string,url:string,retrieved_at:\Illuminate\Support\Carbon} */
+    /** @return array{release_key:string,version:string,filename:string,url:string,retrieved_at:Carbon} */
     public function discover(CatalogSource $source): array
     {
         $downloadsUrl = (string) ($source->settings['downloads_url'] ?? 'https://vpic.nhtsa.dot.gov/Downloads');
