@@ -5,6 +5,7 @@ namespace App\Catalog\Canonicalization;
 use App\Catalog\Canonicalization\Contracts\CatalogRecordCanonicalizer;
 use App\Catalog\Canonicalization\Vehicles\EeaVehicleCanonicalizer;
 use App\Catalog\Canonicalization\Vehicles\LifeOfCapoVehicleCanonicalizer;
+use App\Catalog\Canonicalization\Vehicles\VpicReferenceCanonicalizer;
 use App\Models\CatalogSource;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
@@ -19,6 +20,7 @@ class CatalogCanonicalizerRegistry
         $class = $source->canonicalizer_class ?: match ($source->code) {
             'EEA' => EeaVehicleCanonicalizer::class,
             'LIFEOFCAPO' => LifeOfCapoVehicleCanonicalizer::class,
+            'VPIC' => VpicReferenceCanonicalizer::class,
             default => throw new RuntimeException("No canonicalizer configured for {$source->code}."),
         };
 
