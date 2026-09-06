@@ -135,10 +135,18 @@ class CatalogPartGraphQuery
             $frontier = $nextFrontier;
         }
 
+        $visibleEdges = array_filter(
+            $edges,
+            fn (array $edge): bool => isset($nodes[$edge['from_part_id']], $nodes[$edge['to_part_id']]),
+        );
+        if (count($visibleEdges) !== count($edges)) {
+            $truncated = true;
+        }
+
         return [
             'seeds' => $seeds,
             'nodes' => array_values($nodes),
-            'edges' => array_values($edges),
+            'edges' => array_values($visibleEdges),
             'truncated' => $truncated,
         ];
     }
