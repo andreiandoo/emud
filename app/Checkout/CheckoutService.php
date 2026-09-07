@@ -48,6 +48,7 @@ class CheckoutService
                     'tax_rate' => $item->snapshot['tax_rate'] ?? 0, 'snapshot' => $item->snapshot,
                 ]);
             }
+
             return $order;
         });
 
