@@ -30,7 +30,7 @@ class StorefrontCartTest extends TestCase
 
         $item = app(CartManager::class)->add($product, null, 2);
 
-        $this->assertSame('249.50', (string) $item->unit_price);
+        $this->assertSame(249.5, (float) $item->unit_price);
         $this->assertSame(2, $item->quantity);
     }
 
@@ -45,7 +45,8 @@ class StorefrontCartTest extends TestCase
 
         $product->variants()->first()->update(['retail_price' => 180.00]);
 
-        $this->assertSame('100.00', (string) $item->refresh()->unit_price);
+        // Compared numerically: the decimal cast renders differently on SQLite and PostgreSQL.
+        $this->assertSame(100.0, (float) $item->refresh()->unit_price);
     }
 
     public function test_adding_the_same_product_twice_increments_one_line(): void

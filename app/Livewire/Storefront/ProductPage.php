@@ -4,8 +4,8 @@ namespace App\Livewire\Storefront;
 
 use App\Enums\ProductStatus;
 use App\Models\Product;
-use App\Storefront\Compatibility\CompatibilityVerdict;
 use App\Storefront\CartManager;
+use App\Storefront\Compatibility\CompatibilityVerdict;
 use App\Storefront\Compatibility\FitmentMatcher;
 use App\Storefront\VehicleContext;
 use Livewire\Attributes\Layout;
