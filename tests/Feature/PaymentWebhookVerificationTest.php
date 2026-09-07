@@ -21,7 +21,12 @@ class PaymentWebhookVerificationTest extends TestCase
         parent::setUp();
 
         $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
-        openssl_pkey_export($key, $this->privateKey);
+
+        // openssl_pkey_export() writes through a reference, and a typed property cannot be
+        // passed by reference before it holds a value.
+        openssl_pkey_export($key, $privateKey);
+
+        $this->privateKey = (string) $privateKey;
         $this->publicKey = openssl_pkey_get_details($key)['key'];
     }
 
