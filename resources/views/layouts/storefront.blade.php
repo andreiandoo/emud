@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Piese și accesorii 4x4' }} · eMUD</title>
+    @stack('meta')
     @vite(['resources/css/app.css','resources/js/app.js'])
     @livewireStyles
 </head>
@@ -60,8 +61,16 @@
 <main class="mx-auto max-w-6xl px-4 py-8">{{ $slot }}</main>
 
 <footer class="mt-16 border-t border-stone-200 bg-white">
-    <div class="mx-auto max-w-6xl px-4 py-8 text-xs text-stone-500">
-        eMUD · piese și accesorii 4x4, off-road și overlanding
+    <div class="mx-auto max-w-6xl space-y-4 px-4 py-8 text-xs text-stone-500">
+        @php($footerPages = \App\Models\Page::query()->published()->where('show_in_footer', true)->orderBy('position')->orderBy('title')->get())
+        @if($footerPages->isNotEmpty())
+            <nav class="flex flex-wrap gap-x-5 gap-y-2">
+                @foreach($footerPages as $footerPage)
+                    <a href="{{ route('storefront.page', $footerPage->slug) }}" class="hover:text-stone-900 hover:underline">{{ $footerPage->title }}</a>
+                @endforeach
+            </nav>
+        @endif
+        <p>eMUD · piese și accesorii 4x4, off-road și overlanding</p>
     </div>
 </footer>
 @livewireScripts

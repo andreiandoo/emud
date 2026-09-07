@@ -1,4 +1,6 @@
 <div class="space-y-6">
+    <x-seo title="Finalizare comandă" :index="false" :follow="false" />
+
     <h1 class="text-2xl font-black tracking-tight">Finalizare comandă</h1>
 
     @if($failure)

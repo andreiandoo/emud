@@ -1,4 +1,9 @@
 <div class="space-y-8">
+    <x-seo :title="$product->name"
+           :description="$product->short_description"
+           :canonical="route('storefront.product', $product)"
+           type="product" />
+
     <nav class="text-xs text-stone-500">
         <a href="{{ route('storefront.home') }}" class="hover:underline">Acasă</a>
         @php($primaryCategory = $product->categories->first())
@@ -83,7 +88,7 @@
     @if($product->description)
         <section>
             <h2 class="mb-3 text-lg font-bold">Descriere</h2>
-            <div class="prose prose-stone max-w-none text-stone-700">{!! nl2br(e($product->description)) !!}</div>
+            <div class="prose prose-stone max-w-none text-stone-700">{!! app(\App\Support\HtmlSanitizer::class)->clean($product->description) !!}</div>
         </section>
     @endif
 

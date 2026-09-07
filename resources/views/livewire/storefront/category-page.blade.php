@@ -1,4 +1,10 @@
 <div class="space-y-6">
+    {{-- Filtered and paginated views are the same catalogue sliced differently, so the canonical
+         always points at the unfiltered first page. --}}
+    <x-seo :title="$category->name"
+           :description="$category->description ?? 'Piese și accesorii 4x4 din categoria '.$category->name"
+           :canonical="route('storefront.category', $category)" />
+
     <nav class="text-xs text-stone-500">
         <a href="{{ route('storefront.home') }}" class="hover:underline">Acasă</a>
         <span class="mx-1">/</span>

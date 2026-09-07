@@ -1,4 +1,8 @@
 <div class="space-y-6">
+    {{-- Search result pages are per-query and endless; indexing them buys nothing and dilutes
+         the pages that should rank. --}}
+    <x-seo title="Căutare" :index="false" :follow="true" />
+
     <div>
         <h1 class="text-2xl font-black tracking-tight">Căutare</h1>
         <input type="search" wire:model.live.debounce.400ms="query" placeholder="Cod piesă, MPN sau denumire"

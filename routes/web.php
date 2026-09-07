@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SitemapController;
 use App\Livewire\Admin\Catalog\AttributesIndex;
 use App\Livewire\Admin\Catalog\BrandsIndex;
 use App\Livewire\Admin\Catalog\CategoriesIndex;
@@ -45,12 +46,15 @@ use App\Livewire\Storefront\Home as StorefrontHome;
 use App\Livewire\Storefront\OrderConfirmation as StorefrontOrder;
 use App\Livewire\Storefront\ProductPage as StorefrontProduct;
 use App\Livewire\Storefront\SearchResults as StorefrontSearch;
+use App\Livewire\Storefront\StaticPage as StorefrontPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', StorefrontHome::class)->name('storefront.home');
 Route::get('/cauta', StorefrontSearch::class)->name('storefront.search');
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('storefront.sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('storefront.robots');
 Route::get('/categorie/{category}', StorefrontCategory::class)->where('category', '.+')->name('storefront.category');
 Route::get('/produs/{product:slug}', StorefrontProduct::class)->name('storefront.product');
 Route::get('/cos', StorefrontCart::class)->name('storefront.cart');
@@ -143,3 +147,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/orders/{order}', OrderEditor::class)->name('orders.edit');
     Route::get('/commerce-settings', CommerceSettings::class)->name('commerce.settings');
 });
+
+// Registered last on purpose: legal and informational pages get clean root URLs, and every
+// specific route above is matched before this one is reached.
+Route::get('/{slug}', StorefrontPage::class)->where('slug', '[a-z0-9-]+')->name('storefront.page');

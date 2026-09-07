@@ -1,4 +1,7 @@
 <div class="space-y-10">
+    <x-seo title="Piese și accesorii 4x4, off-road și overlanding"
+           description="Alege-ți mașina și vezi doar piesele și accesoriile care i se potrivesc. 4x4, off-road, mudding și overlanding." />
+
     <section>
         <h1 class="mb-2 text-3xl font-black tracking-tight">Piese și accesorii pentru 4x4</h1>
         <p class="mb-6 max-w-2xl text-stone-600">

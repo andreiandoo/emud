@@ -1,4 +1,6 @@
 <div class="mx-auto max-w-2xl space-y-6">
+    <x-seo title="Comanda ta" :index="false" :follow="false" />
+
     <div class="rounded-xl border border-lime-300 bg-lime-50 p-6">
         <h1 class="text-2xl font-black tracking-tight">Comanda a fost înregistrată</h1>
         <p class="mt-1 text-sm text-stone-700">

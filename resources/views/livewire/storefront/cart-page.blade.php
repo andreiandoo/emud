@@ -1,4 +1,6 @@
 <div class="space-y-6">
+    <x-seo title="Coșul meu" :index="false" :follow="false" />
+
     <h1 class="text-2xl font-black tracking-tight">Coșul meu</h1>
 
     @if($items->isEmpty())
