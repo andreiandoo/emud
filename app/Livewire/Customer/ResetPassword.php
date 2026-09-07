@@ -28,7 +28,8 @@ class ResetPassword extends Component
         $this->email = (string) request('email', '');
     }
 
-    public function reset()
+    /** Named resetPassword because Livewire\Component already defines reset(). */
+    public function resetPassword()
     {
         $this->validate([
             'email' => ['required', 'email'],

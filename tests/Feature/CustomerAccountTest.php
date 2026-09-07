@@ -81,7 +81,7 @@ class CustomerAccountTest extends TestCase
             ->set('email', $user->email)
             ->set('password', 'o-parola-noua-sigura-1')
             ->set('password_confirmation', 'o-parola-noua-sigura-1')
-            ->call('reset');
+            ->call('resetPassword');
 
         $this->assertTrue(Hash::check('o-parola-noua-sigura-1', $user->refresh()->password));
     }
@@ -94,7 +94,7 @@ class CustomerAccountTest extends TestCase
             ->set('email', $user->email)
             ->set('password', 'o-parola-noua-sigura-1')
             ->set('password_confirmation', 'o-parola-noua-sigura-1')
-            ->call('reset')
+            ->call('resetPassword')
             ->assertHasErrors('email');
     }
 
