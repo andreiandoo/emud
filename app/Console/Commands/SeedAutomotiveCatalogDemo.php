@@ -8,7 +8,7 @@ use App\Models\CatalogPart;
 use App\Models\CatalogUnresolvedPartRelation;
 use App\Models\SupplierProduct;
 use App\Models\VehicleConfiguration;
-use Database\Seeders\AutomotiveCatalogDemoSeeder;
+use Database\Seeders\AutomotiveCatalogDemoFixtureSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -23,7 +23,7 @@ class SeedAutomotiveCatalogDemo extends Command
     public function handle(): int
     {
         $this->call('db:seed', [
-            '--class' => AutomotiveCatalogDemoSeeder::class,
+            '--class' => AutomotiveCatalogDemoFixtureSeeder::class,
             '--force' => true,
         ]);
 
