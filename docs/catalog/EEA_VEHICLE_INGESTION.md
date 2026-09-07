@@ -127,3 +127,29 @@ EEA does **not** provide:
 - option/PR-code-level equipment sufficient for every exact fitment
 
 Its role is the European vehicle identity/homologation backbone. Parts data must still come from manufacturer/supplier feeds and other permitted sources.
+
+## Scale, resume and per-dataset columns
+
+### The import is far longer than one job window
+
+The 2025 provisional passenger-car table yields **1,332,309 distinct configuration rows** at the projection this connector selects, measured against Discodata. At an observed ~66 rows/second that is roughly five and a half hours, against a `SyncCatalogSource` timeout of 7200 seconds.
+
+`EeaVehicleCatalogSourceConnector` therefore implements `ResumableCatalogSourceConnector`. The current dataset index and page are written to `catalog_import_runs.checkpoint` every 500 records and whenever a run fails, and the next attempt continues from there instead of restarting at page one. `SyncCatalogSource` uses that budget deliberately: `tries = 6`, with `maxExceptions = 3` so a genuinely broken connector still fails fast rather than consuming every attempt.
+
+The retry backoff is 7800 seconds, deliberately longer than the `WithoutOverlapping` lock's `expireAfter(7500)`. A job killed by its timeout never releases that lock, so a retry scheduled sooner would find it held and be discarded silently instead of rescheduled.
+
+A checkpoint records a fingerprint of the dataset list it was taken against. Changing the configured datasets or moving to a new release invalidates it, so a resumed import can never continue into the middle of a feed it never started.
+
+### Fetched rows greatly exceed staged records
+
+Record identity hashes twelve fields and deliberately excludes mass and the CO2 measurements, while the `SELECT DISTINCT` projection includes them. Those near-continuous values multiply the distinct row count roughly tenfold, so expect around ten fetched rows per staged record. Both numbers are correct: `fetched` counts rows pulled from Discodata, `staged records` counts canonical configurations.
+
+Widening the identity hash would reduce the fetch volume, but it would also split one configuration into many records that differ only by measured mass or CO2. Do not narrow the projection to make the numbers match.
+
+### Datasets do not share a column set
+
+The 2025 vans table has no `Mt` (test mass) column while the cars table does, and Discodata rejects the whole query with `Invalid column name 'Mt'` rather than ignoring it — as HTTP 200 with an `errors` key, not an error status.
+
+The connector therefore probes each table before building its query: one combined `SELECT TOP 1` in the normal case, falling back to per-column probes to identify exactly which columns are absent. Missing optional columns are dropped from the projection; missing `Mk`, `Cn` or `year` is a hard error, because identity depends on them. A dataset may also declare `exclude_columns` in its settings to skip a column without probing.
+
+`testConnection` runs the real projection rather than a two-column sample, so a schema mismatch surfaces in the admin connection test instead of hours into an import.
