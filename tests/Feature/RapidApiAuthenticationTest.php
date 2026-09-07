@@ -26,7 +26,8 @@ class RapidApiAuthenticationTest extends TestCase
             ->getJson('/api/v1/coverage')
             ->assertOk()
             ->assertHeader('X-Catalog-Auth-Channel', 'rapidapi')
-            ->assertHeaderMissing('X-RateLimit-Limit');
+            ->assertHeader('X-RateLimit-Limit', '120')
+            ->assertHeaderMissing('X-Catalog-Monthly-Quota');
 
         $identity = CatalogApiExternalIdentity::query()->where([
             'provider' => 'rapidapi',
@@ -82,6 +83,21 @@ class RapidApiAuthenticationTest extends TestCase
             ->assertJsonPath('error.code', 'RAPIDAPI_USER_REQUIRED');
     }
 
+    public function test_unknown_rapidapi_user_is_rejected_when_auto_provisioning_is_disabled(): void
+    {
+        config([
+            'catalog_api.rapidapi.proxy_secret' => 'provider-secret',
+            'catalog_api.rapidapi.auto_provision' => false,
+        ]);
+
+        $this->withHeaders($this->rapidHeaders('not-provisioned', 'BASIC'))
+            ->getJson('/api/v1/coverage')
+            ->assertStatus(403)
+            ->assertJsonPath('error.code', 'RAPIDAPI_USER_UNPROVISIONED');
+
+        $this->assertDatabaseCount('catalog_api_external_identities', 0);
+    }
+
     public function test_rapidapi_subscription_change_updates_plan_and_optional_local_quota(): void
     {
         config([
@@ -93,14 +109,16 @@ class RapidApiAuthenticationTest extends TestCase
         $this->withHeaders($this->rapidHeaders('plan-change-user', 'BASIC'))
             ->getJson('/api/v1/coverage')
             ->assertOk()
-            ->assertHeader('X-RateLimit-Limit', '10')
-            ->assertHeader('X-RateLimit-Remaining', '9');
+            ->assertHeader('X-RateLimit-Limit', '120')
+            ->assertHeader('X-Catalog-Monthly-Quota', '10')
+            ->assertHeader('X-Catalog-Monthly-Remaining', '9');
 
         $this->withHeaders($this->rapidHeaders('plan-change-user', 'PRO'))
             ->getJson('/api/v1/coverage')
             ->assertOk()
-            ->assertHeader('X-RateLimit-Limit', '25')
-            ->assertHeader('X-RateLimit-Remaining', '23');
+            ->assertHeader('X-RateLimit-Limit', '120')
+            ->assertHeader('X-Catalog-Monthly-Quota', '25')
+            ->assertHeader('X-Catalog-Monthly-Remaining', '23');
 
         $identity = CatalogApiExternalIdentity::query()->where('external_user_id', 'plan-change-user')->firstOrFail();
         $this->assertSame('PRO', $identity->subscription);
@@ -133,7 +151,12 @@ class RapidApiAuthenticationTest extends TestCase
         ]);
 
         $headers = $this->rapidHeaders('quota-user', 'BASIC');
-        $this->withHeaders($headers)->getJson('/api/v1/coverage')->assertOk();
+        $this->withHeaders($headers)
+            ->getJson('/api/v1/coverage')
+            ->assertOk()
+            ->assertHeader('X-Catalog-Monthly-Quota', '1')
+            ->assertHeader('X-Catalog-Monthly-Remaining', '0');
+
         $this->withHeaders($headers)
             ->getJson('/api/v1/coverage')
             ->assertStatus(429)
@@ -161,8 +184,9 @@ class RapidApiAuthenticationTest extends TestCase
             ->getJson('/api/v1/coverage')
             ->assertOk()
             ->assertHeader('X-Catalog-Auth-Channel', 'native')
-            ->assertHeader('X-RateLimit-Limit', '2')
-            ->assertHeader('X-RateLimit-Remaining', '1');
+            ->assertHeader('X-RateLimit-Limit', '120')
+            ->assertHeader('X-Catalog-Monthly-Quota', '2')
+            ->assertHeader('X-Catalog-Monthly-Remaining', '1');
 
         $this->withHeader('X-API-Key', $token)->getJson('/api/v1/coverage')->assertOk();
         $this->withHeader('X-API-Key', $token)
