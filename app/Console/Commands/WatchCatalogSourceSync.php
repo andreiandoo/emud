@@ -132,6 +132,7 @@ class WatchCatalogSourceSync extends Command
                 'catalog_import_runs.started_at',
                 'catalog_import_runs.finished_at',
                 'catalog_import_runs.checkpoint',
+                'catalog_import_runs.updated_at',
                 'catalog_sources.code',
             ]);
     }
@@ -156,6 +157,15 @@ class WatchCatalogSourceSync extends Command
         // support, usually a worker process started before the deploy. Everything it has
         // fetched is lost when the job hits its timeout, so it is worth seeing immediately.
         $line .= $run->checkpoint === null ? '  [no checkpoint]' : '  [ckpt p'.(json_decode((string) $run->checkpoint, true)['page'] ?? '?').']';
+
+        // A job killed by its timeout never reaches the failure handler, so the row keeps
+        // saying "running" indefinitely. The import job touches the row every 500 records, so
+        // a heartbeat that has stopped is what distinguishes a dead run from a slow one.
+        $stalledFor = $this->secondsSinceHeartbeat($run);
+
+        if ($stalledFor !== null) {
+            $line .= sprintf('  [STALLED %s — no progress; the job is almost certainly dead]', $this->humanSeconds($stalledFor));
+        }
 
         $sample = $this->latestRecords((int) $run->catalog_source_id, (int) $run->id);
 
@@ -221,6 +231,28 @@ class WatchCatalogSourceSync extends Command
         $this->line('Follow it with: php artisan catalog:system:check');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Seconds since the run last reported progress, or null while the heartbeat is healthy.
+     * The threshold allows for a slow page plus the connector's HTTP retries.
+     */
+    private function secondsSinceHeartbeat(object $run, int $threshold = 600): ?int
+    {
+        if (! in_array((string) $run->status, ['pending', 'running'], true) || $run->updated_at === null) {
+            return null;
+        }
+
+        $silent = Carbon::now()->getTimestamp() - Carbon::parse((string) $run->updated_at)->getTimestamp();
+
+        return $silent > $threshold ? $silent : null;
+    }
+
+    private function humanSeconds(int $seconds): string
+    {
+        return $seconds >= 3600
+            ? sprintf('%dh%02dm', intdiv($seconds, 3600), intdiv($seconds % 3600, 60))
+            : sprintf('%dm', max(1, intdiv($seconds, 60)));
     }
 
     private function duration(mixed $from, mixed $to = null): string

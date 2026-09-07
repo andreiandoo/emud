@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -169,6 +170,7 @@ class CatalogSystemCheck extends Command
                 'catalog_import_runs.failed_count',
                 'catalog_import_runs.error_message',
                 'catalog_import_runs.started_at',
+                'catalog_import_runs.updated_at',
             ])
             ->first();
 
@@ -195,6 +197,17 @@ class CatalogSystemCheck extends Command
         }
 
         if (in_array($run->status, ['pending', 'running'], true)) {
+            // A job killed by its timeout never reaches the failure handler, so the row keeps
+            // reporting "running". The import touches the row every 500 records, so a stopped
+            // heartbeat is what separates a dead run from a slow one.
+            $silent = $run->updated_at === null
+                ? 0
+                : Carbon::now()->getTimestamp() - Carbon::parse((string) $run->updated_at)->getTimestamp();
+
+            if ($silent > 600) {
+                return ['status' => 'warn', 'message' => $summary.sprintf(' No progress for %d minute(s): the run says running but the job is almost certainly dead. Re-queue it; a resumable source continues from its checkpoint.', intdiv($silent, 60))];
+            }
+
             return ['status' => 'warn', 'message' => $summary.' Still in progress or waiting for a worker.'];
         }
 
