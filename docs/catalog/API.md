@@ -1,8 +1,10 @@
 # Catalog API — v1
 
-The catalog API is authenticated independently from ecommerce users.
+The catalog API is authenticated independently from ecommerce users. Direct API clients and marketplace/gateway clients resolve to the same `CatalogApiConsumer` model and are subject to the same publication-rights rules.
 
 ## Authentication
+
+### Direct eMUD API
 
 Send either:
 
@@ -17,6 +19,29 @@ Authorization: Bearer emud_...
 ```
 
 Keys are stored as SHA-256 hashes. The plaintext key is returned only once when issued.
+
+### RapidAPI provider traffic
+
+RapidAPI traffic does not need a native eMUD key. The backend authenticates the provider request with the configured `X-RapidAPI-Proxy-Secret` and maps `X-RapidAPI-User` to a persistent external identity and `CatalogApiConsumer`.
+
+Do not use or trust a customer's `X-RapidAPI-Key` as an eMUD backend credential. See `docs/catalog/RAPIDAPI.md` for provider configuration, subscription mapping, optional host pinning and failure behavior.
+
+Any request carrying provider-side RapidAPI headers is committed to the RapidAPI authentication path. A bad/missing proxy secret cannot fall back to a simultaneously supplied native eMUD API key.
+
+## Quotas and request metering
+
+Direct and RapidAPI traffic use the same atomic monthly usage meter. Quota reset/check/increment is performed under a database row lock to prevent concurrent check-then-increment overshoot.
+
+For a positive local monthly quota, successful responses include:
+
+```http
+X-RateLimit-Limit: 10000
+X-RateLimit-Remaining: 9999
+```
+
+A quota of `0` means unlimited locally and these two headers are omitted. Successful responses also include `X-Catalog-Auth-Channel: native|rapidapi`.
+
+The per-minute Laravel API limiter is keyed to the resolved catalog consumer after authentication, not to the gateway IP.
 
 ## Rights enforcement
 
@@ -104,9 +129,9 @@ Reverse relation lookup is indexed separately so traversal remains efficient whe
 
 ## API consumer administration
 
-API consumers and keys are managed from the Catalog API admin surface. Keys should be issued with the minimum required scope/quota and rotated if exposed.
+API consumers, native keys and external identities are managed from the Catalog API admin surface. Keys should be issued with the minimum required scope/quota and rotated if exposed. RapidAPI identities are created automatically on first valid request when `RAPIDAPI_AUTO_PROVISION=true`.
 
-Programmatic issuance remains available for development:
+Programmatic native-key issuance remains available for development:
 
 ```php
 $consumer = App\Models\CatalogApiConsumer::create([
