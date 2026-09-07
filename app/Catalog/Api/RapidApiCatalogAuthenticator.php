@@ -77,10 +77,12 @@ class RapidApiCatalogAuthenticator
                     ], 403);
                 }
 
-                $consumer = CatalogApiConsumer::query()->create([
+                $slug = 'rapidapi-'.substr(hash('sha256', $externalUserId), 0, 24);
+                $consumer = CatalogApiConsumer::query()->firstOrCreate([
+                    'slug' => $slug,
+                ], [
                     'public_id' => (string) Str::ulid(),
                     'name' => 'RapidAPI '.Str::limit($externalUserId, 80, ''),
-                    'slug' => 'rapidapi-'.substr(hash('sha256', $externalUserId), 0, 24),
                     'plan' => 'rapidapi_'.strtolower($subscription),
                     'monthly_quota' => $quota,
                     'requests_used' => 0,
@@ -89,11 +91,14 @@ class RapidApiCatalogAuthenticator
                     'metadata' => ['auth_channel' => 'rapidapi'],
                 ]);
 
-                $identity = CatalogApiExternalIdentity::query()->create([
-                    'catalog_api_consumer_id' => $consumer->id,
+                $identity = CatalogApiExternalIdentity::query()->firstOrCreate([
                     'provider' => 'rapidapi',
                     'external_user_id' => $externalUserId,
+                ], [
+                    'catalog_api_consumer_id' => $consumer->id,
                 ]);
+
+                $consumer = $identity->consumer()->firstOrFail();
             } else {
                 $consumer = $identity->consumer;
             }
