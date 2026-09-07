@@ -85,13 +85,17 @@ The command verifies:
 During development, use separate terminals:
 
 ```bash
-php artisan queue:work
+php artisan queue:work --queue=notifications,catalog-search,catalog-canonicalization,catalog-matching,catalog-enrichment,catalog-imports,imports
 php artisan schedule:work
 ```
 
-In production use long-running queue workers/supervision and the standard Laravel scheduler cron entry. Source and supplier cron expressions are stored in the database; Laravel's scheduler dispatcher evaluates them.
+**The queue list is not optional.** Every catalog and supplier job routes itself to a dedicated queue; none of them uses the default queue. A worker started as plain `php artisan queue:work` drains only the default queue (`REDIS_QUEUE`, often renamed per environment), reports `Processing jobs from the [...] queue`, finds nothing and exits. Imports then sit in Redis forever while `catalog:system:check` still reports the runtime as OK.
 
-Without a queue worker, manually queued catalog/supplier imports will remain pending when the queue connection is asynchronous.
+For the same reason, `php artisan queue:monitor default,...` is meaningless here — monitor the queues above instead. Note that `queue:monitor` reports queue depth, not whether a worker is alive; a dead worker and an empty queue look identical.
+
+The long-running import queues come last in the list so that a multi-hour EEA import does not starve search projection and notification jobs.
+
+In production use long-running supervised queue workers with the same `--queue` list and `--timeout=1800`, plus the standard Laravel scheduler cron entry. Source and supplier cron expressions are stored in the database; Laravel's scheduler dispatcher evaluates them.
 
 ## 6. Admin catalog operations
 

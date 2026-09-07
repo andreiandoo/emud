@@ -13,7 +13,7 @@ services:
   queue:
     image: emud-app:local
     env_file: .env
-    command: php artisan queue:work redis --queue=default,imports,notifications --sleep=2 --tries=3 --timeout=1800
+    command: php artisan queue:work redis --queue=notifications,catalog-search,catalog-canonicalization,catalog-matching,catalog-enrichment,catalog-imports,imports --sleep=2 --tries=3 --timeout=1800
     depends_on:
       app:
         condition: service_started
