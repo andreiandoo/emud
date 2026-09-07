@@ -7,10 +7,27 @@ use App\Catalog\Sources\Connectors\LifeOfCapoCatalogSourceConnector;
 use App\Catalog\Sources\Connectors\VpicReferenceCatalogSourceConnector;
 use App\Models\CatalogSource;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 class CatalogSourceSeeder extends Seeder
 {
+    /**
+     * Fields owned by the code profile. They are refreshed on every seed run so that
+     * connector/licence changes shipped in a release reach existing installations.
+     */
+    private const PROFILE_OWNED_FIELDS = [
+        'name',
+        'source_type',
+        'protocol',
+        'connector_class',
+        'license_name',
+        'license_url',
+        'legal_notes',
+        'base_url',
+        'capabilities',
+    ];
+
     public function run(): void
     {
         $sources = [
@@ -176,10 +193,49 @@ class CatalogSourceSeeder extends Seeder
 
         foreach ($sources as $payload) {
             $source = CatalogSource::query()->firstOrNew(['code' => $payload['code']]);
+
             if (! $source->exists) {
                 $source->public_id = (string) Str::ulid();
+                $source->fill($payload)->save();
+
+                continue;
             }
-            $source->fill($payload)->save();
+
+            // An existing source has already been operated: activation state, rights flags,
+            // field mapping and settings belong to the admin, not to this seeder. Overwriting
+            // them would silently deactivate configured sources on every deployment.
+            $this->warnAboutSettingsDrift($source, $payload);
+
+            $source->fill(Arr::only($payload, self::PROFILE_OWNED_FIELDS));
+            $source->settings = array_replace($payload['settings'] ?? [], $source->settings ?? []);
+            $source->save();
+        }
+    }
+
+    /**
+     * Operator settings win over the shipped profile, so a changed profile default would
+     * otherwise diverge from the stored configuration without anyone noticing.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function warnAboutSettingsDrift(CatalogSource $source, array $payload): void
+    {
+        $stored = $source->settings ?? [];
+
+        $drifted = array_keys(array_filter(
+            $payload['settings'] ?? [],
+            // Loose comparison on purpose: jsonb does not preserve object key order,
+            // so a strict check would report drift for untouched nested settings.
+            fn (mixed $value, string $key) => array_key_exists($key, $stored) && $stored[$key] != $value,
+            ARRAY_FILTER_USE_BOTH
+        ));
+
+        if ($drifted !== []) {
+            $this->command?->warn(sprintf(
+                'Catalog source %s keeps its stored settings; shipped profile differs for: %s.',
+                $source->code,
+                implode(', ', $drifted)
+            ));
         }
     }
 }

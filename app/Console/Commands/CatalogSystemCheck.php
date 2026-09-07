@@ -13,6 +13,22 @@ class CatalogSystemCheck extends Command
 
     protected $description = 'Check whether the automotive catalog database, search, sources and QA queues are ready to use.';
 
+    /**
+     * Every catalog/supplier job routes itself to one of these queues, in worker priority order.
+     * No pipeline job uses the default queue, so a worker started without an explicit --queue
+     * list processes nothing at all. Keep in sync with docker-compose.yml and the runbook;
+     * CatalogPipelineQueueTest fails if a job introduces a queue that is missing here.
+     */
+    public const PIPELINE_QUEUES = [
+        'notifications',
+        'catalog-search',
+        'catalog-canonicalization',
+        'catalog-matching',
+        'catalog-enrichment',
+        'catalog-imports',
+        'imports',
+    ];
+
     public function handle(): int
     {
         $checks = [];
@@ -82,7 +98,7 @@ class CatalogSystemCheck extends Command
         ];
         $checks['runtime'] = [
             'status' => 'ok',
-            'message' => 'Queue='.config('queue.default').'; cache='.config('cache.default').'. Run queue and scheduler workers for asynchronous imports.',
+            'message' => 'Queue='.config('queue.default').' (default queue "'.config('queue.connections.'.config('queue.default').'.queue').'" is unused by the pipeline); cache='.config('cache.default').'. Workers must cover: '.implode(',', self::PIPELINE_QUEUES).'.',
         ];
         $checks['demo'] = [
             'status' => ($stats['demo_parts'] ?? 0) > 0 ? 'ok' : 'warn',
@@ -140,7 +156,8 @@ class CatalogSystemCheck extends Command
         if ($stats !== []) {
             $this->newLine();
             $this->line('If catalog/search data is empty: php artisan catalog:demo:seed --api-key --rebuild-search');
-            $this->line('For scheduled imports: run php artisan queue:work and php artisan schedule:work (or production cron + queue workers).');
+            $this->line('For scheduled imports: php artisan queue:work --queue='.implode(',', self::PIPELINE_QUEUES));
+            $this->line('and php artisan schedule:work (or production cron + supervised queue workers on the same queue list).');
         }
     }
 }

@@ -39,7 +39,9 @@ php artisan db:seed
 
 `DatabaseSeeder` installs structural/reference data only: categories, attributes, commerce providers, catalog-source profiles and supplier profiles. It does not inject fake catalog records.
 
-If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are present in `.env`, `db:seed` also creates/updates the admin account.
+If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are present in `.env`, `db:seed` also creates/updates the admin account. Run `php artisan optimize` **after** seeding: `DatabaseSeeder` reads `env()` directly, so a cached config makes it skip admin creation without reporting an error.
+
+Re-seeding is safe on an operated installation. For a catalog source that already exists, the seeder refreshes only profile-owned fields (name, connector class, licence, capabilities) and adds settings keys introduced by a newer profile. Activation state, rights flags, field mapping and existing settings values stay under admin control and are never reverted by a deployment. When a shipped profile default differs from the stored value, the seeder prints which settings keys diverged instead of overwriting them.
 
 ## 3. Add deterministic test data
 
@@ -83,13 +85,17 @@ The command verifies:
 During development, use separate terminals:
 
 ```bash
-php artisan queue:work
+php artisan queue:work --queue=notifications,catalog-search,catalog-canonicalization,catalog-matching,catalog-enrichment,catalog-imports,imports
 php artisan schedule:work
 ```
 
-In production use long-running queue workers/supervision and the standard Laravel scheduler cron entry. Source and supplier cron expressions are stored in the database; Laravel's scheduler dispatcher evaluates them.
+**The queue list is not optional.** Every catalog and supplier job routes itself to a dedicated queue; none of them uses the default queue. A worker started as plain `php artisan queue:work` drains only the default queue (`REDIS_QUEUE`, often renamed per environment), reports `Processing jobs from the [...] queue`, finds nothing and exits. Imports then sit in Redis forever while `catalog:system:check` still reports the runtime as OK.
 
-Without a queue worker, manually queued catalog/supplier imports will remain pending when the queue connection is asynchronous.
+For the same reason, `php artisan queue:monitor default,...` is meaningless here — monitor the queues above instead. Note that `queue:monitor` reports queue depth, not whether a worker is alive; a dead worker and an empty queue look identical.
+
+The long-running import queues come last in the list so that a multi-hour EEA import does not starve search projection and notification jobs.
+
+In production use long-running supervised queue workers with the same `--queue` list and `--timeout=1800`, plus the standard Laravel scheduler cron entry. Source and supplier cron expressions are stored in the database; Laravel's scheduler dispatcher evaluates them.
 
 ## 6. Admin catalog operations
 
