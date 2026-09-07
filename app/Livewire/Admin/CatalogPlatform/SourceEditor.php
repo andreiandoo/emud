@@ -10,6 +10,7 @@ use App\Models\CatalogSourceSchedule;
 use Cron\CronExpression;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Throwable;
@@ -291,7 +292,7 @@ class SourceEditor extends Component
         }
 
         if ($this->getErrorBag()->isNotEmpty()) {
-            throw \Illuminate\Validation\ValidationException::withMessages($this->getErrorBag()->toArray());
+            throw ValidationException::withMessages($this->getErrorBag()->toArray());
         }
     }
 
