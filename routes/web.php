@@ -23,6 +23,7 @@ use App\Livewire\Admin\CatalogPlatform\VehicleDetail as CatalogVehicleDetail;
 use App\Livewire\Admin\CommerceSettings;
 use App\Livewire\Admin\Content\ArticleEditor;
 use App\Livewire\Admin\Content\ArticlesIndex;
+use App\Livewire\Admin\Content\PagesIndex;
 use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\MediaLibrary;
 use App\Livewire\Admin\OrderEditor;
@@ -135,6 +136,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/attributes', AttributesIndex::class)->name('attributes.index');
     Route::get('/brands', BrandsIndex::class)->name('brands.index');
     Route::get('/media', MediaLibrary::class)->name('media.index');
+    Route::get('/pages', PagesIndex::class)->name('pages.index');
     Route::get('/articles', ArticlesIndex::class)->name('articles.index');
     Route::get('/articles/create', ArticleEditor::class)->name('articles.create');
     Route::get('/articles/{article}/edit', ArticleEditor::class)->name('articles.edit');
