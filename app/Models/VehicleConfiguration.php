@@ -39,6 +39,11 @@ class VehicleConfiguration extends Model
         return $this->hasMany(VehicleIdentifier::class, 'configuration_id');
     }
 
+    public function technicalFacts(): HasMany
+    {
+        return $this->hasMany(VehicleTechnicalFact::class, 'configuration_id');
+    }
+
     public function catalogFitments(): HasMany
     {
         return $this->hasMany(CatalogFitment::class, 'configuration_id');
