@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Catalog\Api\CatalogPublicationScope;
 use App\Http\Controllers\Controller;
 use App\Models\CatalogFitment;
 use App\Models\CatalogPart;
@@ -11,16 +12,21 @@ use Illuminate\Http\Request;
 
 class CompatibilityController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, CatalogPublicationScope $scope): JsonResponse
     {
         $validated = $request->validate([
             'vehicle_id' => ['required', 'integer'],
             'part_id' => ['required', 'string'],
         ]);
 
-        $vehicle = VehicleConfiguration::query()->findOrFail((int) $validated['vehicle_id']);
+        $vehicleQuery = VehicleConfiguration::query();
+        $scope->visibleEntity($vehicleQuery, 'vehicle_configuration', 'vehicle_configurations.id');
+        $vehicle = $vehicleQuery->findOrFail((int) $validated['vehicle_id']);
+
         $publicId = str_starts_with($validated['part_id'], 'prt_') ? substr($validated['part_id'], 4) : $validated['part_id'];
-        $part = CatalogPart::query()->where('public_id', $publicId)->firstOrFail();
+        $partQuery = CatalogPart::query()->where('public_id', $publicId);
+        $scope->visibleEntity($partQuery, 'catalog_part', 'catalog_parts.id');
+        $part = $partQuery->firstOrFail();
 
         $fitment = CatalogFitment::query()
             ->with(['constraints', 'source'])

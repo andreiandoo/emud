@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Catalog\Api\CatalogPublicationScope;
 use App\Catalog\Api\CatalogSerializer;
 use App\Http\Controllers\Controller;
 use App\Models\CatalogFitment;
@@ -11,16 +12,26 @@ use Illuminate\Http\Request;
 
 class VehiclePartsController extends Controller
 {
-    public function __invoke(int $vehicle, Request $request, CatalogSerializer $serializer): JsonResponse
-    {
-        VehicleConfiguration::query()->findOrFail($vehicle);
+    public function __invoke(
+        int $vehicle,
+        Request $request,
+        CatalogSerializer $serializer,
+        CatalogPublicationScope $scope,
+    ): JsonResponse {
+        $vehicleQuery = VehicleConfiguration::query();
+        $scope->visibleEntity($vehicleQuery, 'vehicle_configuration', 'vehicle_configurations.id');
+        $vehicleQuery->findOrFail($vehicle);
+
         $limit = min(100, max(1, (int) $request->query('limit', 25)));
 
         $query = CatalogFitment::query()
             ->with(['part.brand', 'part.category', 'part.numbers.brand', 'part.numbers.oeMake'])
             ->where('configuration_id', $vehicle)
             ->whereIn('status', ['confirmed', 'conditional'])
-            ->whereHas('source', fn ($q) => $q->where('allow_api_redistribution', true));
+            ->whereHas('source', fn ($q) => $q->where('allow_api_redistribution', true))
+            ->whereHas('part', function ($partQuery) use ($scope): void {
+                $scope->visibleEntity($partQuery, 'catalog_part', 'catalog_parts.id');
+            });
 
         $query->when($request->filled('category_id'), fn ($q) => $q->where('category_id', (int) $request->query('category_id')))
             ->when($request->filled('position'), fn ($q) => $q->where('position', $request->query('position')))

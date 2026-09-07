@@ -2,11 +2,14 @@
 
 namespace App\Catalog\Vehicles\Vin;
 
+use App\Catalog\Api\CatalogPublicationScope;
 use App\Models\VehicleConfiguration;
 
 class VpicDecodedVehicleMatcher
 {
-    public function match(array $decoded): VinResolutionResult
+    public function __construct(private readonly CatalogPublicationScope $publicationScope) {}
+
+    public function match(array $decoded, bool $publicContext = false): VinResolutionResult
     {
         $make = trim((string) $this->firstValue($decoded['Make'] ?? null));
         $model = trim((string) $this->firstValue($decoded['Model'] ?? null));
@@ -23,7 +26,7 @@ class VpicDecodedVehicleMatcher
             );
         }
 
-        $matches = VehicleConfiguration::query()
+        $query = VehicleConfiguration::query()
             ->with(['generation.model.make', 'engine'])
             ->where(function ($query) use ($year): void {
                 $query->where('year', $year)
@@ -33,10 +36,14 @@ class VpicDecodedVehicleMatcher
                             ->where('model_year_to', '>=', $year);
                     });
             })
-            ->whereHas('generation.model.make', fn ($query) => $query->where('name', 'ilike', $make))
-            ->whereHas('generation.model', fn ($query) => $query->where('name', 'ilike', $model))
-            ->limit(20)
-            ->get();
+            ->whereHas('generation.model.make', fn ($query) => $query->whereRaw('LOWER(name) = LOWER(?)', [$make]))
+            ->whereHas('generation.model', fn ($query) => $query->whereRaw('LOWER(name) = LOWER(?)', [$model]));
+
+        if ($publicContext) {
+            $this->publicationScope->visibleEntity($query, 'vehicle_configuration', 'vehicle_configurations.id');
+        }
+
+        $matches = $query->limit(20)->get();
 
         if ($matches->count() === 1) {
             return new VinResolutionResult(
