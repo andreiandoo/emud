@@ -22,4 +22,9 @@ class CatalogApiConsumer extends Model
     {
         return $this->hasMany(CatalogApiKey::class);
     }
+
+    public function externalIdentities(): HasMany
+    {
+        return $this->hasMany(CatalogApiExternalIdentity::class);
+    }
 }
