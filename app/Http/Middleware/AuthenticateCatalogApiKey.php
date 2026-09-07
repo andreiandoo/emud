@@ -73,8 +73,8 @@ class AuthenticateCatalogApiKey
         $response->headers->set('X-Catalog-Auth-Channel', $authChannel);
 
         if ($consumer->monthly_quota > 0) {
-            $response->headers->set('X-RateLimit-Limit', (string) $consumer->monthly_quota);
-            $response->headers->set('X-RateLimit-Remaining', (string) max(0, $consumer->monthly_quota - $consumer->requests_used));
+            $response->headers->set('X-Catalog-Monthly-Quota', (string) $consumer->monthly_quota);
+            $response->headers->set('X-Catalog-Monthly-Remaining', (string) max(0, $consumer->monthly_quota - $consumer->requests_used));
         }
 
         return $response;
