@@ -20,7 +20,9 @@ class VehicleContext
 
     public function current(): ?SelectedVehicle
     {
-        if (Session::has(self::SESSION_KEY)) {
+        // exists(), not has(): has() reports false for a null value, which would erase the
+        // difference between "nothing chosen yet" and "deliberately cleared".
+        if (Session::exists(self::SESSION_KEY)) {
             $stored = Session::get(self::SESSION_KEY);
 
             return is_array($stored) ? SelectedVehicle::fromArray($stored) : null;
