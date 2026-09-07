@@ -34,12 +34,18 @@ use App\Livewire\Customer\Dashboard as CustomerDashboard;
 use App\Livewire\Customer\Garage as CustomerGarage;
 use App\Livewire\Customer\Login as CustomerLogin;
 use App\Livewire\Customer\Register as CustomerRegister;
+use App\Livewire\Storefront\CategoryPage as StorefrontCategory;
 use App\Livewire\Storefront\Home as StorefrontHome;
+use App\Livewire\Storefront\ProductPage as StorefrontProduct;
+use App\Livewire\Storefront\SearchResults as StorefrontSearch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', StorefrontHome::class)->name('storefront.home');
+Route::get('/cauta', StorefrontSearch::class)->name('storefront.search');
+Route::get('/categorie/{category}', StorefrontCategory::class)->where('category', '.+')->name('storefront.category');
+Route::get('/produs/{product:slug}', StorefrontProduct::class)->name('storefront.product');
 Route::middleware('guest')->group(function (): void {
     Route::view('/admin/login', 'auth.admin-login')->name('admin.login');
     Route::post('/admin/login', function (Request $request) {

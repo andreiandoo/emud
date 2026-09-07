@@ -21,6 +21,11 @@
             </span>
         @endif
 
+        <form action="{{ route('storefront.search') }}" method="get" class="hidden flex-1 md:block">
+            <input type="search" name="q" value="{{ request('q') }}" placeholder="Caută cod piesă, MPN sau denumire"
+                   class="w-full max-w-md rounded-lg border-stone-300 text-sm">
+        </form>
+
         <nav class="ml-auto flex items-center gap-4 text-sm">
             @auth
                 <a href="{{ route('customer.garage') }}" class="text-stone-600 hover:text-stone-900">Garajul meu</a>
@@ -31,6 +36,17 @@
             @endauth
         </nav>
     </div>
+
+    @php($menu = \App\Models\Category::query()->whereNull('parent_id')->where('is_active', true)->where('is_visible_in_menu', true)->orderBy('position')->orderBy('name')->get())
+    @if($menu->isNotEmpty())
+        <nav class="border-t border-stone-100">
+            <div class="mx-auto flex max-w-6xl gap-5 overflow-x-auto px-4 py-2.5 text-sm">
+                @foreach($menu as $item)
+                    <a href="{{ route('storefront.category', $item) }}" class="whitespace-nowrap text-stone-600 hover:text-stone-900">{{ $item->name }}</a>
+                @endforeach
+            </div>
+        </nav>
+    @endif
 </header>
 
 <main class="mx-auto max-w-6xl px-4 py-8">{{ $slot }}</main>

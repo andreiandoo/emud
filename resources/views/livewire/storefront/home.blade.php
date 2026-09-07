@@ -27,12 +27,12 @@
         @else
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach($categories as $category)
-                    <div class="rounded-xl border border-stone-200 bg-white p-4 transition hover:border-stone-400">
+                    <a href="{{ route('storefront.category', $category) }}" class="rounded-xl border border-stone-200 bg-white p-4 transition hover:border-stone-400">
                         <span class="block font-semibold">{{ $category->name }}</span>
                         @if($category->description)
                             <span class="mt-1 block text-xs text-stone-500">{{ Str::limit($category->description, 80) }}</span>
                         @endif
-                    </div>
+                    </a>
                 @endforeach
             </div>
         @endif

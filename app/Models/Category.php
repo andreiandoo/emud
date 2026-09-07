@@ -22,6 +22,16 @@ class Category extends Model
         ];
     }
 
+    /**
+     * Slugs are only unique within a parent, so binding on one would be ambiguous. full_path is
+     * unique and gives the nested URL a customer expects, and Laravel leaves its slashes intact
+     * when generating the route.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'full_path';
+    }
+
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');

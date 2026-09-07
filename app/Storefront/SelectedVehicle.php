@@ -21,6 +21,8 @@ final readonly class SelectedVehicle
         public ?int $generationId = null,
         public ?string $generationName = null,
         public ?int $configurationId = null,
+        /** Year of manufacture, when known; fitment year ranges cannot be evaluated without it. */
+        public ?int $year = null,
         public ?int $customerVehicleId = null,
     ) {}
 
@@ -34,6 +36,7 @@ final readonly class SelectedVehicle
             generationId: $vehicle->generation_id ? (int) $vehicle->generation_id : null,
             generationName: $vehicle->generation?->name,
             configurationId: $vehicle->configuration_id ? (int) $vehicle->configuration_id : null,
+            year: $vehicle->year ? (int) $vehicle->year : null,
             customerVehicleId: (int) $vehicle->id,
         );
     }
@@ -53,6 +56,7 @@ final readonly class SelectedVehicle
             generationId: isset($data['generation_id']) ? (int) $data['generation_id'] : null,
             generationName: $data['generation_name'] ?? null,
             configurationId: isset($data['configuration_id']) ? (int) $data['configuration_id'] : null,
+            year: isset($data['year']) ? (int) $data['year'] : null,
             customerVehicleId: isset($data['customer_vehicle_id']) ? (int) $data['customer_vehicle_id'] : null,
         );
     }
@@ -68,6 +72,7 @@ final readonly class SelectedVehicle
             'generation_id' => $this->generationId,
             'generation_name' => $this->generationName,
             'configuration_id' => $this->configurationId,
+            'year' => $this->year,
             'customer_vehicle_id' => $this->customerVehicleId,
         ];
     }
