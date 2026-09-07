@@ -47,10 +47,11 @@ class StorefrontPagesAndSeoTest extends TestCase
 
     public function test_the_page_route_never_shadows_a_real_route(): void
     {
-        // A page could be created with any slug; the specific routes must still win.
-        $this->page('cos', 'Coș fals', published: true);
+        // A page could be created with any slug; the specific routes must still win. Kept out
+        // of the footer so the assertion reads the served page rather than a navigation link.
+        $this->page('cos', 'Coș fals', published: true, inFooter: false);
 
-        $this->get('/cos')->assertOk()->assertDontSee('Coș fals');
+        $this->get('/cos')->assertOk()->assertSee('Coșul este gol')->assertDontSee('Coș fals');
     }
 
     public function test_published_pages_appear_in_the_footer(): void
