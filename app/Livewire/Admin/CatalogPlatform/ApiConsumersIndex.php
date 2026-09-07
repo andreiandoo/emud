@@ -65,7 +65,13 @@ class ApiConsumersIndex extends Component
     public function render()
     {
         return view('livewire.admin.catalog-platform.api-consumers-index', [
-            'consumers' => CatalogApiConsumer::query()->with(['keys' => fn ($q) => $q->latest()])->latest()->get(),
+            'consumers' => CatalogApiConsumer::query()
+                ->with([
+                    'keys' => fn ($q) => $q->latest(),
+                    'externalIdentities' => fn ($q) => $q->latest('last_seen_at'),
+                ])
+                ->latest()
+                ->get(),
         ]);
     }
 }
