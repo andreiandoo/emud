@@ -9,6 +9,7 @@ use App\Storefront\Compatibility\FitmentMatcher;
 use App\Storefront\VehicleContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -107,8 +108,8 @@ class CategoryPage extends Component
             ->all();
     }
 
-    /** @return \Illuminate\Support\Collection<int, Brand> */
-    private function availableBrands()
+    /** @return Collection<int, Brand> */
+    private function availableBrands(): Collection
     {
         return Brand::query()
             ->where('is_active', true)
