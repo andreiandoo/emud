@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Throwable;
 
 class CatalogSystemCheck extends Command
@@ -93,9 +94,18 @@ class CatalogSystemCheck extends Command
             'status' => ($stats['catalog_sources'] ?? 0) > 0 ? 'ok' : 'warn',
             'message' => ($stats['catalog_sources'] ?? 0).' catalog source(s), '.($stats['active_sources'] ?? 0).' active, '.($stats['enabled_source_schedules'] ?? 0).' enabled schedule(s).',
         ];
+        // Taxonomy sources (LIFEOFCAPO) only ever create makes/models/generations, so judging
+        // this check on parts and configurations alone reports a successful import as empty.
+        $canonical = ($stats['catalog_parts'] ?? 0)
+            + ($stats['vehicle_configurations'] ?? 0)
+            + ($stats['vehicle_makes'] ?? 0)
+            + ($stats['vehicle_models'] ?? 0)
+            + ($stats['vehicle_generations'] ?? 0);
+
         $checks['catalog'] = [
-            'status' => (($stats['catalog_parts'] ?? 0) + ($stats['vehicle_configurations'] ?? 0)) > 0 ? 'ok' : 'warn',
-            'message' => ($stats['catalog_parts'] ?? 0).' part(s), '.($stats['vehicle_configurations'] ?? 0).' vehicle configuration(s), '.($stats['catalog_fitments'] ?? 0).' fitment(s).',
+            'status' => $canonical > 0 ? 'ok' : 'warn',
+            'message' => ($stats['vehicle_makes'] ?? 0).' make(s), '.($stats['vehicle_models'] ?? 0).' model(s), '.($stats['vehicle_generations'] ?? 0).' generation(s), '
+                .($stats['vehicle_configurations'] ?? 0).' configuration(s), '.($stats['catalog_parts'] ?? 0).' part(s), '.($stats['catalog_fitments'] ?? 0).' fitment(s).',
         ];
         $checks['search'] = [
             'status' => ($stats['search_documents'] ?? 0) > 0 ? 'ok' : 'warn',
@@ -109,6 +119,7 @@ class CatalogSystemCheck extends Command
             'status' => 'ok',
             'message' => 'Queue='.config('queue.default').' (default queue "'.config('queue.connections.'.config('queue.default').'.queue').'" is unused by the pipeline); cache='.config('cache.default').'. Workers must cover: '.implode(',', self::PIPELINE_QUEUES).'.',
         ];
+        $checks['imports'] = $this->lastImportRunCheck($stats);
         $checks['queue_retry'] = $this->queueRetryCheck();
         $checks['demo'] = [
             'status' => ($stats['demo_parts'] ?? 0) > 0 ? 'ok' : 'warn',
@@ -120,6 +131,76 @@ class CatalogSystemCheck extends Command
         $this->output($checks, $stats);
 
         return $fatal ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * Canonical counts alone cannot tell a queued job that never ran from an import that
+     * failed, or from records that reached staging but were never canonicalized. Report the
+     * last run and the staging depth so the failing stage is identifiable without SQL.
+     *
+     * @param  array<string, int>  $stats
+     * @return array{status:string,message:string}
+     */
+    private function lastImportRunCheck(array $stats): array
+    {
+        if (! Schema::hasTable('catalog_import_runs')) {
+            return ['status' => 'warn', 'message' => 'catalog_import_runs table is missing; run migrations.'];
+        }
+
+        $staged = $stats['staged_source_records'] ?? 0;
+
+        $run = DB::table('catalog_import_runs')
+            ->leftJoin('catalog_sources', 'catalog_sources.id', '=', 'catalog_import_runs.catalog_source_id')
+            ->orderByDesc('catalog_import_runs.id')
+            ->select([
+                'catalog_sources.code',
+                'catalog_import_runs.mode',
+                'catalog_import_runs.status',
+                'catalog_import_runs.fetched_count',
+                'catalog_import_runs.parsed_count',
+                'catalog_import_runs.failed_count',
+                'catalog_import_runs.error_message',
+                'catalog_import_runs.started_at',
+            ])
+            ->first();
+
+        if ($run === null) {
+            return [
+                'status' => 'warn',
+                'message' => 'No import run recorded. A queued job that never starts means no worker covers catalog-imports; check the queue depth and the worker --queue list.',
+            ];
+        }
+
+        $summary = sprintf(
+            'Last run: %s %s, status=%s, fetched=%d parsed=%d failed=%d, staged records=%d.',
+            $run->code ?? 'unknown source',
+            $run->mode,
+            $run->status,
+            (int) $run->fetched_count,
+            (int) $run->parsed_count,
+            (int) $run->failed_count,
+            $staged
+        );
+
+        if ($run->error_message !== null && $run->error_message !== '') {
+            return ['status' => 'warn', 'message' => $summary.' Error: '.Str::limit((string) $run->error_message, 160)];
+        }
+
+        if (in_array($run->status, ['pending', 'running'], true)) {
+            return ['status' => 'warn', 'message' => $summary.' Still in progress or waiting for a worker.'];
+        }
+
+        $canonical = ($stats['catalog_parts'] ?? 0)
+            + ($stats['vehicle_configurations'] ?? 0)
+            + ($stats['vehicle_makes'] ?? 0)
+            + ($stats['vehicle_models'] ?? 0)
+            + ($stats['vehicle_generations'] ?? 0);
+
+        if ($staged > 0 && $canonical === 0) {
+            return ['status' => 'warn', 'message' => $summary.' Records reached staging but nothing was canonicalized; check the catalog-canonicalization queue.'];
+        }
+
+        return ['status' => 'ok', 'message' => $summary];
     }
 
     /**
@@ -158,8 +239,12 @@ class CatalogSystemCheck extends Command
             'active_sources' => $this->countWhere('catalog_sources', 'is_active', true),
             'enabled_source_schedules' => $this->countWhere('catalog_source_schedules', 'is_enabled', true),
             'catalog_parts' => $this->count('catalog_parts'),
+            'vehicle_makes' => $this->count('vehicle_makes'),
+            'vehicle_models' => $this->count('vehicle_models'),
+            'vehicle_generations' => $this->count('vehicle_generations'),
             'vehicle_configurations' => $this->count('vehicle_configurations'),
             'catalog_fitments' => $this->count('catalog_fitments'),
+            'staged_source_records' => $this->count('catalog_source_records'),
             'search_documents' => $this->count('catalog_search_documents'),
             'open_conflicts' => $this->countWhere('catalog_conflicts', 'status', 'open'),
             'pending_relations' => $this->countWhere('catalog_unresolved_part_relations', 'status', 'pending'),
