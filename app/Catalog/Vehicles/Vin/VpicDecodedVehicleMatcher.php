@@ -36,8 +36,8 @@ class VpicDecodedVehicleMatcher
                             ->where('model_year_to', '>=', $year);
                     });
             })
-            ->whereHas('generation.model.make', fn ($query) => $query->where('name', 'ilike', $make))
-            ->whereHas('generation.model', fn ($query) => $query->where('name', 'ilike', $model));
+            ->whereHas('generation.model.make', fn ($query) => $query->whereRaw('LOWER(name) = LOWER(?)', [$make]))
+            ->whereHas('generation.model', fn ($query) => $query->whereRaw('LOWER(name) = LOWER(?)', [$model]));
 
         if ($publicContext) {
             $this->publicationScope->visibleEntity($query, 'vehicle_configuration', 'vehicle_configurations.id');
