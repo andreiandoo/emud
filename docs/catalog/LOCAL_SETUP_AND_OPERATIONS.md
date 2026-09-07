@@ -39,7 +39,9 @@ php artisan db:seed
 
 `DatabaseSeeder` installs structural/reference data only: categories, attributes, commerce providers, catalog-source profiles and supplier profiles. It does not inject fake catalog records.
 
-If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are present in `.env`, `db:seed` also creates/updates the admin account.
+If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are present in `.env`, `db:seed` also creates/updates the admin account. Run `php artisan optimize` **after** seeding: `DatabaseSeeder` reads `env()` directly, so a cached config makes it skip admin creation without reporting an error.
+
+Re-seeding is safe on an operated installation. For a catalog source that already exists, the seeder refreshes only profile-owned fields (name, connector class, licence, capabilities) and adds settings keys introduced by a newer profile. Activation state, rights flags, field mapping and existing settings values stay under admin control and are never reverted by a deployment. When a shipped profile default differs from the stored value, the seeder prints which settings keys diverged instead of overwriting them.
 
 ## 3. Add deterministic test data
 
