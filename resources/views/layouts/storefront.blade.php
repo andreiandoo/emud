@@ -34,6 +34,14 @@
                 <a href="{{ route('customer.login') }}" class="text-stone-600 hover:text-stone-900">Autentificare</a>
                 <a href="{{ route('customer.register') }}" class="rounded-lg bg-stone-900 px-3 py-1.5 font-semibold text-white">Cont nou</a>
             @endauth
+
+            @php($cartCount = (int) (app(\App\Storefront\CartManager::class)->current()?->items()->sum('quantity') ?? 0))
+            <a href="{{ route('storefront.cart') }}" class="relative whitespace-nowrap text-stone-600 hover:text-stone-900">
+                Coș
+                @if($cartCount > 0)
+                    <span class="ml-1 rounded-full bg-stone-900 px-1.5 py-0.5 text-xs font-bold text-white">{{ $cartCount }}</span>
+                @endif
+            </a>
         </nav>
     </div>
 

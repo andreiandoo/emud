@@ -34,7 +34,10 @@ use App\Livewire\Customer\Dashboard as CustomerDashboard;
 use App\Livewire\Customer\Garage as CustomerGarage;
 use App\Livewire\Customer\Login as CustomerLogin;
 use App\Livewire\Customer\Register as CustomerRegister;
+use App\Livewire\Storefront\CartPage as StorefrontCart;
 use App\Livewire\Storefront\CategoryPage as StorefrontCategory;
+use App\Livewire\Storefront\CheckoutPage as StorefrontCheckout;
+use App\Livewire\Storefront\OrderConfirmation as StorefrontOrder;
 use App\Livewire\Storefront\Home as StorefrontHome;
 use App\Livewire\Storefront\ProductPage as StorefrontProduct;
 use App\Livewire\Storefront\SearchResults as StorefrontSearch;
@@ -46,6 +49,9 @@ Route::get('/', StorefrontHome::class)->name('storefront.home');
 Route::get('/cauta', StorefrontSearch::class)->name('storefront.search');
 Route::get('/categorie/{category}', StorefrontCategory::class)->where('category', '.+')->name('storefront.category');
 Route::get('/produs/{product:slug}', StorefrontProduct::class)->name('storefront.product');
+Route::get('/cos', StorefrontCart::class)->name('storefront.cart');
+Route::get('/finalizare', StorefrontCheckout::class)->name('storefront.checkout');
+Route::get('/comanda/{order}', StorefrontOrder::class)->name('storefront.order');
 Route::middleware('guest')->group(function (): void {
     Route::view('/admin/login', 'auth.admin-login')->name('admin.login');
     Route::post('/admin/login', function (Request $request) {

@@ -53,6 +53,23 @@
                 {{ $variant?->retail_price !== null ? number_format((float) $variant->retail_price, 2, ',', '.').' lei' : 'Preț la cerere' }}
             </div>
 
+            <div class="flex flex-wrap items-center gap-3">
+                <input type="number" min="1" max="99" wire:model="quantity" class="w-20 rounded-lg border-stone-300 text-sm">
+                <button wire:click="addToCart" class="rounded-lg bg-stone-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-stone-700">
+                    Adaugă în coș
+                </button>
+                @if(session('cart-added'))
+                    <span class="text-sm font-semibold text-lime-700">{{ session('cart-added') }}</span>
+                @endif
+            </div>
+            @error('quantity') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+
+            @unless($verdict->isCertain())
+                <p class="text-xs text-stone-500">
+                    Compatibilitatea nu este confirmată pentru mașina ta. Verifică înainte de comandă.
+                </p>
+            @endunless
+
             @if($product->short_description)
                 <p class="text-stone-700">{{ $product->short_description }}</p>
             @endif
