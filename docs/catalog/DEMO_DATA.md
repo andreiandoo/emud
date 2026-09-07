@@ -18,11 +18,13 @@ The command is idempotent. Re-running it updates the same fixture entities inste
 
 `--rebuild-search` resets and queues the canonical part and vehicle search projections. With `QUEUE_CONNECTION=sync` this completes inline; with an asynchronous queue, run the normal queue worker.
 
-The demo seeder is intentionally **not** called by `DatabaseSeeder`, so a normal production/reference seed does not receive fake catalog data. It can also be invoked directly:
+The demo fixture is intentionally **not** called by `DatabaseSeeder`, so a normal production/reference seed does not receive fake catalog data. It can also be invoked directly:
 
 ```bash
-php artisan db:seed --class=Database\\Seeders\\AutomotiveCatalogDemoSeeder
+php artisan db:seed --class=Database\\Seeders\\AutomotiveCatalogDemoFixtureSeeder
 ```
+
+`AutomotiveCatalogDemoFixtureSeeder` is the supported fixture entrypoint. It runs the canonical demo-data seeder and then normalizes demo supplier mapping state names to the same `mapped_auto` contract used by the production matcher.
 
 ## What is seeded
 
@@ -168,3 +170,9 @@ After logging in as an admin:
 - compatibility publication-scope enforcement;
 - conditional fitment constraint serialization;
 - unresolved relation and supplier matching queue fixtures.
+
+`tests/Feature/CatalogPublicationBoundaryTest.php` additionally verifies:
+
+- demo supplier states normalize to `mapped_auto`;
+- a public part-number source cannot expose a restricted canonical part;
+- public VIN matching cannot return or suggest a canonical vehicle whose identity is not API-publishable.
