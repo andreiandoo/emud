@@ -8,7 +8,6 @@ use App\Models\Product;
 use App\Support\HtmlSanitizer;
 use Database\Seeders\PageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class StorefrontPagesAndSeoTest extends TestCase
