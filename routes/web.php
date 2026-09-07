@@ -11,6 +11,7 @@ use App\Livewire\Admin\CatalogPlatform\Explorer as CatalogExplorer;
 use App\Livewire\Admin\CatalogPlatform\ImportRunsIndex as CatalogImportRunsIndex;
 use App\Livewire\Admin\CatalogPlatform\PartDetail as CatalogPartDetail;
 use App\Livewire\Admin\CatalogPlatform\QualityDashboard as CatalogQualityDashboard;
+use App\Livewire\Admin\CatalogPlatform\SchemaExplorer as CatalogSchemaExplorer;
 use App\Livewire\Admin\CatalogPlatform\SourceEditor as CatalogSourceEditor;
 use App\Livewire\Admin\CatalogPlatform\SourceRecordDetail as CatalogSourceRecordDetail;
 use App\Livewire\Admin\CatalogPlatform\SourceRecordsIndex as CatalogSourceRecordsIndex;
@@ -58,6 +59,7 @@ Route::post('/admin/logout', function (Request $request) {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', Dashboard::class)->name('dashboard');
     Route::get('/catalog-explorer', CatalogExplorer::class)->name('catalog-platform.explorer');
+    Route::get('/catalog-schema', CatalogSchemaExplorer::class)->name('catalog-platform.schema');
     Route::get('/catalog-quality', CatalogQualityDashboard::class)->name('catalog-platform.quality');
     Route::get('/catalog-sources', CatalogSourcesIndex::class)->name('catalog-platform.sources');
     Route::get('/catalog-sources/create', CatalogSourceEditor::class)->name('catalog-platform.sources.create');
