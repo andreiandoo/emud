@@ -37,9 +37,13 @@ class CheckoutPaymentSafetyTest extends TestCase
             return Http::response(['id' => 'pi_1', 'status' => 'requires_action', 'client_secret' => 's']);
         });
 
+        // RefreshDatabase holds a transaction around the whole test, so the meaningful
+        // assertion is that the gateway call adds no nesting of its own on top of it.
+        $baseline = DB::transactionLevel();
+
         app(PaymentService::class)->start($this->order(), $this->stripe());
 
-        $this->assertSame([0], $levels, 'The gateway call must run outside any open transaction.');
+        $this->assertSame([$baseline], $levels, 'The gateway call must not run inside a transaction opened by PaymentService.');
     }
 
     public function test_a_failed_provider_call_still_leaves_a_local_record(): void
