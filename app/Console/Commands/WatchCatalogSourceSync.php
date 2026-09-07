@@ -131,6 +131,7 @@ class WatchCatalogSourceSync extends Command
                 'catalog_import_runs.error_message',
                 'catalog_import_runs.started_at',
                 'catalog_import_runs.finished_at',
+                'catalog_import_runs.checkpoint',
                 'catalog_sources.code',
             ]);
     }
@@ -150,6 +151,11 @@ class WatchCatalogSourceSync extends Command
             number_format((int) $run->failed_count),
             $rate > 0 ? sprintf('%s/s', number_format($rate, 1)) : '—'
         );
+
+        // A resumable source whose run has no checkpoint is running code that predates resume
+        // support, usually a worker process started before the deploy. Everything it has
+        // fetched is lost when the job hits its timeout, so it is worth seeing immediately.
+        $line .= $run->checkpoint === null ? '  [no checkpoint]' : '  [ckpt p'.(json_decode((string) $run->checkpoint, true)['page'] ?? '?').']';
 
         $sample = $this->latestRecords((int) $run->catalog_source_id, (int) $run->id);
 

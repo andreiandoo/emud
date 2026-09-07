@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ $title ?? 'Piese și accesorii 4x4' }} · eMUD</title>
+    @vite(['resources/css/app.css','resources/js/app.js'])
+    @livewireStyles
+</head>
+<body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
+<header class="border-b border-stone-200 bg-white">
+    <div class="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
+        <a href="{{ route('storefront.home') }}" class="text-xl font-black tracking-[.18em]">eMUD</a>
+
+        @php($vehicle = app(\App\Storefront\VehicleContext::class)->current())
+        @if($vehicle)
+            <span class="hidden items-center gap-2 rounded-full bg-lime-100 px-3 py-1 text-xs font-semibold text-lime-900 sm:inline-flex">
+                {{ $vehicle->label() }}
+                @if($vehicle->isFromGarage())<span class="font-normal text-lime-700">· din garaj</span>@endif
+            </span>
+        @endif
+
+        <nav class="ml-auto flex items-center gap-4 text-sm">
+            @auth
+                <span class="text-stone-500">{{ auth()->user()->name }}</span>
+            @else
+                <span class="text-stone-400">Cont client în lucru</span>
+            @endauth
+        </nav>
+    </div>
+</header>
+
+<main class="mx-auto max-w-6xl px-4 py-8">{{ $slot }}</main>
+
+<footer class="mt-16 border-t border-stone-200 bg-white">
+    <div class="mx-auto max-w-6xl px-4 py-8 text-xs text-stone-500">
+        eMUD · piese și accesorii 4x4, off-road și overlanding
+    </div>
+</footer>
+@livewireScripts
+</body>
+</html>

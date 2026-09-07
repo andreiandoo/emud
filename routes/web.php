@@ -30,11 +30,12 @@ use App\Livewire\Admin\Suppliers\SupplierEditor;
 use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
 use App\Livewire\Admin\VehiclesIndex;
+use App\Livewire\Storefront\Home as StorefrontHome;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', StorefrontHome::class)->name('storefront.home');
 Route::middleware('guest')->group(function (): void {
     Route::view('/admin/login', 'auth.admin-login')->name('login');
     Route::post('/admin/login', function (Request $request) {
