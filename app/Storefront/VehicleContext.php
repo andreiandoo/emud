@@ -67,8 +67,10 @@ class VehicleContext
             return null;
         }
 
-        // Ordering rather than filtering on is_primary: nothing in the schema guarantees a
-        // single primary vehicle per user, so this stays deterministic even if two are flagged.
+        // Ordering rather than filtering on is_primary: a partial unique index guarantees at
+        // most one primary vehicle, but not that one exists. A customer whose primary was
+        // removed by something other than the garage service still gets their oldest vehicle
+        // instead of losing personalisation entirely.
         $vehicle = $user->vehicles()
             ->with(['make', 'model', 'generation'])
             ->orderByDesc('is_primary')

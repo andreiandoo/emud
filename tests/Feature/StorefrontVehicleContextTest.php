@@ -77,14 +77,15 @@ class StorefrontVehicleContextTest extends TestCase
     }
 
     /**
-     * Nothing in the schema enforces a single primary vehicle, so resolution must stay
-     * deterministic rather than depending on row order when two are flagged.
+     * The index guarantees at most one primary vehicle, not that one exists. A customer left
+     * without a primary should still get personalisation rather than none, so resolution falls
+     * back to their oldest vehicle deterministically.
      */
-    public function test_resolution_is_deterministic_when_two_vehicles_are_flagged_primary(): void
+    public function test_a_garage_with_no_primary_falls_back_to_the_oldest_vehicle(): void
     {
         $user = User::factory()->create();
-        $first = $this->garageVehicle($user, 'Suzuki', 'Jimny', primary: true);
-        $this->garageVehicle($user, 'Toyota', 'Hilux', primary: true);
+        $first = $this->garageVehicle($user, 'Suzuki', 'Jimny', primary: false);
+        $this->garageVehicle($user, 'Toyota', 'Hilux', primary: false);
 
         $this->actingAs($user);
 
