@@ -29,6 +29,15 @@ class CatalogSystemCheck extends Command
         'imports',
     ];
 
+    /**
+     * Longest $timeout declared by a pipeline job. The queue connection's retry_after must
+     * exceed it: Redis releases a reserved job back to the queue after retry_after seconds
+     * even while it is still running, so a lower value makes a long import restart on a
+     * second worker and write to staging concurrently with the first.
+     * CatalogPipelineQueueTest fails if a job declares a longer timeout than this.
+     */
+    public const MAX_JOB_TIMEOUT_SECONDS = 7200;
+
     public function handle(): int
     {
         $checks = [];
@@ -100,6 +109,7 @@ class CatalogSystemCheck extends Command
             'status' => 'ok',
             'message' => 'Queue='.config('queue.default').' (default queue "'.config('queue.connections.'.config('queue.default').'.queue').'" is unused by the pipeline); cache='.config('cache.default').'. Workers must cover: '.implode(',', self::PIPELINE_QUEUES).'.',
         ];
+        $checks['queue_retry'] = $this->queueRetryCheck();
         $checks['demo'] = [
             'status' => ($stats['demo_parts'] ?? 0) > 0 ? 'ok' : 'warn',
             'message' => ($stats['demo_parts'] ?? 0) > 0
@@ -110,6 +120,34 @@ class CatalogSystemCheck extends Command
         $this->output($checks, $stats);
 
         return $fatal ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * A reserved job that outlives retry_after is handed to another worker while the first
+     * is still importing, so the same source is ingested twice in parallel and nothing in
+     * the logs identifies the duplication as a configuration problem.
+     *
+     * @return array{status:string,message:string}
+     */
+    private function queueRetryCheck(): array
+    {
+        $connection = (string) config('queue.default');
+        $retryAfter = config('queue.connections.'.$connection.'.retry_after');
+
+        if ($retryAfter === null) {
+            return ['status' => 'ok', 'message' => "Connection {$connection} does not reserve jobs; retry_after does not apply."];
+        }
+
+        $retryAfter = (int) $retryAfter;
+
+        if ($retryAfter > self::MAX_JOB_TIMEOUT_SECONDS) {
+            return ['status' => 'ok', 'message' => "retry_after={$retryAfter}s exceeds the longest job timeout (".self::MAX_JOB_TIMEOUT_SECONDS.'s).'];
+        }
+
+        return [
+            'status' => 'warn',
+            'message' => "retry_after={$retryAfter}s is below the longest job timeout (".self::MAX_JOB_TIMEOUT_SECONDS.'s): a long import is released mid-run and imported twice. Set '.strtoupper($connection).'_QUEUE_RETRY_AFTER='.(self::MAX_JOB_TIMEOUT_SECONDS + 60).'.',
+        ];
     }
 
     /** @return array<string, int> */

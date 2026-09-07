@@ -95,6 +95,18 @@ For the same reason, `php artisan queue:monitor default,...` is meaningless here
 
 The long-running import queues come last in the list so that a multi-hour EEA import does not starve search projection and notification jobs.
 
+### retry_after must outlast the longest job
+
+`SyncCatalogSource` and `CanonicalizeCatalogSourceRecords` declare a two-hour timeout, but the Redis queue connection defaults to `retry_after=90`. Redis releases a reserved job back to the queue once `retry_after` elapses **even while the job is still running**, so with the default a long import is picked up by a second worker and the same source is ingested twice in parallel — with `tries=3`, up to three concurrent runs writing to staging. Nothing in the logs identifies this as a configuration fault.
+
+Set this in every environment that runs imports:
+
+```dotenv
+REDIS_QUEUE_RETRY_AFTER=7260
+```
+
+`catalog:system:check` reports a `queue_retry` warning whenever the deployed value is not above the longest job timeout.
+
 In production use long-running supervised queue workers with the same `--queue` list and `--timeout=1800`, plus the standard Laravel scheduler cron entry. Source and supplier cron expressions are stored in the database; Laravel's scheduler dispatcher evaluates them.
 
 ## 6. Admin catalog operations
