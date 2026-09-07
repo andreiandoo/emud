@@ -55,7 +55,9 @@ Route::get('/categorie/{category}', StorefrontCategory::class)->where('category'
 Route::get('/produs/{product:slug}', StorefrontProduct::class)->name('storefront.product');
 Route::get('/cos', StorefrontCart::class)->name('storefront.cart');
 Route::get('/finalizare', StorefrontCheckout::class)->name('storefront.checkout');
-Route::get('/comanda/{token}', StorefrontOrder::class)->name('storefront.order');
+// Constrained to a UUID so a malformed link never reaches the query: checkout_token is a uuid
+// column, and PostgreSQL raises on a non-UUID comparison rather than simply matching nothing.
+Route::get('/comanda/{token}', StorefrontOrder::class)->whereUuid('token')->name('storefront.order');
 Route::middleware('guest')->group(function (): void {
     Route::view('/admin/login', 'auth.admin-login')->name('admin.login');
     Route::post('/admin/login', function (Request $request) {
