@@ -30,6 +30,10 @@ use App\Livewire\Admin\Suppliers\SupplierEditor;
 use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
 use App\Livewire\Admin\VehiclesIndex;
+use App\Livewire\Customer\Dashboard as CustomerDashboard;
+use App\Livewire\Customer\Garage as CustomerGarage;
+use App\Livewire\Customer\Login as CustomerLogin;
+use App\Livewire\Customer\Register as CustomerRegister;
 use App\Livewire\Storefront\Home as StorefrontHome;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +41,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', StorefrontHome::class)->name('storefront.home');
 Route::middleware('guest')->group(function (): void {
-    Route::view('/admin/login', 'auth.admin-login')->name('login');
+    Route::view('/admin/login', 'auth.admin-login')->name('admin.login');
     Route::post('/admin/login', function (Request $request) {
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
@@ -47,15 +51,34 @@ Route::middleware('guest')->group(function (): void {
         $request->session()->regenerate();
 
         return redirect()->intended(route('admin.dashboard'));
-    })->name('admin.login.store');
+    })->middleware('throttle:6,1')->name('admin.login.store');
 });
 Route::post('/admin/logout', function (Request $request) {
     Auth::logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
-    return redirect()->route('login');
+    return redirect()->route('admin.login');
 })->middleware('auth')->name('admin.logout');
+
+Route::prefix('cont')->name('customer.')->group(function (): void {
+    Route::middleware('guest')->group(function (): void {
+        Route::get('/autentificare', CustomerLogin::class)->name('login');
+        Route::get('/inregistrare', CustomerRegister::class)->name('register');
+    });
+
+    Route::middleware('auth')->group(function (): void {
+        Route::get('/', CustomerDashboard::class)->name('dashboard');
+        Route::get('/garaj', CustomerGarage::class)->name('garage');
+        Route::post('/iesire', function (Request $request) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('storefront.home');
+        })->name('logout');
+    });
+});
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/', Dashboard::class)->name('dashboard');

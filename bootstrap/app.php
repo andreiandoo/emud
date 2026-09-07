@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -27,6 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
             'catalog.api' => AuthenticateCatalogApiKey::class,
         ]);
+
+        // The shop and the back office have separate sign-in screens, so neither route is named
+        // "login". Sending a customer to the admin form, or an operator to the shop form, would
+        // strand both after they authenticate.
+        $middleware->redirectGuestsTo(fn (Request $request): string => $request->is('admin', 'admin/*')
+            ? route('admin.login')
+            : route('customer.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

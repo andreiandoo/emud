@@ -23,9 +23,11 @@
 
         <nav class="ml-auto flex items-center gap-4 text-sm">
             @auth
-                <span class="text-stone-500">{{ auth()->user()->name }}</span>
+                <a href="{{ route('customer.garage') }}" class="text-stone-600 hover:text-stone-900">Garajul meu</a>
+                <a href="{{ route('customer.dashboard') }}" class="font-semibold">{{ auth()->user()->name }}</a>
             @else
-                <span class="text-stone-400">Cont client în lucru</span>
+                <a href="{{ route('customer.login') }}" class="text-stone-600 hover:text-stone-900">Autentificare</a>
+                <a href="{{ route('customer.register') }}" class="rounded-lg bg-stone-900 px-3 py-1.5 font-semibold text-white">Cont nou</a>
             @endauth
         </nav>
     </div>
