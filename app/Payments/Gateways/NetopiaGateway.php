@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\PaymentProvider;
 use App\Payments\Contracts\PaymentGateway;
 use App\Payments\Data\PaymentResult;
+use App\Payments\Support\JwtVerifier;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -73,12 +74,86 @@ class NetopiaGateway implements PaymentGateway
         );
     }
 
+    /**
+     * The previous implementation compared the request's Authorization header against our own
+     * API key. That authenticated nothing: the payload was never covered, and the API key is an
+     * outbound request credential sent on every payment start, so anyone holding it could post
+     * an arbitrary body and have a payment marked paid.
+     *
+     * IPN authenticity now rests on the signed token NETOPIA sends, verified against the POS
+     * public key, with the body bound to the token through a payload hash claim. Verification
+     * fails closed: without a configured public key no notification is accepted.
+     *
+     * The header and claim names are configurable because they must be confirmed against the
+     * documentation of the specific merchant account before go-live; see docs/netopia-ipn.md.
+     */
     public function verifyWebhook(PaymentProvider $provider, string $payload, array $headers): bool
     {
-        $apiKey = ($provider->credentials ?? [])['api_key'] ?? null;
-        $authorization = $headers['authorization'][0] ?? $headers['Authorization'][0] ?? null;
+        $publicKey = (string) (($provider->credentials ?? [])['ipn_public_key'] ?? '');
 
-        return $apiKey && $authorization && hash_equals($apiKey, $authorization);
+        if (trim($publicKey) === '') {
+            return false;
+        }
+
+        $settings = $provider->settings ?? [];
+        $header = strtolower((string) ($settings['ipn_token_header'] ?? 'verification-token'));
+        $token = $headers[$header][0] ?? null;
+
+        if (! is_string($token) || $token === '') {
+            return false;
+        }
+
+        $claims = JwtVerifier::verify($token, $publicKey, ['RS256', 'RS512']);
+
+        if ($claims === null) {
+            return false;
+        }
+
+        return $this->tokenIsFresh($claims, (int) ($settings['ipn_max_age_seconds'] ?? 300))
+            && $this->tokenMatchesPayload($claims, $payload, $settings);
+    }
+
+    /**
+     * Without this, a signed notification captured once could be replayed indefinitely.
+     *
+     * @param  array<string, mixed>  $claims
+     */
+    private function tokenIsFresh(array $claims, int $maxAge): bool
+    {
+        $expiry = $claims['exp'] ?? null;
+
+        if ($expiry !== null && time() > (int) $expiry) {
+            return false;
+        }
+
+        $issuedAt = $claims['iat'] ?? null;
+
+        if ($issuedAt === null) {
+            return $expiry !== null;
+        }
+
+        return abs(time() - (int) $issuedAt) <= max(1, $maxAge);
+    }
+
+    /**
+     * A valid signature only proves NETOPIA issued the token, not that it describes this body.
+     * The hash claim is what ties the two together, so a missing claim is a rejection rather
+     * than a skipped check.
+     *
+     * @param  array<string, mixed>  $claims
+     * @param  array<string, mixed>  $settings
+     */
+    private function tokenMatchesPayload(array $claims, string $payload, array $settings): bool
+    {
+        $claimName = (string) ($settings['ipn_payload_hash_claim'] ?? 'sub');
+        $algorithm = (string) ($settings['ipn_payload_hash_algo'] ?? 'sha512');
+        $claimed = $claims[$claimName] ?? null;
+
+        if (! is_string($claimed) || $claimed === '' || ! in_array($algorithm, hash_algos(), true)) {
+            return false;
+        }
+
+        return hash_equals(hash($algorithm, $payload), strtolower($claimed));
     }
 
     public function webhookReference(array $payload): ?string

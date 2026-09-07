@@ -42,24 +42,64 @@ class StripeGateway implements PaymentGateway
 
     public function verifyWebhook(PaymentProvider $provider, string $payload, array $headers): bool
     {
-        $secret = ($provider->credentials ?? [])['webhook_secret'] ?? null;
         $signature = $headers['stripe-signature'][0] ?? $headers['Stripe-Signature'][0] ?? null;
 
-        if (! $secret || ! $signature) {
+        if ($this->webhookSecrets($provider) === [] || ! is_string($signature) || $signature === '') {
             return false;
         }
 
-        $parts = collect(explode(',', $signature))->mapWithKeys(function (string $part): array {
+        $timestamp = null;
+        $signatures = [];
+
+        // Stripe sends every valid v1 signature in one header, which is how a rotated secret
+        // stays verifiable during the overlap. Collapsing the header into a map kept only the
+        // last one, so a rotation whose valid signature was not last was rejected as forged.
+        foreach (explode(',', $signature) as $part) {
             [$key, $value] = array_pad(explode('=', trim($part), 2), 2, null);
 
-            return $key && $value ? [$key => $value] : [];
-        });
+            if ($key === 't' && $value !== null) {
+                $timestamp = $value;
+            } elseif ($key === 'v1' && $value !== null) {
+                $signatures[] = $value;
+            }
+        }
 
-        $timestamp = $parts->get('t');
-        $expected = hash_hmac('sha256', "{$timestamp}.{$payload}", $secret);
+        if ($timestamp === null || $signatures === [] || abs(time() - (int) $timestamp) > 300) {
+            return false;
+        }
 
-        return $timestamp && abs(time() - (int) $timestamp) <= 300
-            && hash_equals($expected, (string) $parts->get('v1'));
+        foreach ($this->webhookSecrets($provider) as $candidate) {
+            $expected = hash_hmac('sha256', "{$timestamp}.{$payload}", $candidate);
+
+            foreach ($signatures as $received) {
+                if (hash_equals($expected, $received)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Rotating an endpoint secret means both the old and the new one are live for a window, so
+     * verification has to accept either. `webhook_secrets` holds the rotation set;
+     * `webhook_secret` remains supported as the single-secret case.
+     *
+     * @return list<string>
+     */
+    private function webhookSecrets(PaymentProvider $provider): array
+    {
+        $credentials = $provider->credentials ?? [];
+        $secrets = array_merge(
+            (array) ($credentials['webhook_secrets'] ?? []),
+            [$credentials['webhook_secret'] ?? null],
+        );
+
+        return array_values(array_unique(array_filter(
+            array_map(static fn (mixed $secret): string => is_string($secret) ? trim($secret) : '', $secrets),
+            static fn (string $secret): bool => $secret !== '',
+        )));
     }
 
     public function webhookReference(array $payload): ?string

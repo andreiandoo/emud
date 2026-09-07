@@ -81,9 +81,9 @@ Acestea trebuie tratate ca buguri sau datorie tehnică prioritară, nu ca funcț
 
 - [x] `PaymentService` face apelul HTTP extern în interiorul unei tranzacții DB; mută I/O-ul extern în afara tranzacției și păstrează idempotency/recovery. **Rezolvat:** cheia de idempotency e rezervată printr-un rând local înainte de apelul extern, apelul rulează în afara oricărei tranzacții, iar un eșec lasă tranzacția în stare reluabilă cu aceeași cheie.
 - [x] `CheckoutService` marchează coșul `converted` înainte ca inițierea plății să fie garantată; adaugă stare recuperabilă și retry sigur. **Rezolvat:** coșul rămâne `active` până când plata a pornit; la eșec comanda devine `failed`/`failed` și clientul poate relua checkout-ul.
-- [ ] Verificarea IPN NETOPIA este insuficientă și trebuie înlocuită cu validarea criptografică oficială.
+- [x] Verificarea IPN NETOPIA este insuficientă și trebuie înlocuită cu validarea criptografică oficială. **Rezolvat:** token semnat verificat cu cheia publică a POS-ului, algoritm dintr-un allowlist, corp legat prin hash claim, protecție la replay, fail-closed. Numele headerului/claim-ului trebuie confirmate din contul comercial — vezi `docs/netopia-ipn.md`.
 - [ ] Deduplificarea webhook NETOPIA nu trebuie făcută numai după `ntpID`; același payment poate primi mai multe actualizări legitime de status.
-- [ ] Parserul manual Stripe Signature trebuie înlocuit cu SDK-ul oficial și trebuie să accepte rotația/mai multe semnături valide.
+- [x] Parserul manual Stripe Signature trebuie înlocuit cu SDK-ul oficial și trebuie să accepte rotația/mai multe semnături valide. **Rezolvat:** toate semnăturile `v1` din header sunt verificate față de toate secretele configurate (`webhook_secrets`), deci rotația funcționează. SDK-ul oficial nu a fost adăugat: nu pot rula composer aici ca să actualizez lockfile-ul.
 - [ ] Adapterul FAN folosește endpointuri/payloaduri presupuse și nu reprezintă contractul SelfAWB verificat.
 - [ ] Testele Stripe și FAN folosesc `Http::fake`; nu există test NETOPIA complet și nici teste webhook.
 - [ ] Salvarea unui atribut șterge/recreează opțiunile, ceea ce poate rupe referințele valorilor existente.
