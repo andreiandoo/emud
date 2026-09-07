@@ -82,23 +82,23 @@ class SourceEditor extends Component
         }
 
         $this->source = $source;
-        $this->name = $source->name;
-        $this->code = $source->code;
-        $this->sourceType = $source->source_type;
-        $this->protocol = $source->protocol;
+        $this->name = (string) $source->name;
+        $this->code = (string) $source->code;
+        $this->sourceType = (string) ($source->source_type ?? 'open_dataset');
+        $this->protocol = (string) ($source->protocol ?? 'http');
         $this->connectorClass = $source->connector_class;
         $this->canonicalizerClass = $source->canonicalizer_class;
         $this->baseUrl = $source->base_url;
         $this->catalogEndpoint = $source->catalog_endpoint;
-        $this->rightsClass = $source->rights_class->value;
-        $this->allowInternal = $source->allow_internal;
-        $this->allowEcommerce = $source->allow_ecommerce;
-        $this->allowDerived = $source->allow_derived;
-        $this->allowApiRedistribution = $source->allow_api_redistribution;
-        $this->allowBulkExport = $source->allow_bulk_export;
-        $this->allowMediaRedistribution = $source->allow_media_redistribution;
-        $this->attributionRequired = $source->attribution_required;
-        $this->isActive = $source->is_active;
+        $this->rightsClass = $source->rights_class?->value ?? 'unknown_pending_review';
+        $this->allowInternal = (bool) ($source->allow_internal ?? true);
+        $this->allowEcommerce = (bool) ($source->allow_ecommerce ?? false);
+        $this->allowDerived = (bool) ($source->allow_derived ?? false);
+        $this->allowApiRedistribution = (bool) ($source->allow_api_redistribution ?? false);
+        $this->allowBulkExport = (bool) ($source->allow_bulk_export ?? false);
+        $this->allowMediaRedistribution = (bool) ($source->allow_media_redistribution ?? false);
+        $this->attributionRequired = (bool) ($source->attribution_required ?? false);
+        $this->isActive = (bool) ($source->is_active ?? true);
         $this->licenseName = $source->license_name;
         $this->licenseUrl = $source->license_url;
         $this->legalNotes = $source->legal_notes;
@@ -190,7 +190,8 @@ class SourceEditor extends Component
         }
 
         try {
-            $result = $registry->for($this->source->fresh())->testConnection($this->source->fresh());
+            $source = $this->source->fresh();
+            $result = $registry->for($source)->testConnection($source);
             $this->connectionResult = [
                 'ok' => (bool) ($result['ok'] ?? false),
                 'tested_at' => now()->toIso8601String(),
