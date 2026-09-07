@@ -58,6 +58,6 @@ class VpicPostgresVinResolver
             return new VinResolutionResult('unavailable', null, 0, message: 'The local vPIC decoder returned no data.');
         }
 
-        return $this->matcher->match($decoded);
+        return $this->matcher->match($decoded, $publicContext);
     }
 }
