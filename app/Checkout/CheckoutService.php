@@ -10,6 +10,7 @@ use App\Models\ShippingMethod;
 use App\Payments\PaymentService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 class CheckoutService
 {
@@ -47,12 +48,22 @@ class CheckoutService
                     'tax_rate' => $item->snapshot['tax_rate'] ?? 0, 'snapshot' => $item->snapshot,
                 ]);
             }
-            $cart->update(['status' => 'converted']);
-
             return $order;
         });
 
-        $this->payments->start($order, $provider, $paymentContext);
+        // The cart stays active until the payment has actually been initiated. Converting it
+        // inside the order transaction left a customer whose gateway call then failed with an
+        // emptied cart, an order nobody was paying for, and no way to retry: place() requires
+        // an active cart.
+        try {
+            $this->payments->start($order, $provider, $paymentContext);
+        } catch (Throwable $exception) {
+            $order->update(['status' => 'failed', 'payment_status' => 'failed']);
+
+            throw $exception;
+        }
+
+        $cart->update(['status' => 'converted']);
 
         return $order->refresh();
     }

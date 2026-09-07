@@ -79,8 +79,8 @@ Important: existența unei migrații, a unui model sau a unei clase gateway nu �
 
 Acestea trebuie tratate ca buguri sau datorie tehnică prioritară, nu ca funcționalități finalizate:
 
-- [ ] `PaymentService` face apelul HTTP extern în interiorul unei tranzacții DB; mută I/O-ul extern în afara tranzacției și păstrează idempotency/recovery.
-- [ ] `CheckoutService` marchează coșul `converted` înainte ca inițierea plății să fie garantată; adaugă stare recuperabilă și retry sigur.
+- [x] `PaymentService` face apelul HTTP extern în interiorul unei tranzacții DB; mută I/O-ul extern în afara tranzacției și păstrează idempotency/recovery. **Rezolvat:** cheia de idempotency e rezervată printr-un rând local înainte de apelul extern, apelul rulează în afara oricărei tranzacții, iar un eșec lasă tranzacția în stare reluabilă cu aceeași cheie.
+- [x] `CheckoutService` marchează coșul `converted` înainte ca inițierea plății să fie garantată; adaugă stare recuperabilă și retry sigur. **Rezolvat:** coșul rămâne `active` până când plata a pornit; la eșec comanda devine `failed`/`failed` și clientul poate relua checkout-ul.
 - [ ] Verificarea IPN NETOPIA este insuficientă și trebuie înlocuită cu validarea criptografică oficială.
 - [ ] Deduplificarea webhook NETOPIA nu trebuie făcută numai după `ntpID`; același payment poate primi mai multe actualizări legitime de status.
 - [ ] Parserul manual Stripe Signature trebuie înlocuit cu SDK-ul oficial și trebuie să accepte rotația/mai multe semnături valide.
