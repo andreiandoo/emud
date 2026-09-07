@@ -201,8 +201,8 @@ class AutomotiveCatalogDemoSeeder extends Seeder
     }
 
     /**
-     * @param array<string, VehicleConfiguration> $vehicles
-     * @param array<string, CatalogPart> $parts
+     * @param  array<string, VehicleConfiguration>  $vehicles
+     * @param  array<string, CatalogPart>  $parts
      */
     private function seedFitments(array $vehicles, array $parts): void
     {
