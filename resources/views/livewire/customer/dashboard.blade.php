@@ -4,6 +4,12 @@
         <p class="mt-1 text-sm text-stone-600">Bine ai venit, {{ auth()->user()->name }}.</p>
     </div>
 
+    <nav class="flex flex-wrap gap-2 text-sm">
+        <a href="{{ route('customer.garage') }}" class="rounded-full border border-stone-300 px-3 py-1 hover:border-stone-900">Garajul meu</a>
+        <a href="{{ route('customer.orders') }}" class="rounded-full border border-stone-300 px-3 py-1 hover:border-stone-900">Comenzile mele</a>
+        <a href="{{ route('customer.profile') }}" class="rounded-full border border-stone-300 px-3 py-1 hover:border-stone-900">Datele mele</a>
+    </nav>
+
     <section class="rounded-xl border border-stone-200 bg-white p-6">
         <div class="mb-3 flex items-baseline justify-between gap-3">
             <h2 class="text-lg font-bold">Garajul meu</h2>

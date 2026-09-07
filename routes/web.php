@@ -31,9 +31,13 @@ use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
 use App\Livewire\Admin\VehiclesIndex;
 use App\Livewire\Customer\Dashboard as CustomerDashboard;
+use App\Livewire\Customer\ForgotPassword as CustomerForgotPassword;
 use App\Livewire\Customer\Garage as CustomerGarage;
 use App\Livewire\Customer\Login as CustomerLogin;
+use App\Livewire\Customer\Orders as CustomerOrders;
+use App\Livewire\Customer\Profile as CustomerProfile;
 use App\Livewire\Customer\Register as CustomerRegister;
+use App\Livewire\Customer\ResetPassword as CustomerResetPassword;
 use App\Livewire\Storefront\CartPage as StorefrontCart;
 use App\Livewire\Storefront\CategoryPage as StorefrontCategory;
 use App\Livewire\Storefront\CheckoutPage as StorefrontCheckout;
@@ -73,6 +77,13 @@ Route::post('/admin/logout', function (Request $request) {
     return redirect()->route('admin.login');
 })->middleware('auth')->name('admin.logout');
 
+// Outside the customer.* name group on purpose: Laravel's own reset notification links to the
+// route named exactly password.reset, and a prefixed name would leave the email pointing nowhere.
+Route::prefix('cont')->middleware('guest')->group(function (): void {
+    Route::get('/parola-uitata', CustomerForgotPassword::class)->name('password.request');
+    Route::get('/reseteaza-parola/{token}', CustomerResetPassword::class)->name('password.reset');
+});
+
 Route::prefix('cont')->name('customer.')->group(function (): void {
     Route::middleware('guest')->group(function (): void {
         Route::get('/autentificare', CustomerLogin::class)->name('login');
@@ -82,6 +93,8 @@ Route::prefix('cont')->name('customer.')->group(function (): void {
     Route::middleware('auth')->group(function (): void {
         Route::get('/', CustomerDashboard::class)->name('dashboard');
         Route::get('/garaj', CustomerGarage::class)->name('garage');
+        Route::get('/comenzi', CustomerOrders::class)->name('orders');
+        Route::get('/date', CustomerProfile::class)->name('profile');
         Route::post('/iesire', function (Request $request) {
             Auth::logout();
             $request->session()->invalidate();
