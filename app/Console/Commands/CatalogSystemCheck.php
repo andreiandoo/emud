@@ -107,10 +107,18 @@ class CatalogSystemCheck extends Command
             'message' => ($stats['vehicle_makes'] ?? 0).' make(s), '.($stats['vehicle_models'] ?? 0).' model(s), '.($stats['vehicle_generations'] ?? 0).' generation(s), '
                 .($stats['vehicle_configurations'] ?? 0).' configuration(s), '.($stats['catalog_parts'] ?? 0).' part(s), '.($stats['catalog_fitments'] ?? 0).' fitment(s).',
         ];
-        $checks['search'] = [
-            'status' => ($stats['search_documents'] ?? 0) > 0 ? 'ok' : 'warn',
-            'message' => ($stats['search_documents'] ?? 0).' search projection document(s).',
-        ];
+        // The projector only emits documents for parts and vehicle configurations; generations
+        // appear inside a configuration document rather than as documents of their own. With a
+        // taxonomy-only catalog there is legitimately nothing to project, so an empty
+        // projection is only a problem once projectable entities exist.
+        $projectable = ($stats['catalog_parts'] ?? 0) + ($stats['vehicle_configurations'] ?? 0);
+        $documents = $stats['search_documents'] ?? 0;
+
+        $checks['search'] = match (true) {
+            $documents > 0 => ['status' => 'ok', 'message' => $documents.' search projection document(s).'],
+            $projectable === 0 => ['status' => 'ok', 'message' => 'No documents yet, and nothing to project: the projection covers parts and vehicle configurations, and the catalog holds neither.'],
+            default => ['status' => 'warn', 'message' => $projectable.' projectable entity/entities but 0 document(s). Run catalog:search:rebuild --reset and confirm a worker covers catalog-search.'],
+        };
         $checks['qa'] = [
             'status' => 'ok',
             'message' => ($stats['open_conflicts'] ?? 0).' open conflict(s), '.($stats['pending_relations'] ?? 0).' unresolved relation(s), '.($stats['unmatched_supplier_products'] ?? 0).' unmatched supplier product(s).',
