@@ -15,11 +15,14 @@ class OrderConfirmation extends Component
      * Looked up by checkout_token rather than id or order number. The number is predictable
      * enough to be useful operationally, which is exactly why it must not be what grants access
      * to someone else's order and delivery address.
+     *
+     * The route parameter is deliberately not called "order": matching the typed Order property
+     * makes implicit binding try to resolve the token as a primary key before mount() runs.
      */
-    public function mount(string $order): void
+    public function mount(string $token): void
     {
         $this->order = Order::query()
-            ->where('checkout_token', $order)
+            ->where('checkout_token', $token)
             ->with(['items', 'shippingMethod'])
             ->firstOrFail();
     }

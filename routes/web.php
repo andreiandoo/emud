@@ -55,7 +55,7 @@ Route::get('/categorie/{category}', StorefrontCategory::class)->where('category'
 Route::get('/produs/{product:slug}', StorefrontProduct::class)->name('storefront.product');
 Route::get('/cos', StorefrontCart::class)->name('storefront.cart');
 Route::get('/finalizare', StorefrontCheckout::class)->name('storefront.checkout');
-Route::get('/comanda/{order}', StorefrontOrder::class)->name('storefront.order');
+Route::get('/comanda/{token}', StorefrontOrder::class)->name('storefront.order');
 Route::middleware('guest')->group(function (): void {
     Route::view('/admin/login', 'auth.admin-login')->name('admin.login');
     Route::post('/admin/login', function (Request $request) {
