@@ -41,8 +41,11 @@ use App\Livewire\Customer\Profile as CustomerProfile;
 use App\Livewire\Customer\Register as CustomerRegister;
 use App\Livewire\Customer\ResetPassword as CustomerResetPassword;
 use App\Livewire\Storefront\CartPage as StorefrontCart;
+use App\Livewire\Storefront\Contact as StorefrontContact;
 use App\Livewire\Storefront\CategoryPage as StorefrontCategory;
 use App\Livewire\Storefront\CheckoutPage as StorefrontCheckout;
+use App\Livewire\Storefront\GuidePage as StorefrontGuide;
+use App\Livewire\Storefront\Guides as StorefrontGuides;
 use App\Livewire\Storefront\Home as StorefrontHome;
 use App\Livewire\Storefront\OrderConfirmation as StorefrontOrder;
 use App\Livewire\Storefront\ProductPage as StorefrontProduct;
@@ -58,6 +61,9 @@ Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('storefron
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('storefront.robots');
 Route::get('/categorie/{category}', StorefrontCategory::class)->where('category', '.+')->name('storefront.category');
 Route::get('/produs/{product:slug}', StorefrontProduct::class)->name('storefront.product');
+Route::get('/ghiduri', StorefrontGuides::class)->name('storefront.guides');
+Route::get('/ghiduri/{slug}', StorefrontGuide::class)->where('slug', '[a-z0-9-]+')->name('storefront.guide');
+Route::get('/contact', StorefrontContact::class)->name('storefront.contact');
 Route::get('/cos', StorefrontCart::class)->name('storefront.cart');
 Route::get('/finalizare', StorefrontCheckout::class)->name('storefront.checkout');
 // Constrained to a UUID so a malformed link never reaches the query: checkout_token is a uuid

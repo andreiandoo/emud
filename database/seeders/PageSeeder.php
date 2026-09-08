@@ -17,7 +17,6 @@ class PageSeeder extends Seeder
     /** @var list<array{slug: string, title: string, excerpt: string, position: int}> */
     private const PAGES = [
         ['slug' => 'despre-noi', 'title' => 'Despre noi', 'excerpt' => 'Cine suntem și ce vindem.', 'position' => 10],
-        ['slug' => 'contact', 'title' => 'Contact', 'excerpt' => 'Cum ne poți contacta.', 'position' => 20],
         ['slug' => 'livrare', 'title' => 'Livrare', 'excerpt' => 'Termene, costuri și curieri.', 'position' => 30],
         ['slug' => 'plata', 'title' => 'Modalități de plată', 'excerpt' => 'Cum poți plăti comanda.', 'position' => 40],
         ['slug' => 'retur', 'title' => 'Politica de retur', 'excerpt' => 'Dreptul de retragere și procedura de retur.', 'position' => 50],
