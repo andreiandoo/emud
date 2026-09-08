@@ -25,6 +25,12 @@ class BrandsIndex extends Component
 
     public $logo;
 
+    public function resetForm(): void
+    {
+        $this->reset(['editingId', 'name', 'website', 'description', 'logo']);
+        $this->isActive = true;
+    }
+
     public function edit(int $id): void
     {
         $brand = Brand::findOrFail($id);
@@ -40,8 +46,7 @@ class BrandsIndex extends Component
         $data = $this->validate(['name' => ['required', 'string', 'max:255'], 'website' => ['nullable', 'url'], 'description' => ['nullable', 'string'], 'logo' => ['nullable', 'image', 'max:4096']]);
         $brand = $this->editingId ? Brand::findOrFail($this->editingId) : new Brand;
         $brand->fill(['name' => $data['name'], 'slug' => Str::slug($data['name']), 'website' => $data['website'] ?: null, 'description' => $data['description'] ?: null, 'is_active' => $this->isActive, 'logo_path' => $this->logo?->store('brands', 'public') ?? $brand->logo_path])->save();
-        $this->reset(['editingId', 'name', 'website', 'description', 'logo']);
-        $this->isActive = true;
+        $this->resetForm();
     }
 
     public function delete(int $id): void
