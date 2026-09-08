@@ -21,6 +21,7 @@ use App\Livewire\Admin\CatalogPlatform\SupplierMatchingIndex as CatalogSupplierM
 use App\Livewire\Admin\CatalogPlatform\UnresolvedRelationsIndex as CatalogUnresolvedRelationsIndex;
 use App\Livewire\Admin\CatalogPlatform\VehicleDetail as CatalogVehicleDetail;
 use App\Livewire\Admin\CommerceSettings;
+use App\Livewire\Admin\Content\ArticleBlockEditor;
 use App\Livewire\Admin\Content\ArticleEditor;
 use App\Livewire\Admin\Content\ArticlesIndex;
 use App\Livewire\Admin\Content\PagesIndex;
@@ -150,6 +151,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/articles', ArticlesIndex::class)->name('articles.index');
     Route::get('/articles/create', ArticleEditor::class)->name('articles.create');
     Route::get('/articles/{article}/edit', ArticleEditor::class)->name('articles.edit');
+    Route::get('/articles/{article}/blocks', ArticleBlockEditor::class)->name('articles.blocks');
     Route::get('/vehicles', VehiclesIndex::class)->name('vehicles.index');
     Route::get('/suppliers', SuppliersIndex::class)->name('suppliers.index');
     Route::get('/suppliers/create', SupplierEditor::class)->name('suppliers.create');

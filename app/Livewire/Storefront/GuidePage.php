@@ -22,7 +22,7 @@ class GuidePage extends Component
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->with(['category', 'author'])
+            ->with(['category', 'author', 'blocks', 'vehicles.make', 'vehicles.model', 'vehicles.generation'])
             ->firstOrFail();
     }
 

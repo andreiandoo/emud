@@ -27,7 +27,24 @@
         <p class="text-lg text-stone-700">{{ $article->excerpt }}</p>
     @endif
 
-    @if($article->content)
+    @if($article->vehicles->isNotEmpty())
+        <div class="flex flex-wrap gap-2 text-xs">
+            <span class="text-stone-500">Pentru:</span>
+            @foreach($article->vehicles as $link)
+                <span class="rounded-full bg-stone-100 px-2 py-0.5 font-semibold">{{ $link->label() }}</span>
+            @endforeach
+        </div>
+    @endif
+
+    {{-- The legacy HTML body still renders when an article predates the block editor, so
+         nothing written before the migration disappears from the site. --}}
+    @if($article->blocks->isEmpty() && $article->content)
         <div class="prose prose-stone max-w-none">{!! app(\App\Support\HtmlSanitizer::class)->clean($article->content) !!}</div>
     @endif
+
+    @foreach($article->blocks as $block)
+        <div>
+            @include('livewire.storefront.partials.article-block', ['block' => $block, 'article' => $article])
+        </div>
+    @endforeach
 </article>
