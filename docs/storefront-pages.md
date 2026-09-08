@@ -20,8 +20,8 @@ by tests. "Missing" means it does not exist yet.
 | sitemap.xml, robots.txt | — | Built |
 | **Brand page** | `/brand/{slug}` | **Missing** |
 | **Vehicle landing** (make/model/generation → compatible parts) | `/masina/{make}/{model}` | **Missing** |
-| **Service directory** | `/service-auto` | **Missing** |
-| **Service detail** | `/service-auto/{slug}` | **Missing** |
+| Service directory | `/service-auto` | Built |
+| Service detail | `/service-auto/{slug}` | Built |
 | **Comparison** | `/compara` | **Missing** |
 | **Offers / promotions** | `/oferte` | **Missing** |
 
@@ -35,9 +35,9 @@ by tests. "Missing" means it does not exist yet.
 | Garage list | `/cont/garaj` | Built |
 | Order history | `/cont/comenzi` | Built |
 | Profile and password | `/cont/date` | Built |
-| **Vehicle detail** (technical data, service plan, parts history, wishlist) | `/cont/garaj/{vehicle}` | **Missing** |
-| **Maintenance reminders** (ITP, RCA, oil, filters, timing belt) | part of vehicle detail | **Missing** |
-| **Wishlist**, global and per vehicle | `/cont/favorite` | **Missing** |
+| Vehicle detail (technical data, service plan, parts history) | `/cont/garaj/{vehicleId}` | Built |
+| Maintenance reminders (ITP, RCA, oil, filters, timing belt) | part of vehicle detail | Built |
+| Wishlist, global and per vehicle | `/cont/favorite` | Built |
 | **Addresses** | `/cont/adrese` | **Missing** |
 | **Saved searches and alerts** | `/cont/alerte` | **Missing** |
 | **Returns / RMA** | `/cont/retururi` | **Missing** |
@@ -49,8 +49,9 @@ Built: catalog explorer, database schema, quality, sources, imports, conflicts, 
 relations, supplier matching, catalog API, products, categories, attributes, brands, media,
 vehicles, suppliers, supplier syncs, static pages, articles, orders, commerce settings.
 
-Missing: **service directory management**, **article block editor**, **wishlist/alert
-insight**, **returns handling**, **customer records**, **menu builder**.
+Also built: service directory management, article block editor.
+
+Still missing: **wishlist/alert insight**, **returns handling**, **customer records**.
 
 ---
 
@@ -93,17 +94,17 @@ and a trust problem.
 
 # Interface work
 
-## Mega menu
+## Mega menu — built
 
-The catalogue currently renders as a flat row of top-level categories. It needs one mega menu
+The catalogue used to render as a flat row of top-level categories. It is now one mega menu
 covering the whole parts catalogue, pyramidal, at least three levels: a top-level column list,
 second-level groups under each, third-level links. Driven by the existing category tree, with
 `is_visible_in_menu` and `position` respected, and cached, because rendering three levels on
 every page load is a query per level otherwise.
 
-## Article builder
+## Article builder — built
 
-Articles today hold one HTML blob. They need structured blocks:
+Articles used to hold one HTML blob. They now carry ordered, typed blocks:
 
 - rich text
 - image and gallery
@@ -116,3 +117,14 @@ Articles today hold one HTML blob. They need structured blocks:
 An article also needs to be **linked to a vehicle model or generation**, so a guide about the
 Duster can surface on that vehicle's landing page, and so its parts carousel can resolve to
 parts compatible with that model. Both the editor and the renderer are new work.
+
+---
+
+# Remaining after this pass
+
+- addresses, saved searches and alerts, returns/RMA, GDPR consents and data export in the
+  customer account;
+- brand pages, vehicle landing pages, comparison and offers on the storefront;
+- returns handling and customer records in the admin;
+- known commerce defects still open in the handoff backlog: attribute options rebuilt on every
+  save, the variant matrix, media primary/reordering.
