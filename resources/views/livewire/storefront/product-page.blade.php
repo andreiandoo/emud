@@ -63,8 +63,14 @@
                 <button wire:click="addToCart" class="rounded-lg bg-stone-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-stone-700">
                     Adaugă în coș
                 </button>
+                <button wire:click="toggleWishlist" class="rounded-lg border border-stone-300 px-4 py-3 text-sm font-semibold hover:border-stone-900">
+                    Salvează la favorite
+                </button>
                 @if(session('cart-added'))
                     <span class="text-sm font-semibold text-lime-700">{{ session('cart-added') }}</span>
+                @endif
+                @if(session('wishlist'))
+                    <span class="text-sm font-semibold text-stone-700">{{ session('wishlist') }}</span>
                 @endif
             </div>
             @error('quantity') <p class="text-sm text-red-600">{{ $message }}</p> @enderror

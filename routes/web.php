@@ -33,6 +33,7 @@ use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
 use App\Livewire\Admin\VehiclesIndex;
 use App\Livewire\Customer\Dashboard as CustomerDashboard;
+use App\Livewire\Customer\Favourites as CustomerFavourites;
 use App\Livewire\Customer\ForgotPassword as CustomerForgotPassword;
 use App\Livewire\Customer\Garage as CustomerGarage;
 use App\Livewire\Customer\Login as CustomerLogin;
@@ -108,6 +109,7 @@ Route::prefix('cont')->name('customer.')->group(function (): void {
         Route::get('/', CustomerDashboard::class)->name('dashboard');
         Route::get('/garaj', CustomerGarage::class)->name('garage');
         Route::get('/garaj/{vehicleId}', CustomerVehicleDetail::class)->whereNumber('vehicleId')->name('garage.vehicle');
+        Route::get('/favorite', CustomerFavourites::class)->name('favourites');
         Route::get('/comenzi', CustomerOrders::class)->name('orders');
         Route::get('/date', CustomerProfile::class)->name('profile');
         Route::post('/iesire', function (Request $request) {

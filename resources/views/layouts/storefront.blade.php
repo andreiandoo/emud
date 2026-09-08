@@ -29,6 +29,7 @@
 
         <nav class="ml-auto flex items-center gap-4 text-sm">
             @auth
+                <a href="{{ route('customer.favourites') }}" class="text-stone-600 hover:text-stone-900">Favorite</a>
                 <a href="{{ route('customer.garage') }}" class="text-stone-600 hover:text-stone-900">Garajul meu</a>
                 <a href="{{ route('customer.dashboard') }}" class="font-semibold">{{ auth()->user()->name }}</a>
             @else
