@@ -3,8 +3,8 @@
 namespace App\Jobs;
 
 use App\Models\ProductAlert;
-use App\Support\Money;
 use App\Notifications\ProductAlertTriggered;
+use App\Support\Money;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
