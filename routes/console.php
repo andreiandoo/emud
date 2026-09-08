@@ -17,3 +17,7 @@ Schedule::command('catalog:relations:resolve --limit=50000')->hourly()->withoutO
 Schedule::command('suppliers:sync --mode=stock')->everyFifteenMinutes()->withoutOverlapping(14);
 Schedule::command('suppliers:sync --mode=prices')->hourly()->withoutOverlapping(55);
 Schedule::command('suppliers:sync --mode=catalog')->dailyAt('02:10')->withoutOverlapping(180);
+
+// A feed that stops updating fails silently by nature: the shop keeps serving the
+// last known price and stock. This is the only thing that turns that into a signal.
+Schedule::command('suppliers:health-check --notify')->hourly()->withoutOverlapping(55);

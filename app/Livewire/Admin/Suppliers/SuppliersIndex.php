@@ -6,10 +6,14 @@ use App\Enums\SupplierOnboardingStatus;
 use App\Enums\SupplierStrategicRole;
 use App\Jobs\SyncSupplierFeed;
 use App\Models\Supplier;
+use App\Suppliers\ConnectorRegistry;
+use App\Suppliers\Contracts\SupportsConnectionTest;
+use App\Suppliers\SupplierHealthInspector;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Throwable;
 
 #[Layout('layouts::admin')]
 class SuppliersIndex extends Component
@@ -44,7 +48,34 @@ class SuppliersIndex extends Component
         $supplier->update(['is_active' => ! $supplier->is_active]);
     }
 
-    public function render()
+    /**
+     * The one supplier network call allowed outside a queued job: an operator asking
+     * "can we reach this feed?" needs the answer now, and the connectors keep the
+     * timeout short so a dead host cannot hold the request open.
+     */
+    public function testConnection(int $supplierId, ConnectorRegistry $registry): void
+    {
+        $supplier = Supplier::query()->findOrFail($supplierId);
+
+        try {
+            $connector = $registry->for($supplier);
+        } catch (Throwable $exception) {
+            session()->flash('connection-test', ['ok' => false, 'message' => $exception->getMessage()]);
+
+            return;
+        }
+
+        if (! $connector instanceof SupportsConnectionTest) {
+            session()->flash('connection-test', ['ok' => false, 'message' => "Conectorul furnizorului {$supplier->code} nu suportă testarea conexiunii."]);
+
+            return;
+        }
+
+        $result = $connector->testConnection($supplier);
+        session()->flash('connection-test', ['ok' => $result->successful, 'message' => "{$supplier->code}: {$result->message}"]);
+    }
+
+    public function render(SupplierHealthInspector $inspector)
     {
         $suppliers = Supplier::query()
             ->with('syncSchedules')
@@ -73,6 +104,11 @@ class SuppliersIndex extends Component
                 ->select('onboarding_status', DB::raw('count(*) as total'))
                 ->groupBy('onboarding_status')
                 ->pluck('total', 'onboarding_status'),
+            // Health is only meaningful for a running feed, so it is computed for the
+            // active suppliers rather than for all 50-odd commercial prospects.
+            'health' => $suppliers
+                ->filter(fn (Supplier $supplier): bool => $supplier->is_active)
+                ->mapWithKeys(fn (Supplier $supplier): array => [$supplier->id => $inspector->inspect($supplier)]),
             'statuses' => SupplierOnboardingStatus::cases(),
             'roles' => SupplierStrategicRole::cases(),
             'countries' => Supplier::query()->whereNotNull('country_code')->distinct()->orderBy('country_code')->pluck('country_code'),

@@ -2,9 +2,14 @@
 
 namespace App\Suppliers\Connectors;
 
+use App\Enums\SupplierSyncErrorType;
 use App\Models\Supplier;
+use App\Suppliers\Contracts\ReportsFeedIssues;
 use App\Suppliers\Contracts\SupplierConnector;
 use App\Suppliers\Contracts\SupplierFeedArtifactProvider;
+use App\Suppliers\Contracts\SupportsConnectionTest;
+use App\Suppliers\Data\SupplierConnectionResult;
+use App\Suppliers\Data\SupplierFeedIssue;
 use App\Suppliers\Data\SupplierRecord;
 use App\Suppliers\Parsing\StructuredSupplierFeedParser;
 use App\Suppliers\Parsing\SupplierRecordMapper;
@@ -13,10 +18,13 @@ use Illuminate\Filesystem\FilesystemAdapter;
 use RuntimeException;
 use Throwable;
 
-class SftpFeedConnector implements SupplierConnector, SupplierFeedArtifactProvider
+class SftpFeedConnector implements ReportsFeedIssues, SupplierConnector, SupplierFeedArtifactProvider, SupportsConnectionTest
 {
     /** @var array<string, mixed>|null */
     private ?array $artifact = null;
+
+    /** @var list<SupplierFeedIssue> */
+    private array $issues = [];
 
     public function __construct(
         private readonly SftpSupplierFilesystemFactory $filesystemFactory,
@@ -24,10 +32,45 @@ class SftpFeedConnector implements SupplierConnector, SupplierFeedArtifactProvid
         private readonly SupplierRecordMapper $mapper,
     ) {}
 
+    /** @return list<SupplierFeedIssue> */
+    public function takeIssues(): array
+    {
+        $issues = $this->issues;
+        $this->issues = [];
+
+        return $issues;
+    }
+
+    public function testConnection(Supplier $supplier, string $mode = 'catalog'): SupplierConnectionResult
+    {
+        try {
+            $endpoint = $this->endpoint($supplier, $mode);
+            $disk = $this->filesystemFactory->build($supplier);
+            $path = $this->resolvePath($disk, $endpoint);
+        } catch (Throwable $exception) {
+            return SupplierConnectionResult::failure($exception->getMessage());
+        }
+
+        $size = $this->safeFileSize($disk, $path);
+        $modified = $this->safeLastModified($disk, $path);
+        $context = [
+            'resolved_path' => $path,
+            'size_bytes' => $size,
+            'source_modified_at' => $modified ? now()->setTimestamp($modified)->toDateTimeString() : null,
+        ];
+
+        // A resolvable path with no readable size usually means the account can list
+        // the directory but not read the file, which would only surface at import time.
+        return $size === null
+            ? SupplierConnectionResult::failure("Fișierul {$path} a fost găsit, dar dimensiunea nu poate fi citită.", $context)
+            : SupplierConnectionResult::success("Feed accesibil: {$path}.", $context);
+    }
+
     /** @return iterable<SupplierRecord> */
     public function records(Supplier $supplier, string $mode): iterable
     {
         $this->artifact = null;
+        $this->issues = [];
         $endpoint = $this->endpoint($supplier, $mode);
         $disk = $this->filesystemFactory->build($supplier);
         $path = $this->resolvePath($disk, $endpoint);
@@ -72,7 +115,15 @@ class SftpFeedConnector implements SupplierConnector, SupplierFeedArtifactProvid
                 $record = $this->mapper->map($supplier, $row, $sourceUrl);
                 if ($record) {
                     yield $record;
+
+                    continue;
                 }
+
+                $this->issues[] = new SupplierFeedIssue(
+                    SupplierSyncErrorType::Rejected,
+                    'Rândul nu are identificator extern sau denumire, deci nu poate fi mapat.',
+                    raw: $row,
+                );
             }
 
             $this->artifact = [

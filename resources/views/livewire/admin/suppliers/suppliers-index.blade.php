@@ -6,6 +6,10 @@
 
     @if(session('status'))<div class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('status') }}</div>@endif
 
+    @if($test = session('connection-test'))
+        <div @class(['mb-4 rounded-lg border p-3 text-sm', 'border-emerald-300 bg-emerald-50 text-emerald-900' => $test['ok'], 'border-red-300 bg-red-50 text-red-900' => ! $test['ok']])>{{ $test['message'] }}</div>
+    @endif
+
     <div class="mb-6 flex flex-wrap gap-2">
         @foreach($statuses as $pipelineStatus)
             @php($count = $pipeline[$pipelineStatus->value] ?? 0)
@@ -54,8 +58,19 @@
                     @endforeach
                 </div>
             @endif
+            @php($report = $health[$supplier->id] ?? null)
+            @if($report && ! $report['healthy'])
+                <div class="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
+                    <strong class="text-xs font-bold uppercase tracking-wide text-amber-900">Necesită atenție</strong>
+                    <ul class="mt-2 space-y-1 text-xs text-amber-900">@foreach($report['issues'] as $issue)<li>• {{ $issue['message'] }}</li>@endforeach</ul>
+                </div>
+            @elseif($report)
+                <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-900">Feedurile programate sunt la zi.</div>
+            @endif
+
             <div class="mt-4 flex flex-wrap gap-2">
                 <a href="{{ route('admin.suppliers.edit', $supplier) }}" class="rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white">Configurează</a>
+                <button wire:click="testConnection({{ $supplier->id }})" wire:loading.attr="disabled" class="text-sm font-medium hover:bg-stone-50">Testează conexiunea</button>
                 @foreach(['catalog'=>'Catalog','stock'=>'Stoc','prices'=>'Prețuri'] as $mode=>$label)<button wire:click="sync({{ $supplier->id }}, '{{ $mode }}')" wire:loading.attr="disabled" class="text-sm font-medium hover:bg-stone-50">Sincronizează {{ $label }}</button>@endforeach
             </div>
         </section>

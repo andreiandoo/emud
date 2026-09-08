@@ -3,30 +3,69 @@
 namespace App\Suppliers\Connectors;
 
 use App\Enums\SupplierProtocol;
+use App\Enums\SupplierSyncErrorType;
 use App\Models\Supplier;
+use App\Suppliers\Contracts\ReportsFeedIssues;
 use App\Suppliers\Contracts\SupplierConnector;
+use App\Suppliers\Contracts\SupportsConnectionTest;
+use App\Suppliers\Data\SupplierConnectionResult;
+use App\Suppliers\Data\SupplierFeedIssue;
 use App\Suppliers\Data\SupplierRecord;
 use App\Suppliers\Parsing\StructuredSupplierFeedParser;
 use App\Suppliers\Parsing\SupplierRecordMapper;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Throwable;
 
-class HttpFeedConnector implements SupplierConnector
+class HttpFeedConnector implements ReportsFeedIssues, SupplierConnector, SupportsConnectionTest
 {
+    /** @var list<SupplierFeedIssue> */
+    private array $issues = [];
+
     public function __construct(
         private readonly StructuredSupplierFeedParser $parser,
         private readonly SupplierRecordMapper $mapper,
     ) {}
 
+    /** @return list<SupplierFeedIssue> */
+    public function takeIssues(): array
+    {
+        $issues = $this->issues;
+        $this->issues = [];
+
+        return $issues;
+    }
+
+    public function testConnection(Supplier $supplier, string $mode = 'catalog'): SupplierConnectionResult
+    {
+        $endpoint = $this->endpointFor($supplier, $mode);
+
+        if (blank($endpoint)) {
+            return SupplierConnectionResult::failure("Furnizorul {$supplier->code} nu are endpoint pentru {$mode}.");
+        }
+
+        try {
+            // Deliberately short, and retry(1) means a single attempt: this runs inside
+            // an admin request, so it must fail fast rather than hold a web worker for
+            // the import timeout multiplied by the configured retries.
+            $response = $this->request($supplier)->timeout(10)->retry(1)->head((string) $endpoint);
+        } catch (Throwable $exception) {
+            return SupplierConnectionResult::failure($exception->getMessage(), ['endpoint' => $endpoint]);
+        }
+
+        $context = ['endpoint' => $endpoint, 'status' => $response->status(), 'content_type' => $response->header('Content-Type')];
+
+        return $response->successful()
+            ? SupplierConnectionResult::success("Endpoint accesibil (HTTP {$response->status()}).", $context)
+            : SupplierConnectionResult::failure("Endpointul a răspuns cu HTTP {$response->status()}.", $context);
+    }
+
     /** @return iterable<SupplierRecord> */
     public function records(Supplier $supplier, string $mode): iterable
     {
-        $endpoint = match ($mode) {
-            'stock' => $supplier->stock_endpoint ?: $supplier->catalog_endpoint,
-            'prices' => $supplier->price_endpoint ?: $supplier->catalog_endpoint,
-            default => $supplier->catalog_endpoint,
-        };
+        $this->issues = [];
+        $endpoint = $this->endpointFor($supplier, $mode);
 
         throw_if(blank($endpoint), RuntimeException::class, "Furnizorul {$supplier->code} nu are endpoint pentru {$mode}.");
 
@@ -46,11 +85,28 @@ class HttpFeedConnector implements SupplierConnector
                 $record = $this->mapper->map($supplier, $row, (string) $endpoint);
                 if ($record) {
                     yield $record;
+
+                    continue;
                 }
+
+                $this->issues[] = new SupplierFeedIssue(
+                    SupplierSyncErrorType::Rejected,
+                    'Rândul nu are identificator extern sau denumire, deci nu poate fi mapat.',
+                    raw: $row,
+                );
             }
         } finally {
             fclose($stream);
         }
+    }
+
+    private function endpointFor(Supplier $supplier, string $mode): ?string
+    {
+        return match ($mode) {
+            'stock' => $supplier->stock_endpoint ?: $supplier->catalog_endpoint,
+            'prices' => $supplier->price_endpoint ?: $supplier->catalog_endpoint,
+            default => $supplier->catalog_endpoint,
+        };
     }
 
     private function request(Supplier $supplier): PendingRequest
