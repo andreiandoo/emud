@@ -75,11 +75,16 @@ class CatalogSourceSeeder extends Seeder
                             'status' => 'P',
                         ],
                     ],
-                    'page_size' => 1000,
+                    // Discodata charges almost the same for a large page as a small one — a
+                    // 5,000-row page measured 15s against 22s for 1,000 rows — so the page size
+                    // is set by what a single JSON response can be decoded into, not by speed.
+                    'page_size' => 5000,
                     'auto_canonicalize' => true,
                     'timeout_seconds' => 120,
                     'retry_times' => 4,
                     'retry_sleep_ms' => 2000,
+                    'transient_retry_times' => 3,
+                    'transient_retry_sleep_ms' => 5000,
                     'user_agent' => 'eMUD-Automotive-Catalog/1.0 (https://github.com/andreiandoo/emud)',
                 ],
             ],

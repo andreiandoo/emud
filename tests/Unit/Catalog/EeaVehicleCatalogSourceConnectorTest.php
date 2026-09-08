@@ -14,7 +14,7 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
     public function test_it_streams_distinct_car_configurations_with_release_provenance(): void
     {
         $this->fakeDiscodata(rows: [
-            'cars' => [[
+            'cars' => [
                 [
                     'Mk' => 'LAND ROVER',
                     'Cn' => 'DISCOVERY SPORT',
@@ -45,7 +45,7 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
                     'ep' => 150,
                     'year' => 2025,
                 ],
-            ]],
+            ],
         ]);
 
         $source = $this->source([$this->carsDataset()], pageSize: 2);
@@ -61,20 +61,45 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
         $this->assertStringStartsWith('eea:', $records[0]['external_id']);
         $this->assertStringStartsWith('eea:2025P:', $release['release_key']);
 
-        Http::assertSent(function (Request $request): bool {
-            $url = urldecode($request->url());
+        Http::assertSent(fn (Request $request): bool => str_contains($this->queryOf($request), 'SELECT DISTINCT')
+            && str_contains($this->queryOf($request), '[CO2Emission].[latest].[co2cars_2025Pv31]')
+            && str_contains($this->queryOf($request), "[Mk] = 'LAND ROVER'"));
+    }
 
-            return str_contains($url, 'SELECT DISTINCT')
-                && str_contains($url, '[CO2Emission].[latest].[co2cars_2025Pv31]')
-                && str_contains($url, 'nrOfHits=2');
-        });
+    /**
+     * Manufacturers are the unit of work, so the crawl has to cover all of them and each one's
+     * own pages. Paging the whole table instead made Discodata re-sort millions of rows per
+     * page, which is what put the import beyond its job timeout.
+     */
+    public function test_it_pages_each_manufacturer_separately(): void
+    {
+        $this->fakeDiscodata(rows: [
+            'cars' => [
+                ['Mk' => 'BMW', 'Cn' => 'X3', 'T' => 'G01', 'year' => 2025],
+                ['Mk' => 'BMW', 'Cn' => 'X5', 'T' => 'G05', 'year' => 2025],
+                ['Mk' => 'BMW', 'Cn' => 'X7', 'T' => 'G07', 'year' => 2025],
+                ['Mk' => 'AUDI', 'Cn' => 'Q5', 'T' => 'FY', 'year' => 2025],
+            ],
+        ]);
+
+        $records = iterator_to_array(
+            (new EeaVehicleCatalogSourceConnector)->records($this->source([$this->carsDataset()], pageSize: 2), 'cars')
+        );
+
+        // Sorted partitions, so AUDI is crawled before BMW regardless of the order EEA returns.
+        $this->assertSame(['AUDI', 'BMW', 'BMW', 'BMW'], array_column($records, 'Mk'));
+        $this->assertSame(['Q5', 'X3', 'X5', 'X7'], array_column($records, 'Cn'));
+
+        // BMW does not fit in one page of two, so the second page has to be requested for it.
+        Http::assertSent(fn (Request $request): bool => str_contains($this->queryOf($request), "[Mk] = 'BMW'")
+            && $this->paramOf($request, 'p') === '2');
     }
 
     public function test_catalog_mode_reads_both_passenger_car_and_van_datasets(): void
     {
         $this->fakeDiscodata(rows: [
-            'cars' => [[['Mk' => 'JEEP', 'Cn' => 'WRANGLER', 'T' => 'JL', 'Ft' => 'petrol', 'ec' => 1995, 'ep' => 200, 'year' => 2025]]],
-            'vans' => [[['Mk' => 'FORD', 'Cn' => 'RANGER', 'T' => '2AB', 'Ft' => 'diesel', 'ec' => 1996, 'ep' => 125, 'year' => 2025]]],
+            'cars' => [['Mk' => 'JEEP', 'Cn' => 'WRANGLER', 'T' => 'JL', 'Ft' => 'petrol', 'ec' => 1995, 'ep' => 200, 'year' => 2025]],
+            'vans' => [['Mk' => 'FORD', 'Cn' => 'RANGER', 'T' => '2AB', 'Ft' => 'diesel', 'ec' => 1996, 'ep' => 125, 'year' => 2025]],
         ]);
 
         $source = $this->source([$this->carsDataset(), $this->vansDataset()]);
@@ -93,7 +118,7 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
     public function test_a_dataset_missing_an_optional_column_still_imports_without_it(): void
     {
         $this->fakeDiscodata(
-            rows: ['vans' => [[['Mk' => 'FORD', 'Cn' => 'TRANSIT', 'T' => 'V363', 'Ft' => 'diesel', 'ec' => 1995, 'ep' => 125, 'year' => 2025]]]],
+            rows: ['vans' => [['Mk' => 'FORD', 'Cn' => 'TRANSIT', 'T' => 'V363', 'Ft' => 'diesel', 'ec' => 1995, 'ep' => 125, 'year' => 2025]]],
             missingColumns: ['vans' => ['Mt']],
         );
 
@@ -104,8 +129,8 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
         $this->assertCount(1, $records);
         $this->assertSame('vans', $records[0]['source_vehicle_kind']);
 
-        Http::assertSent(fn (Request $request): bool => str_contains(urldecode($request->url()), 'SELECT DISTINCT')
-            && ! str_contains(urldecode($request->url()), '[Mt]'));
+        Http::assertSent(fn (Request $request): bool => str_contains($this->queryOf($request), 'SELECT DISTINCT')
+            && ! str_contains($this->queryOf($request), '[Mt]'));
     }
 
     public function test_a_dataset_missing_a_required_column_fails_loudly(): void
@@ -120,17 +145,25 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
 
     public function test_connection_testing_exercises_the_real_projection(): void
     {
-        $this->fakeDiscodata(rows: ['vans' => [[]]], missingColumns: ['vans' => ['Mt']]);
+        $this->fakeDiscodata(
+            rows: ['vans' => [['Mk' => 'FORD', 'Cn' => 'TRANSIT', 'year' => 2025]]],
+            missingColumns: ['vans' => ['Mt']],
+        );
 
         $result = (new EeaVehicleCatalogSourceConnector)->testConnection($this->source([$this->vansDataset()]));
 
         $this->assertTrue($result['ok']);
         $this->assertSame(['test_mass_kg'], $result['datasets'][0]['unavailable_columns']);
+        $this->assertSame(1, $result['datasets'][0]['manufacturers']);
     }
 
-    public function test_it_resumes_a_previous_attempt_at_the_recorded_page(): void
+    public function test_it_resumes_a_previous_attempt_at_the_recorded_manufacturer_and_page(): void
     {
-        $rows = ['cars' => [[['Mk' => 'A', 'Cn' => 'A', 'year' => 2025]]]];
+        $rows = ['cars' => [
+            ['Mk' => 'AUDI', 'Cn' => 'Q5', 'year' => 2025],
+            ['Mk' => 'BMW', 'Cn' => 'X3', 'year' => 2025],
+            ['Mk' => 'BMW', 'Cn' => 'X5', 'year' => 2025],
+        ]];
         $source = $this->source([$this->carsDataset()], pageSize: 1);
 
         // Take the fingerprint the way the job does: from a completed run's own checkpoint.
@@ -141,28 +174,65 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
 
         $this->fakeDiscodata($rows);
         $connector = new EeaVehicleCatalogSourceConnector;
-        $connector->resumeFrom(['fingerprint' => $fingerprint, 'dataset_index' => 0, 'page' => 7]);
-        iterator_to_array($connector->records($source, 'cars'));
+        $connector->resumeFrom([
+            'fingerprint' => $fingerprint,
+            'dataset_index' => 0,
+            'manufacturer' => 'BMW',
+            'page' => 2,
+        ]);
 
-        Http::assertSent(fn (Request $request): bool => str_contains(urldecode($request->url()), 'SELECT DISTINCT')
-            && str_contains($request->url(), 'p=7'));
+        $records = iterator_to_array($connector->records($source, 'cars'));
+
+        $this->assertSame(['X5'], array_column($records, 'Cn'));
+        Http::assertNotSent(fn (Request $request): bool => str_contains($this->queryOf($request), "[Mk] = 'AUDI'"));
     }
 
     /**
-     * Resuming a checkpoint taken against a different dataset list would skip records that the
-     * new configuration has never fetched, so the position has to be discarded.
+     * Resuming a checkpoint taken against a different dataset list — or against the older
+     * whole-table paging, where page 42 meant a completely different row — would skip records
+     * the new configuration has never fetched, so the position has to be discarded.
      */
-    public function test_it_ignores_a_checkpoint_from_a_different_dataset_configuration(): void
+    public function test_it_ignores_a_checkpoint_from_a_different_paging_scheme(): void
     {
-        $this->fakeDiscodata(rows: ['cars' => [[['Mk' => 'A', 'Cn' => 'A', 'year' => 2025]]]]);
+        $this->fakeDiscodata(rows: ['cars' => [['Mk' => 'AUDI', 'Cn' => 'Q5', 'year' => 2025]]]);
 
         $connector = new EeaVehicleCatalogSourceConnector;
         $connector->resumeFrom(['fingerprint' => 'stale-fingerprint', 'dataset_index' => 0, 'page' => 42]);
 
-        iterator_to_array($connector->records($this->source([$this->carsDataset()]), 'cars'));
+        $records = iterator_to_array($connector->records($this->source([$this->carsDataset()]), 'cars'));
 
-        Http::assertSent(fn (Request $request): bool => str_contains(urldecode($request->url()), 'SELECT DISTINCT')
-            && str_contains($request->url(), 'p=1'));
+        $this->assertCount(1, $records);
+        Http::assertSent(fn (Request $request): bool => str_contains($this->queryOf($request), "[Mk] = 'AUDI'")
+            && $this->paramOf($request, 'p') === '1');
+    }
+
+    /**
+     * Discodata reports its own query timeout as HTTP 200 with an "errors" key, so the HTTP
+     * client's retry never sees it. Treating it as fatal killed multi-hour runs on a single
+     * slow page.
+     */
+    public function test_a_query_timeout_is_retried_rather_than_failing_the_run(): void
+    {
+        $this->fakeDiscodata(
+            rows: ['cars' => [['Mk' => 'AUDI', 'Cn' => 'Q5', 'year' => 2025]]],
+            transientFailures: 2,
+        );
+
+        $records = iterator_to_array(
+            (new EeaVehicleCatalogSourceConnector)->records($this->source([$this->carsDataset()]), 'cars')
+        );
+
+        $this->assertSame(['Q5'], array_column($records, 'Cn'));
+    }
+
+    public function test_a_rejected_query_still_fails_immediately(): void
+    {
+        $this->fakeDiscodata(rows: ['cars' => [['Mk' => 'AUDI', 'Cn' => 'Q5', 'year' => 2025]]], fatalError: 'Invalid object name.');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid object name.');
+
+        iterator_to_array((new EeaVehicleCatalogSourceConnector)->records($this->source([$this->carsDataset()]), 'cars'));
     }
 
     public function test_it_rejects_untrusted_table_identifiers(): void
@@ -178,35 +248,89 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
     }
 
     /**
-     * Discodata answers an invalid column with HTTP 200 and an "errors" key rather than an
-     * error status, so the fake has to reproduce that shape for probing to be exercised.
+     * Reproduces Discodata closely enough that the connector's own paging is what is under
+     * test: invalid columns and query timeouts come back as HTTP 200 with an "errors" key,
+     * the manufacturer listing is a separate query, and record pages are sliced per
+     * manufacturer under a case-insensitive collation.
      *
-     * @param  array<string, list<list<array<string, mixed>>>>  $rows  kind => pages of rows
+     * @param  array<string, list<array<string, mixed>>>  $rows  kind => flat rows
      * @param  array<string, list<string>>  $missingColumns  kind => columns the table lacks
+     * @param  int  $transientFailures  leading record requests answered with a query timeout
      */
-    private function fakeDiscodata(array $rows, array $missingColumns = []): void
-    {
-        $pageCursor = [];
+    private function fakeDiscodata(
+        array $rows,
+        array $missingColumns = [],
+        int $transientFailures = 0,
+        ?string $fatalError = null,
+    ): void {
+        $remainingTransient = $transientFailures;
 
-        Http::fake(function (Request $request) use ($rows, $missingColumns, &$pageCursor) {
-            $url = urldecode($request->url());
-            $kind = str_contains($url, 'co2vans') ? 'vans' : 'cars';
+        Http::fake(function (Request $request) use ($rows, $missingColumns, $fatalError, &$remainingTransient) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $params);
+            $query = (string) ($params['query'] ?? '');
+            $page = max(1, (int) ($params['p'] ?? 1));
+            $size = max(1, (int) ($params['nrOfHits'] ?? 1));
+            $kind = str_contains($query, 'co2vans') ? 'vans' : 'cars';
 
             foreach ($missingColumns[$kind] ?? [] as $column) {
-                if (str_contains($url, "[{$column}]")) {
+                if (str_contains($query, "[{$column}]")) {
                     return Http::response(['errors' => [['error' => "Invalid column name '{$column}'.", 'errorcode' => 10003]]]);
                 }
             }
 
-            if (str_contains($url, 'SELECT TOP 1')) {
+            if (str_starts_with($query, 'SELECT TOP 1')) {
                 return Http::response(['results' => []]);
             }
 
-            $index = $pageCursor[$kind] ?? 0;
-            $pageCursor[$kind] = $index + 1;
+            $available = $rows[$kind] ?? [];
 
-            return Http::response(['results' => $rows[$kind][$index] ?? []]);
+            if (str_starts_with($query, 'SELECT DISTINCT [Mk] AS [Mk] FROM')) {
+                $names = array_values(array_unique(array_map(
+                    static fn (array $row): string => (string) ($row['Mk'] ?? ''),
+                    $available,
+                )));
+
+                return Http::response(['results' => array_map(
+                    static fn (string $name): array => ['Mk' => $name],
+                    array_slice($names, ($page - 1) * $size, $size),
+                )]);
+            }
+
+            if ($fatalError !== null) {
+                return Http::response(['errors' => [['error' => $fatalError, 'errorcode' => 10003]]]);
+            }
+
+            if ($remainingTransient > 0) {
+                $remainingTransient--;
+
+                return Http::response(['errors' => [['error' => 'Query timed out']]]);
+            }
+
+            $manufacturer = preg_match("/\[Mk\] = '(.*)'\$/", $query, $matches)
+                ? str_replace("''", "'", $matches[1])
+                : null;
+
+            $matching = $manufacturer === null ? $available : array_values(array_filter(
+                $available,
+                static fn (array $row): bool => strcasecmp((string) ($row['Mk'] ?? ''), $manufacturer) === 0,
+            ));
+
+            return Http::response(['results' => array_slice($matching, ($page - 1) * $size, $size)]);
         });
+    }
+
+    private function queryOf(Request $request): string
+    {
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $params);
+
+        return (string) ($params['query'] ?? '');
+    }
+
+    private function paramOf(Request $request, string $name): string
+    {
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $params);
+
+        return (string) ($params[$name] ?? '');
     }
 
     /** @return array<string, mixed> */
@@ -233,6 +357,7 @@ class EeaVehicleCatalogSourceConnectorTest extends TestCase
                 'dataset_published_at' => '2026-06-25',
                 'datasets' => $datasets,
                 'page_size' => $pageSize,
+                'transient_retry_sleep_ms' => 0,
             ],
         ]);
     }

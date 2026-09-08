@@ -44,10 +44,22 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
      */
     private const REQUIRED_ALIASES = ['Mk', 'Cn', 'year'];
 
+    /**
+     * Identifies the way the crawl is split into pages. Whole-table OFFSET paging and
+     * per-manufacturer paging reach different rows through the same page number, so a
+     * checkpoint written by one must not be resumed by the other.
+     */
+    private const CHECKPOINT_SCHEME = 'by-manufacturer/v1';
+
     /** @var array<string, list<string>> Probed column support, keyed by table. */
     private array $supportedColumns = [];
 
+    /** @var array<string, list<string>> Manufacturer partitions, keyed by table and filters. */
+    private array $manufacturers = [];
+
     private int $datasetIndex = 0;
+
+    private string $manufacturer = '';
 
     private int $page = 1;
 
@@ -59,15 +71,17 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
         $datasets = $this->datasets($source, $mode);
         $fingerprint = $this->fingerprintFor($datasets);
 
-        // A checkpoint taken against a different dataset list or release must not be trusted:
-        // resuming at page 900 of a feed that has since changed would skip real records.
+        // A checkpoint taken against a different dataset list, release or paging scheme must
+        // not be trusted: resuming at a position that meant something else would skip records.
         if ($this->fingerprint !== $fingerprint) {
             $this->datasetIndex = 0;
+            $this->manufacturer = '';
             $this->page = 1;
         }
 
         $this->fingerprint = $fingerprint;
         $resumeIndex = $this->datasetIndex;
+        $resumeManufacturer = $this->manufacturer;
         $resumePage = $this->page;
 
         foreach (array_values($datasets) as $index => $dataset) {
@@ -76,10 +90,20 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
             }
 
             $this->datasetIndex = $index;
-            $startPage = $index === $resumeIndex ? max(1, $resumePage) : 1;
+            $manufacturers = $this->manufacturers($source, $dataset);
+            $resumeAt = $index === $resumeIndex ? $resumeManufacturer : '';
+            $position = $resumeAt === '' ? false : array_search($resumeAt, $manufacturers, true);
 
-            foreach ($this->datasetRecords($source, $dataset, $startPage) as $record) {
-                yield $record;
+            // A manufacturer that has vanished from the feed leaves the checkpoint pointing at
+            // nothing. Restarting the dataset re-fetches rows that are already staged, which
+            // upserts harmlessly; guessing a position would silently skip everything before it.
+            foreach (array_slice($manufacturers, $position === false ? 0 : $position) as $offset => $manufacturer) {
+                $this->manufacturer = $manufacturer;
+                $startPage = $offset === 0 && $manufacturer === $resumeAt ? max(1, $resumePage) : 1;
+
+                foreach ($this->datasetRecords($source, $dataset, $manufacturer, $startPage) as $record) {
+                    yield $record;
+                }
             }
         }
     }
@@ -88,6 +112,7 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
     {
         $this->fingerprint = (string) ($checkpoint['fingerprint'] ?? '');
         $this->datasetIndex = max(0, (int) ($checkpoint['dataset_index'] ?? 0));
+        $this->manufacturer = trim((string) ($checkpoint['manufacturer'] ?? ''));
         $this->page = max(1, (int) ($checkpoint['page'] ?? 1));
     }
 
@@ -96,6 +121,7 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
         return [
             'fingerprint' => $this->fingerprint,
             'dataset_index' => $this->datasetIndex,
+            'manufacturer' => $this->manufacturer,
             'page' => $this->page,
         ];
     }
@@ -159,6 +185,9 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
                 'status' => $response->status(),
                 'columns' => count($projection),
                 'unavailable_columns' => array_values(array_diff(array_keys(self::PROJECTION), array_keys($projection))),
+                // How many partitions the import will be split into, which is the single best
+                // predictor of how long it will take and whether it fits in one job window.
+                'manufacturers' => count($this->manufacturers($source, $dataset)),
             ];
         }
 
@@ -169,33 +198,81 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
         ];
     }
 
-    /** @return iterable<array<string, mixed>> */
-    private function datasetRecords(CatalogSource $source, array $dataset, int $startPage = 1): iterable
+    /**
+     * Splitting the crawl by manufacturer is what keeps every page shallow. Paging the whole
+     * table with OFFSET made Discodata re-sort the full DISTINCT result for each page: measured
+     * 22s per 1,000 rows at page 1,099 of the 2025 cars table, against 1-2s once the WHERE
+     * narrows to a single manufacturer. Those slow pages sat close enough to Discodata's own
+     * query timeout that one of them anywhere in the crawl failed the entire run.
+     *
+     * @return list<string>
+     */
+    private function manufacturers(CatalogSource $source, array $dataset): array
     {
-        $page = max(1, $startPage);
-        $this->page = $page;
-        $pageSize = max(1, min(5000, (int) ($source->settings['page_size'] ?? 1000)));
-        $query = $this->configurationQuery($source, $dataset);
+        $table = $this->validatedTable((string) $dataset['table']);
+        $filters = $this->datasetFilters($dataset);
+        $cacheKey = $table.'|'.implode(' AND ', $filters);
+
+        if (array_key_exists($cacheKey, $this->manufacturers)) {
+            return $this->manufacturers[$cacheKey];
+        }
+
+        $query = 'SELECT DISTINCT [Mk] AS [Mk] FROM '.$table.' WHERE '.implode(' AND ', $filters);
+        $pageSize = $this->pageSize($source);
+        $page = 1;
+        $names = [];
 
         while (true) {
-            $response = $this->request($source)->get($this->apiUrl($source), [
-                'query' => $query,
-                'p' => $page,
-                'nrOfHits' => $pageSize,
-            ]);
-            $payload = $response->throw()->json();
-            $this->throwIfApiError($payload);
-            $rows = data_get($payload, 'results', []);
+            $rows = $this->fetchRows($source, $query, $page, $pageSize);
 
-            if (! is_array($rows) || $rows === []) {
+            if ($rows === []) {
                 break;
             }
 
             foreach ($rows as $row) {
-                if (! is_array($row)) {
-                    continue;
-                }
+                $name = trim((string) ($row['Mk'] ?? ''));
 
+                // Discodata's collation is case-insensitive, so [Mk] = 'Ford' also returns the
+                // 'FORD' rows. Keeping both spellings as partitions would fetch each of them
+                // twice for no extra records.
+                if ($name !== '') {
+                    $names[mb_strtoupper($name)] ??= $name;
+                }
+            }
+
+            if (count($rows) < $pageSize) {
+                break;
+            }
+
+            $page++;
+        }
+
+        $names = array_values($names);
+
+        // Discodata's ordering is an implementation detail of DISTINCT. Sorting here is what
+        // makes a manufacturer's position reproducible across runs, and therefore what makes a
+        // checkpoint mean "everything before this name is done" on the next attempt.
+        sort($names, SORT_STRING);
+
+        return $this->manufacturers[$cacheKey] = $names;
+    }
+
+    /** @return iterable<array<string, mixed>> */
+    private function datasetRecords(CatalogSource $source, array $dataset, string $manufacturer, int $startPage = 1): iterable
+    {
+        $page = max(1, $startPage);
+        $this->page = $page;
+        $pageSize = $this->pageSize($source);
+        $query = $this->configurationQuery($source, $dataset, $manufacturer);
+
+        while (true) {
+            $rows = $this->fetchRows($source, $query, $page, $pageSize);
+
+            if ($rows === []) {
+                break;
+            }
+
+            foreach ($rows as $row) {
                 $normalized = $this->normalizeRow($row, $dataset);
                 if ($normalized === null) {
                     continue;
@@ -213,6 +290,50 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
             // points at work that still needs doing rather than skipping a partial page.
             $this->page = $page;
         }
+    }
+
+    /**
+     * Discodata reports both invalid SQL and its own query timeout as HTTP 200 with an "errors"
+     * key, so the HTTP client's retry never sees either. A timeout is transient and worth
+     * another attempt; a rejected query is not, and retrying it would only delay the failure.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function fetchRows(CatalogSource $source, string $query, int $page, int $pageSize): array
+    {
+        $attempts = max(1, (int) ($source->settings['transient_retry_times'] ?? 3));
+        $sleepMs = max(0, (int) ($source->settings['transient_retry_sleep_ms'] ?? 5000));
+
+        for ($attempt = 1; ; $attempt++) {
+            $payload = $this->request($source)->get($this->apiUrl($source), [
+                'query' => $query,
+                'p' => $page,
+                'nrOfHits' => $pageSize,
+            ])->throw()->json();
+
+            $error = trim((string) (data_get($payload, 'errors.0.error') ?? ''));
+
+            if ($error === '') {
+                $rows = data_get($payload, 'results', []);
+
+                return is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];
+            }
+
+            if ($attempt >= $attempts || ! $this->isTransientError($error)) {
+                throw new RuntimeException('EEA Discodata error: '.$error);
+            }
+
+            usleep($sleepMs * 1000);
+        }
+    }
+
+    private function isTransientError(string $error): bool
+    {
+        $error = mb_strtolower($error);
+
+        return str_contains($error, 'timed out')
+            || str_contains($error, 'timeout')
+            || str_contains($error, 'deadlock');
     }
 
     /** @return array<string, mixed>|null */
@@ -252,28 +373,48 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
         ]);
     }
 
-    private function configurationQuery(CatalogSource $source, array $dataset): string
+    private function configurationQuery(CatalogSource $source, array $dataset, ?string $manufacturer = null): string
     {
         $table = $this->validatedTable((string) $dataset['table']);
-        $year = isset($dataset['year']) ? (int) $dataset['year'] : null;
-        $status = trim((string) ($dataset['status'] ?? ''));
-
         $projection = $this->projectionFor($source, $dataset);
+
         $select = 'SELECT DISTINCT '.implode(', ', array_map(
             static fn (string $column, string $alias): string => "[{$column}] AS [{$alias}]",
             $projection,
             array_keys($projection),
         ));
 
-        $where = ['[Mk] IS NOT NULL', '[Cn] IS NOT NULL'];
-        if ($year !== null && $year > 0) {
-            $where[] = '[year] = '.$year;
-        }
-        if ($status !== '') {
-            $where[] = "[Status] = '".str_replace("'", "''", $status)."'";
+        $where = $this->datasetFilters($dataset);
+        if ($manufacturer !== null && $manufacturer !== '') {
+            $where[] = "[Mk] = '".$this->quote($manufacturer)."'";
         }
 
         return $select.' FROM '.$table.' WHERE '.implode(' AND ', $where);
+    }
+
+    /**
+     * Shared by the manufacturer listing and the record query so a partition can never be
+     * built from a wider set of rows than the one it is then asked to page through.
+     *
+     * @return list<string>
+     */
+    private function datasetFilters(array $dataset): array
+    {
+        // LEN() rather than IS NOT NULL: normalizeRow() drops rows with a blank make or model
+        // anyway, and excluding them server-side keeps them out of the paging entirely.
+        $filters = ['LEN([Mk]) > 0', 'LEN([Cn]) > 0'];
+
+        $year = isset($dataset['year']) ? (int) $dataset['year'] : null;
+        if ($year !== null && $year > 0) {
+            $filters[] = '[year] = '.$year;
+        }
+
+        $status = trim((string) ($dataset['status'] ?? ''));
+        if ($status !== '') {
+            $filters[] = "[Status] = '".$this->quote($status)."'";
+        }
+
+        return $filters;
     }
 
     /**
@@ -400,8 +541,9 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
     }
 
     /**
-     * Identifies the dataset list a checkpoint was taken against, so a resumed import can tell
-     * that it is continuing the same feed rather than jumping into the middle of a new one.
+     * Identifies the dataset list and paging scheme a checkpoint was taken against, so a
+     * resumed import can tell that it is continuing the same crawl rather than jumping into
+     * the middle of a different one.
      *
      * @param  array<int, array<string, mixed>>  $datasets
      */
@@ -414,7 +556,12 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
             'status' => $dataset['status'] ?? null,
         ], array_values($datasets));
 
-        return hash('sha256', json_encode($identity, JSON_THROW_ON_ERROR));
+        return hash('sha256', json_encode([self::CHECKPOINT_SCHEME, $identity], JSON_THROW_ON_ERROR));
+    }
+
+    private function pageSize(CatalogSource $source): int
+    {
+        return max(1, min(5000, (int) ($source->settings['page_size'] ?? 5000)));
     }
 
     private function validatedTable(string $table): string
@@ -424,6 +571,11 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
         }
 
         return $table;
+    }
+
+    private function quote(string $value): string
+    {
+        return str_replace("'", "''", $value);
     }
 
     /** @param array<string, mixed>|null $payload */
