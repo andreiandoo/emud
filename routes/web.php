@@ -33,6 +33,7 @@ use App\Livewire\Admin\OrdersIndex;
 use App\Livewire\Admin\ReturnsIndex;
 use App\Livewire\Admin\ServiceShopsIndex;
 use App\Livewire\Admin\Settings\SettingsPage;
+use App\Livewire\Admin\Suppliers\OffersIndex as SupplierOffersIndex;
 use App\Livewire\Admin\Suppliers\SupplierEditor;
 use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
@@ -166,6 +167,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/suppliers/create', SupplierEditor::class)->name('suppliers.create');
     Route::get('/suppliers/{supplier}/edit', SupplierEditor::class)->name('suppliers.edit');
     Route::get('/supplier-syncs', SyncRunsIndex::class)->name('suppliers.sync-runs');
+    Route::get('/supplier-offers', SupplierOffersIndex::class)->name('suppliers.offers');
     Route::get('/orders', OrdersIndex::class)->name('orders.index');
     Route::get('/returns', ReturnsIndex::class)->name('returns.index');
     Route::get('/customers', CustomersIndex::class)->name('customers.index');

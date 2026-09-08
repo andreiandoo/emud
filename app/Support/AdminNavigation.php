@@ -62,6 +62,7 @@ class AdminNavigation
                 'items' => [
                     ['route' => 'admin.suppliers.index', 'label' => 'Furnizori', 'icon' => 'truck'],
                     ['route' => 'admin.suppliers.sync-runs', 'label' => 'Sincronizări', 'icon' => 'refresh'],
+                    ['route' => 'admin.suppliers.offers', 'label' => 'Economia ofertelor', 'icon' => 'calculator'],
                     ['route' => 'admin.catalog-platform.supplier-matching', 'label' => 'Potrivire cu catalogul', 'icon' => 'shuffle'],
                 ],
             ],

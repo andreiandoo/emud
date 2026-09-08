@@ -2,6 +2,7 @@
 
 namespace App\Suppliers;
 
+use App\Commerce\CurrencyConverter;
 use App\Enums\ProductStatus;
 use App\Jobs\EvaluateProductAlerts;
 use App\Models\Brand;
@@ -11,12 +12,17 @@ use App\Models\Supplier;
 use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
 use App\Models\SupplierSyncRun;
+use App\Models\SupplierWarehouse;
 use App\Suppliers\Data\SupplierRecord;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 class SupplierCatalogImporter
 {
+    public function __construct(private readonly CurrencyConverter $converter) {}
+
     /** @return array{created: bool, updated: bool} */
     public function import(Supplier $supplier, SupplierRecord $record, string $mode, ?SupplierSyncRun $run = null): array
     {
@@ -72,12 +78,27 @@ class SupplierCatalogImporter
                 'price_synced_at' => in_array($mode, ['catalog', 'prices'], true) ? now() : $offer->price_synced_at,
                 'stock_synced_at' => in_array($mode, ['catalog', 'stock'], true) ? now() : $offer->stock_synced_at,
                 'stale_after' => now()->addMinutes($supplier->settings['stale_after_minutes'] ?? 60),
+                'is_active' => true,
+                'source_type' => $supplier->protocol->value,
+                ...$this->economics($supplier, $record),
+                ...$this->baseCurrencyCost($record),
             ])->save();
 
             $new = $offer->only(['cost_price', 'recommended_retail_price', 'stock_quantity', 'stock_status']);
             $offerChanged = $offer->wasRecentlyCreated || $old !== $new;
             if (! $offer->wasRecentlyCreated && $offerChanged) {
                 DB::table('supplier_offer_history')->insert($new + ['supplier_offer_id' => $offer->id, 'recorded_at' => now()]);
+            }
+
+            // Stock history is written only on an actual change, so a feed that runs
+            // every fifteen minutes does not add four identical rows an hour per SKU.
+            if ($offer->wasRecentlyCreated || $old['stock_quantity'] !== $new['stock_quantity'] || $old['stock_status'] !== $new['stock_status']) {
+                DB::table('supplier_stock_history')->insert([
+                    'supplier_offer_id' => $offer->id,
+                    'stock_quantity' => $record->stockQuantity,
+                    'stock_status' => $record->stockStatus,
+                    'recorded_at' => now(),
+                ]);
             }
 
             return ['created' => $created, 'updated' => ! $created && $changed, 'product_id' => $variant?->product_id, 'offer_changed' => $offerChanged];
@@ -88,6 +109,92 @@ class SupplierCatalogImporter
         }
 
         return ['created' => $result['created'], 'updated' => $result['updated']];
+    }
+
+    /**
+     * Commercial and logistics fields, plus the warehouse the offer sits in.
+     *
+     * Supplier-level defaults fill in only where the feed said nothing, so a
+     * per-article dropship fee always beats the account-wide one.
+     *
+     * @return array<string, mixed>
+     */
+    private function economics(Supplier $supplier, SupplierRecord $record): array
+    {
+        return array_filter([
+            'supplier_warehouse_id' => $this->warehouseId($supplier, $record),
+            'warehouse_code' => $record->warehouseCode,
+            'cost_gross' => $record->costGross,
+            'map_price' => $record->mapPrice,
+            'msrp' => $record->msrp,
+            'dropship_fee' => $record->dropshipFee ?? $supplier->dropship_fee,
+            'handling_fee' => $record->handlingFee ?? $supplier->packaging_fee,
+            'shipping_cost_estimate' => $record->shippingCostEstimate,
+            'pack_quantity' => $record->packQuantity,
+            'minimum_order_quantity' => $record->minimumOrderQuantity,
+            'dispatch_days_min' => $record->dispatchDaysMin ?? $supplier->default_dispatch_days_min,
+            'dispatch_days_max' => $record->dispatchDaysMax ?? $supplier->default_dispatch_days_max,
+            'shipping_class' => $record->shippingClass,
+            'weight_kg' => $record->weightKg,
+            'packed_weight_kg' => $record->packedWeightKg,
+            'length_cm' => $record->lengthCm,
+            'width_cm' => $record->widthCm,
+            'height_cm' => $record->heightCm,
+            'oversize_flag' => $record->oversize,
+            'hazmat_flag' => $record->hazmat,
+            'is_dropship_eligible' => $record->dropshipEligible,
+            'source_seller_ref' => $record->sellerRef,
+            'source_seller_name' => $record->sellerName,
+            'source_updated_at' => $this->parseTimestamp($record->sourceUpdatedAt),
+        ], static fn (mixed $value): bool => $value !== null);
+    }
+
+    /**
+     * The supplier's own price stays untouched; this only adds what it is worth in
+     * the base currency, with the rate and the day it came from.
+     *
+     * @return array<string, mixed>
+     */
+    private function baseCurrencyCost(SupplierRecord $record): array
+    {
+        if ($record->costPrice === null) {
+            return [];
+        }
+
+        $converted = $this->converter->convert($record->costPrice, $record->currency);
+
+        // No rate is not an error worth failing the row over: the raw cost is still
+        // recorded and the landed cost simply reports itself as incomplete.
+        return $converted ? [
+            'base_currency' => $converted['currency'],
+            'base_cost_net' => $converted['amount'],
+            'fx_rate' => $converted['rate'],
+            'fx_rate_at' => $converted['rate_date'],
+        ] : [];
+    }
+
+    private function warehouseId(Supplier $supplier, SupplierRecord $record): ?int
+    {
+        if (blank($record->warehouseCode)) {
+            return null;
+        }
+
+        return SupplierWarehouse::query()->firstOrCreate(
+            ['supplier_id' => $supplier->id, 'code' => $record->warehouseCode],
+        )->id;
+    }
+
+    private function parseTimestamp(?string $value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateTimeString();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function technicalPromotionStatus(Supplier $supplier, SupplierRecord $record): string

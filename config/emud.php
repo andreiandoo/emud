@@ -8,6 +8,22 @@ return [
     'pricing' => [
         'default_markup_percent' => (float) env('DEFAULT_MARKUP_PERCENT', 25),
         'price_ending' => (float) env('PRICE_ENDING', 0.99),
+
+        // National Bank of Romania reference rates. RON-denominated, which suits a
+        // RON base currency; verify the document shape before trusting an import.
+        'exchange_rates_url' => env('EXCHANGE_RATES_URL', 'https://www.bnr.ro/nbrfxrates.xml'),
+
+        // Inputs to contribution margin. Planning defaults until real processor and
+        // returns data exist; they are configuration precisely so they can be
+        // replaced with measured values rather than re-derived in code.
+        'margins' => [
+            'payment_fee_percent' => (float) env('PAYMENT_FEE_PERCENT', 1.6),
+            'payment_fee_fixed' => (float) env('PAYMENT_FEE_FIXED', 0),
+            'return_rate_percent' => (float) env('RETURN_RATE_PERCENT', 4),
+            'return_handling_cost' => (float) env('RETURN_HANDLING_COST', 15),
+            'bulky_return_multiplier' => (float) env('BULKY_RETURN_MULTIPLIER', 2.5),
+            'warranty_reserve_percent' => (float) env('WARRANTY_RESERVE_PERCENT', 1),
+        ],
     ],
     'suppliers' => [
         'default_stale_after_minutes' => (int) env('SUPPLIER_STALE_AFTER_MINUTES', 60),

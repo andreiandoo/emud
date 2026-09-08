@@ -44,7 +44,75 @@ class SupplierRecordMapper
             crossReferences: $this->arrayValue($this->value($row, $mapping, 'cross_references'), $settings['cross_references_delimiter'] ?? null),
             supersessions: $this->arrayValue($this->value($row, $mapping, 'supersessions'), $settings['supersessions_delimiter'] ?? null),
             raw: $row,
+            costGross: $this->nullableFloat($this->value($row, $mapping, 'cost_gross'), $settings),
+            mapPrice: $this->nullableFloat($this->value($row, $mapping, 'map_price'), $settings),
+            msrp: $this->nullableFloat($this->value($row, $mapping, 'msrp'), $settings),
+            dropshipFee: $this->nullableFloat($this->value($row, $mapping, 'dropship_fee'), $settings),
+            handlingFee: $this->nullableFloat($this->value($row, $mapping, 'handling_fee'), $settings),
+            shippingCostEstimate: $this->nullableFloat($this->value($row, $mapping, 'shipping_cost_estimate'), $settings),
+            packQuantity: $this->nullableInt($this->value($row, $mapping, 'pack_quantity'), $settings),
+            minimumOrderQuantity: $this->nullableInt($this->value($row, $mapping, 'minimum_order_quantity'), $settings),
+            dispatchDaysMin: $this->nullableInt($this->value($row, $mapping, 'dispatch_days_min'), $settings),
+            dispatchDaysMax: $this->nullableInt($this->value($row, $mapping, 'dispatch_days_max'), $settings),
+            shippingClass: $this->shippingClass($this->value($row, $mapping, 'shipping_class'), $settings),
+            weightKg: $this->nullableFloat($this->value($row, $mapping, 'weight_kg'), $settings),
+            packedWeightKg: $this->nullableFloat($this->value($row, $mapping, 'packed_weight_kg'), $settings),
+            lengthCm: $this->nullableFloat($this->value($row, $mapping, 'length_cm'), $settings),
+            widthCm: $this->nullableFloat($this->value($row, $mapping, 'width_cm'), $settings),
+            heightCm: $this->nullableFloat($this->value($row, $mapping, 'height_cm'), $settings),
+            oversize: $this->nullableBool($this->value($row, $mapping, 'oversize'), $settings),
+            hazmat: $this->nullableBool($this->value($row, $mapping, 'hazmat'), $settings),
+            dropshipEligible: $this->nullableBool($this->value($row, $mapping, 'dropship_eligible'), $settings),
+            warehouseCode: $this->nullableString($this->value($row, $mapping, 'warehouse_code')),
+            sellerRef: $this->nullableString($this->value($row, $mapping, 'seller_ref')),
+            sellerName: $this->nullableString($this->value($row, $mapping, 'seller_name')),
+            sourceUpdatedAt: $this->nullableString($this->value($row, $mapping, 'source_updated_at')),
         );
+    }
+
+    /**
+     * Feeds spell booleans as 1/0, true/false, yes/no, Y/N or a supplier's own
+     * wording. Anything unrecognised stays null: a guessed "not hazardous" on an
+     * aerosol is worse than an unanswered field.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    private function nullableBool(mixed $value, array $settings): ?bool
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $raw = strtolower(trim((string) $value));
+        $map = is_array($settings['boolean_map'] ?? null) ? array_change_key_case($settings['boolean_map']) : [];
+
+        if (array_key_exists($raw, $map)) {
+            return (bool) $map[$raw];
+        }
+
+        return match ($raw) {
+            '1', 'true', 'yes', 'y', 'da', 'ja', 'ano' => true,
+            '0', 'false', 'no', 'n', 'nu', 'nein', 'ne' => false,
+            default => null,
+        };
+    }
+
+    /** @param array<string, mixed> $settings */
+    private function shippingClass(mixed $value, array $settings): ?string
+    {
+        $raw = strtolower(trim((string) ($value ?? '')));
+
+        if ($raw === '') {
+            return null;
+        }
+
+        $map = is_array($settings['shipping_class_map'] ?? null) ? array_change_key_case($settings['shipping_class_map']) : [];
+
+        return $map[$raw] ?? $raw;
     }
 
     /** @param array<string, mixed> $row */

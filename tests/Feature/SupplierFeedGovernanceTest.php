@@ -12,6 +12,8 @@ use App\Suppliers\Contracts\SupplierConnector;
 use App\Suppliers\Contracts\SupplierFeedArtifactProvider;
 use App\Suppliers\Data\SupplierRecord;
 use App\Suppliers\SupplierCatalogImporter;
+use App\Suppliers\SupplierCatalogRetirement;
+use App\Suppliers\SupplierFeedGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use RuntimeException;
@@ -37,7 +39,7 @@ class SupplierFeedGovernanceTest extends TestCase
         $importer->shouldNotReceive('import');
 
         try {
-            (new SyncSupplierFeed($supplier->id))->handle($registry, $importer);
+            (new SyncSupplierFeed($supplier->id))->handle($registry, $importer, app(SupplierFeedGuard::class), app(SupplierCatalogRetirement::class));
             $this->fail('Rights-denied supplier sync should throw.');
         } catch (RuntimeException $exception) {
             $this->assertStringContainsString('do not permit internal ingestion', $exception->getMessage());
@@ -93,7 +95,7 @@ class SupplierFeedGovernanceTest extends TestCase
         $importer = Mockery::mock(SupplierCatalogImporter::class);
         $importer->shouldReceive('import')->once()->andReturn(['created' => true, 'updated' => false]);
 
-        (new SyncSupplierFeed($supplier->id))->handle($registry, $importer);
+        (new SyncSupplierFeed($supplier->id))->handle($registry, $importer, app(SupplierFeedGuard::class), app(SupplierCatalogRetirement::class));
 
         $run = SupplierSyncRun::query()->where('supplier_id', $supplier->id)->sole();
         $this->assertSame(SyncStatus::Completed, $run->status);

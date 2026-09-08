@@ -21,3 +21,7 @@ Schedule::command('suppliers:sync --mode=catalog')->dailyAt('02:10')->withoutOve
 // A feed that stops updating fails silently by nature: the shop keeps serving the
 // last known price and stock. This is the only thing that turns that into a signal.
 Schedule::command('suppliers:health-check --notify')->hourly()->withoutOverlapping(55);
+
+// Before the morning catalogue sync, so foreign supplier costs convert against the
+// day's published rate rather than yesterday's.
+Schedule::command('exchange-rates:fetch')->dailyAt('01:30')->withoutOverlapping(20);
