@@ -35,14 +35,26 @@ class MatchSupplierProductsToCatalog implements ShouldQueue
 
     public function handle(SupplierCatalogPartMatcher $matcher): void
     {
+        $remaining = max(0, $this->limit);
+
+        // chunkById, not each(): matching moves a product out of the statuses this query
+        // selects, and offset paging would then skip as many products as it just mapped.
         SupplierProduct::query()
             ->when($this->supplierId, fn ($q) => $q->where('supplier_id', $this->supplierId))
             ->when($this->supplierSyncRunId, fn ($q) => $q->where('last_supplier_sync_run_id', $this->supplierSyncRunId))
             ->whereIn('catalog_mapping_status', ['unmapped', 'unmatched', 'candidate'])
             ->where(fn ($q) => $q->whereNotNull('ean')->orWhereNotNull('manufacturer_part_number'))
-            ->orderBy('id')
-            ->limit($this->limit)
-            ->each(fn (SupplierProduct $product) => $matcher->match($product));
+            ->chunkById(500, function ($products) use ($matcher, &$remaining): bool {
+                foreach ($products as $product) {
+                    $matcher->match($product);
+
+                    if (--$remaining <= 0) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
 
         if (! $this->supplierId || ! $this->supplierSyncRunId) {
             return;
