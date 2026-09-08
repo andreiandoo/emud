@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             CommerceProviderSeeder::class,
             CatalogSourceSeeder::class,
             SupplierProfileSeeder::class,
+            SupplierProspectSeeder::class,
             PageSeeder::class,
         ]);
 

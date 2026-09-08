@@ -3,7 +3,11 @@
 namespace App\Livewire\Admin\Suppliers;
 
 use App\Enums\CatalogRightsClass;
+use App\Enums\SupplierCapability;
+use App\Enums\SupplierOnboardingStatus;
 use App\Enums\SupplierProtocol;
+use App\Enums\SupplierStrategicRole;
+use App\Enums\SupplierType;
 use App\Models\Supplier;
 use App\Models\SupplierSyncSchedule;
 use Cron\CronExpression;
@@ -21,6 +25,66 @@ class SupplierEditor extends Component
     public string $code = '';
 
     public string $protocol = 'sftp';
+
+    public string $supplierType = 'distributor';
+
+    public string $onboardingStatus = 'not_started';
+
+    public ?string $strategicRole = null;
+
+    public ?string $countryCode = null;
+
+    public ?string $website = null;
+
+    public ?int $qualificationScore = null;
+
+    public ?int $readinessScore = null;
+
+    public ?int $offroadFitScore = null;
+
+    public ?string $onboardingNotes = null;
+
+    public ?string $nextAction = null;
+
+    /**
+     * Capabilities are tri-state. '' means "not established yet" and is stored as
+     * null, which is deliberately different from an explicit "no".
+     *
+     * @var array<string, string>
+     */
+    public array $capabilities = [];
+
+    public ?string $dropshipFee = null;
+
+    public ?string $packagingFee = null;
+
+    public ?string $minimumOrderValue = null;
+
+    public ?string $freeShippingThreshold = null;
+
+    public ?int $paymentTermsDays = null;
+
+    public ?string $termsCurrency = null;
+
+    /** @var array<string, string> Tri-state, same convention as capabilities. */
+    public array $fulfilment = [
+        'blind_shipping' => '',
+        'neutral_packaging' => '',
+        'merchant_as_sender' => '',
+        'supplier_invoice_in_parcel' => '',
+    ];
+
+    public ?int $returnWindowDays = null;
+
+    public ?string $restockingFeePercent = null;
+
+    public ?string $returnFreightPayer = null;
+
+    public ?string $mapPolicy = null;
+
+    public string $allowedCountries = '';
+
+    public string $excludedCountries = '';
 
     public ?string $connectorClass = null;
 
@@ -75,11 +139,46 @@ class SupplierEditor extends Component
 
     public function mount(?Supplier $supplier = null): void
     {
+        foreach (SupplierCapability::cases() as $capability) {
+            $this->capabilities[$capability->value] = '';
+        }
+
         if (! $supplier?->exists) {
             return;
         }
 
         $this->supplier = $supplier;
+        $this->supplierType = $supplier->supplier_type?->value ?? 'distributor';
+        $this->onboardingStatus = $supplier->onboarding_status?->value ?? 'not_started';
+        $this->strategicRole = $supplier->strategic_role?->value;
+        $this->countryCode = $supplier->country_code;
+        $this->website = $supplier->website;
+        $this->qualificationScore = $supplier->qualification_score;
+        $this->readinessScore = $supplier->readiness_score;
+        $this->offroadFitScore = $supplier->offroad_fit_score;
+        $this->onboardingNotes = $supplier->onboarding_notes;
+        $this->nextAction = $supplier->next_action;
+
+        foreach (SupplierCapability::cases() as $capability) {
+            $this->capabilities[$capability->value] = $this->toTriState($supplier->{$capability->value});
+        }
+
+        foreach (array_keys($this->fulfilment) as $field) {
+            $this->fulfilment[$field] = $this->toTriState($supplier->{$field});
+        }
+
+        $this->dropshipFee = $supplier->dropship_fee;
+        $this->packagingFee = $supplier->packaging_fee;
+        $this->minimumOrderValue = $supplier->minimum_order_value;
+        $this->freeShippingThreshold = $supplier->free_shipping_threshold;
+        $this->paymentTermsDays = $supplier->payment_terms_days;
+        $this->termsCurrency = $supplier->terms_currency;
+        $this->returnWindowDays = $supplier->return_window_days;
+        $this->restockingFeePercent = $supplier->restocking_fee_percent;
+        $this->returnFreightPayer = $supplier->return_freight_payer;
+        $this->mapPolicy = $supplier->map_policy;
+        $this->allowedCountries = implode(', ', $supplier->allowed_countries ?? []);
+        $this->excludedCountries = implode(', ', $supplier->excluded_countries ?? []);
         $this->name = $supplier->name;
         $this->code = $supplier->code;
         $this->protocol = $supplier->protocol->value;
@@ -121,6 +220,25 @@ class SupplierEditor extends Component
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:64', Rule::unique('suppliers', 'code')->ignore($this->supplier?->id)],
             'protocol' => ['required', Rule::enum(SupplierProtocol::class)],
+            'supplierType' => ['required', Rule::enum(SupplierType::class)],
+            'onboardingStatus' => ['required', Rule::enum(SupplierOnboardingStatus::class)],
+            'strategicRole' => ['nullable', Rule::enum(SupplierStrategicRole::class)],
+            'countryCode' => ['nullable', 'string', 'size:2'],
+            'website' => ['nullable', 'url', 'max:2048'],
+            'qualificationScore' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'readinessScore' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'offroadFitScore' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'capabilities.*' => ['in:,yes,no'],
+            'fulfilment.*' => ['in:,yes,no'],
+            'dropshipFee' => ['nullable', 'numeric', 'min:0'],
+            'packagingFee' => ['nullable', 'numeric', 'min:0'],
+            'minimumOrderValue' => ['nullable', 'numeric', 'min:0'],
+            'freeShippingThreshold' => ['nullable', 'numeric', 'min:0'],
+            'paymentTermsDays' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'termsCurrency' => ['nullable', 'string', 'size:3'],
+            'returnWindowDays' => ['nullable', 'integer', 'min:0', 'max:3650'],
+            'restockingFeePercent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'returnFreightPayer' => ['nullable', 'in:reseller,supplier,case_by_case,unknown'],
             'connectorClass' => ['nullable', 'string', 'max:255'],
             'catalogEndpoint' => ['nullable', 'string', 'max:2048'],
             'stockEndpoint' => ['nullable', 'string', 'max:2048'],
@@ -177,7 +295,37 @@ class SupplierEditor extends Component
             'license_name' => blank($this->licenseName) ? null : $this->licenseName,
             'license_url' => blank($this->licenseUrl) ? null : $this->licenseUrl,
             'legal_notes' => blank($this->legalNotes) ? null : $this->legalNotes,
+            'supplier_type' => $this->supplierType,
+            'onboarding_status' => $this->onboardingStatus,
+            'strategic_role' => blank($this->strategicRole) ? null : $this->strategicRole,
+            'country_code' => blank($this->countryCode) ? null : strtoupper((string) $this->countryCode),
+            'website' => blank($this->website) ? null : trim((string) $this->website),
+            'qualification_score' => $this->qualificationScore,
+            'readiness_score' => $this->readinessScore,
+            'offroad_fit_score' => $this->offroadFitScore,
+            'onboarding_notes' => blank($this->onboardingNotes) ? null : $this->onboardingNotes,
+            'next_action' => blank($this->nextAction) ? null : $this->nextAction,
+            'dropship_fee' => $this->nullableNumber($this->dropshipFee),
+            'packaging_fee' => $this->nullableNumber($this->packagingFee),
+            'minimum_order_value' => $this->nullableNumber($this->minimumOrderValue),
+            'free_shipping_threshold' => $this->nullableNumber($this->freeShippingThreshold),
+            'payment_terms_days' => $this->paymentTermsDays,
+            'terms_currency' => blank($this->termsCurrency) ? null : strtoupper((string) $this->termsCurrency),
+            'return_window_days' => $this->returnWindowDays,
+            'restocking_fee_percent' => $this->nullableNumber($this->restockingFeePercent),
+            'return_freight_payer' => blank($this->returnFreightPayer) ? null : $this->returnFreightPayer,
+            'map_policy' => blank($this->mapPolicy) ? null : $this->mapPolicy,
+            'allowed_countries' => $this->countryList($this->allowedCountries),
+            'excluded_countries' => $this->countryList($this->excludedCountries),
         ];
+
+        foreach ($this->capabilities as $capability => $value) {
+            $payload[$capability] = $this->fromTriState($value);
+        }
+
+        foreach ($this->fulfilment as $field => $value) {
+            $payload[$field] = $this->fromTriState($value);
+        }
 
         $this->supplier = $this->supplier?->exists
             ? tap($this->supplier)->update($payload)
@@ -198,11 +346,51 @@ class SupplierEditor extends Component
         $this->redirectRoute('admin.suppliers.edit', $this->supplier, navigate: true);
     }
 
+    private function toTriState(?bool $value): string
+    {
+        return match ($value) {
+            true => 'yes',
+            false => 'no',
+            null => '',
+        };
+    }
+
+    private function fromTriState(string $value): ?bool
+    {
+        return match ($value) {
+            'yes' => true,
+            'no' => false,
+            default => null,
+        };
+    }
+
+    private function nullableNumber(?string $value): ?float
+    {
+        return blank($value) ? null : (float) $value;
+    }
+
+    /** @return list<string>|null */
+    private function countryList(string $value): ?array
+    {
+        $codes = collect(preg_split('/[\s,;]+/', $value) ?: [])
+            ->map(static fn (string $code): string => strtoupper(trim($code)))
+            ->filter(static fn (string $code): bool => preg_match('/^[A-Z]{2}$/', $code) === 1)
+            ->unique()
+            ->values()
+            ->all();
+
+        return $codes === [] ? null : $codes;
+    }
+
     public function render()
     {
         return view('livewire.admin.suppliers.supplier-editor', [
             'protocols' => SupplierProtocol::cases(),
             'rightsClasses' => CatalogRightsClass::cases(),
+            'supplierTypes' => SupplierType::cases(),
+            'onboardingStatuses' => SupplierOnboardingStatus::cases(),
+            'strategicRoles' => SupplierStrategicRole::cases(),
+            'capabilityOptions' => SupplierCapability::cases(),
         ]);
     }
 }
