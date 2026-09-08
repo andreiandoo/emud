@@ -216,6 +216,19 @@ class SupplierEditor extends Component
 
     public function save(): void
     {
+        // Livewire does not run the HTTP middleware that turns empty strings into
+        // null, so an untouched optional select would reach rules like url, size
+        // or numeric as '' and fail with a confusing message.
+        foreach ([
+            'strategicRole', 'countryCode', 'website', 'termsCurrency', 'returnFreightPayer', 'mapPolicy',
+            'onboardingNotes', 'nextAction', 'dropshipFee', 'packagingFee', 'minimumOrderValue',
+            'freeShippingThreshold', 'restockingFeePercent',
+        ] as $property) {
+            if ($this->{$property} === '') {
+                $this->{$property} = null;
+            }
+        }
+
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:64', Rule::unique('suppliers', 'code')->ignore($this->supplier?->id)],
@@ -228,8 +241,8 @@ class SupplierEditor extends Component
             'qualificationScore' => ['nullable', 'integer', 'min:0', 'max:100'],
             'readinessScore' => ['nullable', 'integer', 'min:1', 'max:5'],
             'offroadFitScore' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'capabilities.*' => ['in:,yes,no'],
-            'fulfilment.*' => ['in:,yes,no'],
+            'capabilities.*' => [Rule::in(['', 'yes', 'no'])],
+            'fulfilment.*' => [Rule::in(['', 'yes', 'no'])],
             'dropshipFee' => ['nullable', 'numeric', 'min:0'],
             'packagingFee' => ['nullable', 'numeric', 'min:0'],
             'minimumOrderValue' => ['nullable', 'numeric', 'min:0'],
