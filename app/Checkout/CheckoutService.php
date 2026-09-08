@@ -9,6 +9,7 @@ use App\Models\PaymentProvider;
 use App\Models\ShippingMethod;
 use App\Notifications\OrderPlaced;
 use App\Payments\PaymentService;
+use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -27,26 +28,36 @@ class CheckoutService
             $shipping = Address::create([...$customer['shipping'], 'user_id' => $cart->user_id, 'type' => 'shipping']);
             $billingData = $customer['billing'] ?? $customer['shipping'];
             $billing = Address::create([...$billingData, 'user_id' => $cart->user_id, 'type' => 'billing']);
-            $subtotal = $cart->items->sum(fn ($item) => (float) $item->unit_price * $item->quantity);
+            $currency = (string) $cart->currency;
+
+            // Every total is built from integer minor units. Summed as floats, a long order
+            // drifted by a ban or two and the amount charged could differ from the amount stored.
+            $lineTotals = $cart->items->map(
+                fn ($item) => Money::of($item->unit_price, $currency)->times((int) $item->quantity)
+            );
+
+            $subtotal = Money::sum($lineTotals, $currency);
             $shippingTotal = $method->priceFor($subtotal);
+            $grandTotal = $subtotal->plus($shippingTotal);
 
             $order = Order::create([
                 'number' => 'EM-'.now()->format('ymd').'-'.strtoupper(Str::random(7)),
                 'user_id' => $cart->user_id, 'billing_address_id' => $billing->id,
                 'shipping_address_id' => $shipping->id, 'shipping_method_id' => $method->id,
-                'checkout_token' => Str::uuid(), 'currency' => $cart->currency,
-                'subtotal' => $subtotal, 'shipping_total' => $shippingTotal,
-                'grand_total' => $subtotal + $shippingTotal,
+                'checkout_token' => Str::uuid(), 'currency' => $currency,
+                'subtotal' => $subtotal->toDecimal(), 'shipping_total' => $shippingTotal->toDecimal(),
+                'grand_total' => $grandTotal->toDecimal(),
                 'customer_email' => $customer['email'], 'customer_phone' => $customer['phone'] ?? null,
                 'customer_note' => $customer['note'] ?? null, 'placed_at' => now(),
             ]);
-            foreach ($cart->items as $item) {
+
+            foreach ($cart->items as $index => $item) {
                 $order->items()->create([
                     'product_id' => $item->product_id, 'variant_id' => $item->variant_id,
                     'name' => $item->snapshot['name'] ?? $item->product->name,
                     'sku' => $item->snapshot['sku'] ?? $item->variant?->sku ?? $item->product->sku,
                     'quantity' => $item->quantity, 'unit_price' => $item->unit_price,
-                    'line_total' => (float) $item->unit_price * $item->quantity,
+                    'line_total' => $lineTotals[$index]->toDecimal(),
                     'tax_rate' => $item->snapshot['tax_rate'] ?? 0, 'snapshot' => $item->snapshot,
                 ]);
             }

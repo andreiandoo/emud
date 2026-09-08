@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ProductAlert;
+use App\Support\Money;
 use App\Notifications\ProductAlertTriggered;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -28,7 +29,8 @@ class EvaluateProductAlerts implements ShouldQueue
             ->each(function (ProductAlert $alert): void {
                 $conditionMet = match ($alert->type) {
                     'price' => $alert->variant && $alert->target_price !== null
-                        && (float) $alert->variant->retail_price <= (float) $alert->target_price,
+                        && Money::of($alert->variant->retail_price, (string) $alert->currency)
+                            ->isLessThanOrEqualTo(Money::of($alert->target_price, (string) $alert->currency)),
                     'back_in_stock' => $alert->product->supplierProducts()
                         ->where(function ($query) use ($alert): void {
                             $query->when($alert->variant_id, fn ($q) => $q->where('variant_id', $alert->variant_id));

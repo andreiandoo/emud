@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ShippingMethod;
 use App\Notifications\OrderPlaced;
+use App\Support\Money;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -80,6 +81,70 @@ class OrderNotificationTest extends TestCase
         }
 
         Notification::assertNothingSent();
+    }
+
+
+    /**
+     * The totals a customer is charged must match the totals stored, to the ban. Computed as
+     * floats these drifted apart on orders with many lines.
+     */
+    public function test_order_totals_are_exact(): void
+    {
+        Notification::fake();
+        $this->stripe();
+
+        $cart = Cart::create(['token' => (string) Str::uuid(), 'status' => 'active', 'currency' => 'RON']);
+
+        for ($i = 0; $i < 7; $i++) {
+            $product = Product::create([
+                'name' => 'Piesa '.$i,
+                'slug' => 'piesa-'.$i.'-'.Str::random(5),
+                'status' => 'active',
+                'published_at' => now(),
+            ]);
+            ProductVariant::create(['product_id' => $product->id, 'sku' => 'V-'.Str::random(6), 'retail_price' => '19.99', 'is_active' => true]);
+            $cart->items()->create(['product_id' => $product->id, 'quantity' => 3, 'unit_price' => '19.99']);
+        }
+
+        $method = ShippingMethod::create([
+            'code' => 'exact-'.Str::random(4),
+            'name' => 'Curier',
+            'base_price' => '24.99',
+            'currency' => 'RON',
+            'is_active' => true,
+        ]);
+
+        $order = app(CheckoutService::class)->place($cart, $this->customer(), $method);
+
+        // 7 lines x 3 x 19.99 = 419.79, plus 24.99 shipping.
+        $this->assertSame('419.79', Money::of($order->subtotal, 'RON')->toDecimal());
+        $this->assertSame('24.99', Money::of($order->shipping_total, 'RON')->toDecimal());
+        $this->assertSame('444.78', Money::of($order->grand_total, 'RON')->toDecimal());
+    }
+
+    public function test_free_shipping_applies_exactly_at_the_threshold(): void
+    {
+        Notification::fake();
+        $this->stripe();
+
+        $product = Product::create(['name' => 'Prag', 'slug' => 'prag-'.Str::random(5), 'status' => 'active', 'published_at' => now()]);
+        ProductVariant::create(['product_id' => $product->id, 'sku' => 'V-'.Str::random(6), 'retail_price' => '300.00', 'is_active' => true]);
+
+        $cart = Cart::create(['token' => (string) Str::uuid(), 'status' => 'active', 'currency' => 'RON']);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1, 'unit_price' => '300.00']);
+
+        $method = ShippingMethod::create([
+            'code' => 'prag-'.Str::random(4),
+            'name' => 'Curier',
+            'base_price' => '25.00',
+            'free_over' => '300.00',
+            'currency' => 'RON',
+            'is_active' => true,
+        ]);
+
+        $order = app(CheckoutService::class)->place($cart, $this->customer(), $method);
+
+        $this->assertSame('0.00', Money::of($order->shipping_total, 'RON')->toDecimal());
     }
 
     private function stripe(bool $fake = true): PaymentProvider

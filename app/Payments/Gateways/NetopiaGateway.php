@@ -8,6 +8,7 @@ use App\Models\PaymentProvider;
 use App\Payments\Contracts\PaymentGateway;
 use App\Payments\Data\PaymentResult;
 use App\Payments\Support\JwtVerifier;
+use App\Support\Money;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -47,7 +48,7 @@ class NetopiaGateway implements PaymentGateway
                     'dateTime' => now()->toIso8601String(),
                     'description' => "Comanda {$order->number}",
                     'orderID' => $order->number,
-                    'amount' => (float) $order->grand_total,
+                    'amount' => Money::of($order->grand_total, (string) $order->currency)->toDecimal(),
                     'currency' => $order->currency,
                     'billing' => $this->address($order->billingAddress, $order),
                     'shipping' => $this->address($order->shippingAddress, $order),
@@ -55,7 +56,7 @@ class NetopiaGateway implements PaymentGateway
                         'name' => $item->name,
                         'code' => $item->sku ?? (string) $item->id,
                         'category' => 'Piese auto',
-                        'price' => (float) $item->line_total,
+                        'price' => Money::of($item->line_total, (string) $order->currency)->toDecimal(),
                         'vat' => (float) $item->tax_rate,
                     ])->all(),
                     'installments' => ['selected' => 1, 'available' => [0]],

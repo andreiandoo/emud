@@ -32,14 +32,14 @@
             @foreach($order->items as $item)
                 <li class="flex justify-between gap-3">
                     <span class="min-w-0 flex-1">{{ $item->name }} × {{ $item->quantity }}</span>
-                    <span class="font-medium">{{ number_format((float) $item->line_total, 2, ',', '.') }} {{ $order->currency }}</span>
+                    <span class="font-medium">{{ \App\Support\Money::of($item->line_total, $order->currency)->format() }}</span>
                 </li>
             @endforeach
         </ul>
         <div class="mt-3 space-y-1 border-t border-stone-100 pt-3 text-sm">
-            <div class="flex justify-between"><span class="text-stone-600">Subtotal</span><span>{{ number_format((float) $order->subtotal, 2, ',', '.') }}</span></div>
-            <div class="flex justify-between"><span class="text-stone-600">Transport</span><span>{{ number_format((float) $order->shipping_total, 2, ',', '.') }}</span></div>
-            <div class="flex justify-between pt-2 text-lg font-black"><span>Total</span><span>{{ number_format((float) $order->grand_total, 2, ',', '.') }} {{ $order->currency }}</span></div>
+            <div class="flex justify-between"><span class="text-stone-600">Subtotal</span><span>{{ \App\Support\Money::of($order->subtotal, $order->currency)->format() }}</span></div>
+            <div class="flex justify-between"><span class="text-stone-600">Transport</span><span>{{ \App\Support\Money::of($order->shipping_total, $order->currency)->format() }}</span></div>
+            <div class="flex justify-between pt-2 text-lg font-black"><span>Total</span><span>{{ \App\Support\Money::of($order->grand_total, $order->currency)->format() }}</span></div>
         </div>
     </div>
 

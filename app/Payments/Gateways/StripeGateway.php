@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\PaymentProvider;
 use App\Payments\Contracts\PaymentGateway;
 use App\Payments\Data\PaymentResult;
+use App\Support\Money;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -24,7 +25,9 @@ class StripeGateway implements PaymentGateway
             ->withToken($secret)
             ->withHeaders(['Idempotency-Key' => $context['idempotency_key'] ?? "order-{$order->id}"])
             ->post('https://api.stripe.com/v1/payment_intents', [
-                'amount' => (int) round((float) $order->grand_total * 100),
+                // Exact minor units. Multiplying a float by 100 and rounding could charge a
+                // ban more or less than the order records.
+                'amount' => Money::of($order->grand_total, (string) $order->currency)->toMinor(),
                 'currency' => strtolower($order->currency),
                 'receipt_email' => $order->customer_email,
                 'description' => "Comanda {$order->number}",

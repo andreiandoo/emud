@@ -55,7 +55,7 @@
             </div>
 
             <div class="text-3xl font-black">
-                {{ $variant?->retail_price !== null ? number_format((float) $variant->retail_price, 2, ',', '.').' lei' : 'Preț la cerere' }}
+                {{ $variant?->retail_price !== null ? \App\Support\Money::of($variant->retail_price, $variant->currency ?? config('emud.catalog.default_currency', 'RON'))->format() : 'Preț la cerere' }}
             </div>
 
             <div class="flex flex-wrap items-center gap-3">

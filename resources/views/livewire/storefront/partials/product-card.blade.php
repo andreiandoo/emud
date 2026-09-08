@@ -28,6 +28,6 @@
     @endif
 
     <span class="mt-auto pt-3 text-lg font-bold">
-        {{ $price !== null ? number_format((float) $price, 2, ',', '.').' lei' : 'Preț la cerere' }}
+        {{ $price !== null ? \App\Support\Money::of($price, config('emud.catalog.default_currency', 'RON'))->format() : 'Preț la cerere' }}
     </span>
 </a>

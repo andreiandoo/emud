@@ -7,6 +7,7 @@ use App\Models\CartItem;
 use App\Models\PaymentProvider;
 use App\Models\ShippingMethod;
 use App\Storefront\CartManager;
+use App\Support\Money;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Throwable;
@@ -108,17 +109,22 @@ class CheckoutPage extends Component
     {
         $cart = $carts->current();
         $items = $cart?->items()->with('product')->get() ?? collect();
-        $subtotal = $items->sum(fn (CartItem $item) => (float) $item->unit_price * $item->quantity);
+        $currency = (string) ($cart?->currency ?? config('emud.catalog.default_currency', 'RON'));
+        $subtotal = Money::sum(
+            $items->map(fn (CartItem $item) => Money::of($item->unit_price, $currency)->times((int) $item->quantity)),
+            $currency,
+        );
         $method = $this->shippingMethodId === null ? null : ShippingMethod::find($this->shippingMethodId);
 
         return view('livewire.storefront.checkout-page', [
             'items' => $items,
             'subtotal' => $subtotal,
+            'lineTotal' => fn (CartItem $item) => Money::of($item->unit_price, $currency)->times((int) $item->quantity),
             // Recomputed server-side on every render; the browser never supplies a total.
-            'shippingTotal' => $method?->priceFor($subtotal) ?? 0.0,
+            'shippingTotal' => $method?->priceFor($subtotal) ?? Money::zero($currency),
             'methods' => ShippingMethod::query()->where('is_active', true)->orderBy('position')->get(),
             'providers' => PaymentProvider::query()->where('is_active', true)->orderBy('position')->get(),
-            'currency' => $cart?->currency ?? config('emud.catalog.default_currency', 'RON'),
+            'currency' => $currency,
         ]);
     }
 }

@@ -65,7 +65,7 @@
                         <label class="flex items-center gap-3 rounded-lg border border-stone-200 p-3 text-sm">
                             <input type="radio" wire:model.live="shippingMethodId" value="{{ $shippingMethod->id }}">
                             <span class="flex-1">{{ $shippingMethod->name }}</span>
-                            <span class="font-semibold">{{ number_format((float) $shippingMethod->priceFor($subtotal), 2, ',', '.') }} {{ $currency }}</span>
+                            <span class="font-semibold">{{ $shippingMethod->priceFor($subtotal)->format() }}</span>
                         </label>
                     @endforeach
                 </div>
@@ -93,14 +93,14 @@
                 @foreach($items as $item)
                     <li class="flex justify-between gap-3">
                         <span class="min-w-0 flex-1">{{ $item->snapshot['name'] ?? $item->product->name }} × {{ $item->quantity }}</span>
-                        <span class="font-medium">{{ number_format((float) $item->unit_price * $item->quantity, 2, ',', '.') }}</span>
+                        <span class="font-medium">{{ $lineTotal($item)->format() }}</span>
                     </li>
                 @endforeach
             </ul>
             <div class="space-y-1 border-t border-stone-100 pt-3 text-sm">
-                <div class="flex justify-between"><span class="text-stone-600">Subtotal</span><span>{{ number_format($subtotal, 2, ',', '.') }} {{ $currency }}</span></div>
-                <div class="flex justify-between"><span class="text-stone-600">Transport</span><span>{{ number_format($shippingTotal, 2, ',', '.') }} {{ $currency }}</span></div>
-                <div class="flex justify-between pt-2 text-lg font-black"><span>Total</span><span>{{ number_format($subtotal + $shippingTotal, 2, ',', '.') }} {{ $currency }}</span></div>
+                <div class="flex justify-between"><span class="text-stone-600">Subtotal</span><span>{{ $subtotal->format() }}</span></div>
+                <div class="flex justify-between"><span class="text-stone-600">Transport</span><span>{{ $shippingTotal->format() }}</span></div>
+                <div class="flex justify-between pt-2 text-lg font-black"><span>Total</span><span>{{ $subtotal->plus($shippingTotal)->format() }}</span></div>
             </div>
         </aside>
     </div>

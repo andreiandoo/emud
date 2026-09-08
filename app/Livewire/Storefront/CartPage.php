@@ -4,6 +4,7 @@ namespace App\Livewire\Storefront;
 
 use App\Models\CartItem;
 use App\Storefront\CartManager;
+use App\Support\Money;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -25,10 +26,16 @@ class CartPage extends Component
         $cart = $carts->current();
         $items = $cart?->items()->with(['product.media', 'variant'])->get() ?? collect();
 
+        $currency = (string) ($cart?->currency ?? config('emud.catalog.default_currency', 'RON'));
+
         return view('livewire.storefront.cart-page', [
             'items' => $items,
-            'subtotal' => $items->sum(fn (CartItem $item) => (float) $item->unit_price * $item->quantity),
-            'currency' => $cart?->currency ?? config('emud.catalog.default_currency', 'RON'),
+            'currency' => $currency,
+            'lineTotal' => fn (CartItem $item) => Money::of($item->unit_price, $currency)->times((int) $item->quantity),
+            'subtotal' => Money::sum(
+                $items->map(fn (CartItem $item) => Money::of($item->unit_price, $currency)->times((int) $item->quantity)),
+                $currency,
+            ),
         ]);
     }
 

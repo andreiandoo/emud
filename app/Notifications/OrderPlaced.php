@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Order;
+use App\Support\Money;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -50,6 +51,6 @@ class OrderPlaced extends Notification implements ShouldQueue
 
     private function money(mixed $amount): string
     {
-        return number_format((float) $amount, 2, ',', '.').' '.$this->order->currency;
+        return Money::of($amount, (string) $this->order->currency)->format();
     }
 }

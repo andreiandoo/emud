@@ -29,9 +29,7 @@
                                class="w-20 rounded-lg border-stone-300 text-sm">
                     </label>
 
-                    <div class="w-28 text-right font-semibold">
-                        {{ number_format((float) $item->unit_price * $item->quantity, 2, ',', '.') }} {{ $currency }}
-                    </div>
+                    <div class="w-28 text-right font-semibold">{{ $lineTotal($item)->format() }}</div>
 
                     <button wire:click="remove({{ $item->id }})" class="text-sm text-red-600 underline hover:text-red-800">Șterge</button>
                 </div>
@@ -41,7 +39,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white p-5">
             <div>
                 <span class="block text-sm text-stone-500">Subtotal</span>
-                <span class="text-2xl font-black">{{ number_format($subtotal, 2, ',', '.') }} {{ $currency }}</span>
+                <span class="text-2xl font-black">{{ $subtotal->format() }}</span>
                 <span class="mt-1 block text-xs text-stone-500">Transportul se calculează la finalizare.</span>
             </div>
 

@@ -17,7 +17,7 @@
                     </div>
                     <div class="mt-1 flex flex-wrap items-center gap-3 text-sm text-stone-600">
                         <span>{{ $order->items->count() }} produse</span>
-                        <span class="font-semibold text-stone-900">{{ number_format((float) $order->grand_total, 2, ',', '.') }} {{ $order->currency }}</span>
+                        <span class="font-semibold text-stone-900">{{ \App\Support\Money::of($order->grand_total, $order->currency)->format() }}</span>
                         <span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold">{{ $order->status }}</span>
                         <span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold">plată: {{ $order->payment_status }}</span>
                     </div>
