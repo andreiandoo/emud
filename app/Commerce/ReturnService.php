@@ -82,7 +82,10 @@ class ReturnService
             // holds it, including one merely requested.
             ->whereNotIn('order_returns.status', [ReturnStatus::Rejected->value, ReturnStatus::Cancelled->value])
             ->groupBy('order_return_items.order_item_id')
-            ->pluck(DB::raw('sum(order_return_items.quantity)'), 'order_return_items.order_item_id');
+            // Aliased explicitly: pluck() reads result columns by name, and a raw expression
+            // does not come back under the text of the expression.
+            ->selectRaw('order_return_items.order_item_id as order_item_id, sum(order_return_items.quantity) as total')
+            ->pluck('total', 'order_item_id');
 
         return $ordered
             ->map(fn (int $quantity, int $itemId) => max(0, $quantity - (int) ($alreadyRequested[$itemId] ?? 0)))
