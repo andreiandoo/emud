@@ -22,6 +22,7 @@
                     </li>
                 @endforeach
 
+                <li class="shrink-0"><a href="{{ route('storefront.services') }}" class="block whitespace-nowrap px-3 py-2.5 text-stone-600 hover:text-stone-900">Service auto</a></li>
                 <li class="shrink-0"><a href="{{ route('storefront.guides') }}" class="block whitespace-nowrap px-3 py-2.5 text-stone-600 hover:text-stone-900">Ghiduri</a></li>
                 <li class="shrink-0"><a href="{{ route('storefront.contact') }}" class="block whitespace-nowrap px-3 py-2.5 text-stone-600 hover:text-stone-900">Contact</a></li>
             </ul>
