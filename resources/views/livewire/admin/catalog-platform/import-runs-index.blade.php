@@ -1,1 +1,51 @@
-<div class="space-y-6"><div><h1 class="text-2xl font-semibold tracking-tight">Catalog import runs</h1><p class="text-sm text-stone-500">Every technical source execution and its counters.</p></div><div class="overflow-x-auto rounded-xl border bg-white"><table class="min-w-full text-sm"><thead class="bg-stone-50 text-left"><tr><th class="p-3">Started</th><th class="p-3">Source</th><th class="p-3">Mode</th><th class="p-3">Status</th><th class="p-3">Fetched</th><th class="p-3">Matched</th><th class="p-3">Published</th><th class="p-3">Failed</th></tr></thead><tbody class="divide-y">@foreach($runs as $run)<tr><td class="p-3">{{ $run->started_at?->format('Y-m-d H:i:s') ?? '—' }}</td><td class="p-3 font-semibold">{{ $run->source?->code }}</td><td class="p-3">{{ $run->mode }}</td><td class="p-3">{{ $run->status->value ?? $run->status }}</td><td class="p-3">{{ number_format($run->fetched_count) }}</td><td class="p-3">{{ number_format($run->matched_count) }}</td><td class="p-3">{{ number_format($run->published_count) }}</td><td class="p-3">{{ number_format($run->failed_count) }}</td></tr>@endforeach</tbody></table></div>{{ $runs->links() }}</div>
+<div>
+    <x-admin.page-header title="Rulări de import" subtitle="Fiecare execuție a unei surse tehnice și contoarele ei." />
+
+    @if($runs->isEmpty())
+        <x-admin.empty title="Nicio rulare" hint="Pornește o sincronizare dintr-o sursă de catalog." />
+    @else
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr>
+                        <th>Pornită</th>
+                        <th>Sursă</th>
+                        <th>Mod</th>
+                        <th>Status</th>
+                        <th class="text-right">Preluate</th>
+                        <th class="text-right">Potrivite</th>
+                        <th class="text-right">Publicate</th>
+                        <th class="text-right">Eșuate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($runs as $run)
+                        @php($status = $run->status->value ?? $run->status)
+                        <tr wire:key="run-{{ $run->id }}">
+                            <td class="whitespace-nowrap text-stone-500">{{ $run->started_at?->format('d.m.Y H:i:s') ?? '—' }}</td>
+                            <td class="font-mono text-xs font-medium text-stone-900">{{ $run->source?->code }}</td>
+                            <td class="text-stone-600">{{ $run->mode }}</td>
+                            <td>
+                                <x-admin.status :label="ucfirst(str_replace('_', ' ', $status))" :tone="match ($status) {
+                                    'completed' => 'positive',
+                                    'failed', 'aborted_guard' => 'danger',
+                                    'completed_with_errors' => 'warning',
+                                    'running' => 'info',
+                                    default => 'neutral',
+                                }" />
+                            </td>
+                            <td class="text-right tabular-nums">{{ number_format($run->fetched_count, 0, ',', '.') }}</td>
+                            <td class="text-right tabular-nums">{{ number_format($run->matched_count, 0, ',', '.') }}</td>
+                            <td class="text-right tabular-nums">{{ number_format($run->published_count, 0, ',', '.') }}</td>
+                            <td @class(['text-right tabular-nums', 'font-medium text-red-700' => $run->failed_count > 0])>
+                                {{ number_format($run->failed_count, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">{{ $runs->links() }}</div>
+    @endif
+</div>

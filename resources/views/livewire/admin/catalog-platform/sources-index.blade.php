@@ -1,1 +1,77 @@
-<div class="space-y-6"><div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h1 class="text-2xl font-semibold tracking-tight">Catalog sources</h1><p class="text-sm text-stone-500">Technical sources, rights, imports and source coverage.</p></div><div class="flex gap-2"><input wire:model.live.debounce.300ms="search" class="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 lg:w-80" placeholder="Search source..."><a href="{{ route('admin.catalog-platform.sources.create') }}" class="btn-primary">New source</a></div></div>@if(session('status'))<div class="rounded-lg bg-emerald-100 px-4 py-3 text-sm text-emerald-900">{{ session('status') }}</div>@endif<div class="overflow-x-auto rounded-xl border border-stone-200 bg-white"><table class="min-w-full text-sm"><thead class="bg-stone-50 text-left text-stone-500"><tr><th class="px-4 py-3">Source</th><th class="px-4 py-3">Type</th><th class="px-4 py-3">Rights</th><th class="px-4 py-3">Records</th><th class="px-4 py-3">Runs</th><th class="px-4 py-3">Last success</th><th class="px-4 py-3"></th></tr></thead><tbody class="divide-y divide-stone-100">@foreach($sources as $source)<tr><td class="px-4 py-3"><a href="{{ route('admin.catalog-platform.sources.edit', $source) }}" class="font-semibold hover:underline">{{ $source->name }}</a><div class="text-xs text-stone-500">{{ $source->code }}</div></td><td class="px-4 py-3">{{ $source->source_type }}</td><td class="px-4 py-3"><div>{{ $source->rights_class->value ?? $source->rights_class }}</div><div class="text-xs {{ $source->allow_api_redistribution ? 'text-emerald-700':'text-amber-700' }}">API {{ $source->allow_api_redistribution ? 'allowed':'not allowed' }}</div></td><td class="px-4 py-3">{{ number_format($source->records_count) }}</td><td class="px-4 py-3">{{ number_format($source->import_runs_count) }}</td><td class="px-4 py-3">{{ optional($source->last_successful_sync_at)->format('Y-m-d H:i') ?? '—' }}</td><td class="px-4 py-3"><div class="flex gap-2"><button wire:click="sync({{ $source->id }}, 'catalog')" class="rounded bg-stone-900 px-3 py-1.5 text-white">Sync</button><a href="{{ route('admin.catalog-platform.sources.edit', $source) }}" class="rounded-lg border border-stone-300 px-3 py-1.5 hover:border-stone-900">Edit</a><button wire:click="toggle({{ $source->id }})" class="rounded-lg border border-stone-300 px-3 py-1.5 hover:border-stone-900">{{ $source->is_active ? 'Pause':'Enable' }}</button></div></td></tr>@endforeach</tbody></table></div>{{ $sources->links() }}</div>
+<div>
+    <x-admin.page-header title="Surse de catalog" subtitle="Surse tehnice, drepturi de utilizare, importuri și acoperire.">
+        <x-slot:actions>
+            <a href="{{ route('admin.catalog-platform.sources.create') }}" class="btn-primary">Sursă nouă</a>
+        </x-slot:actions>
+    </x-admin.page-header>
+
+    @if(session('status'))
+        <p class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('status') }}</p>
+    @endif
+
+    <label class="relative mb-4 block max-w-md">
+        <span class="sr-only">Caută sursă</span>
+        <x-admin.icon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+        <input wire:model.live.debounce.300ms="search" class="pl-9" placeholder="Caută sursă...">
+    </label>
+
+    @if($sources->isEmpty())
+        <x-admin.empty title="Nicio sursă" hint="Adaugă o sursă tehnică pentru a începe importul catalogului.">
+            <a href="{{ route('admin.catalog-platform.sources.create') }}" class="btn-primary">Adaugă o sursă</a>
+        </x-admin.empty>
+    @else
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr>
+                        <th>Sursă</th>
+                        <th>Tip</th>
+                        <th>Drepturi</th>
+                        <th class="text-right">Înregistrări</th>
+                        <th class="text-right">Rulări</th>
+                        <th>Ultimul succes</th>
+                        <th class="w-10"><span class="sr-only">Acțiuni</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($sources as $source)
+                        <tr wire:key="source-{{ $source->id }}">
+                            <td>
+                                <a href="{{ route('admin.catalog-platform.sources.edit', $source) }}" class="font-medium text-stone-900 hover:underline">{{ $source->name }}</a>
+                                <div class="font-mono text-xs text-stone-500">{{ $source->code }}</div>
+                            </td>
+
+                            <td class="text-stone-600">{{ $source->source_type }}</td>
+
+                            <td>
+                                <div class="text-stone-700">{{ $source->rights_class->value ?? $source->rights_class }}</div>
+                                {{-- Redistribution is the one flag with a legal consequence, so it
+                                     is spelled out rather than left to the rights class alone. --}}
+                                <x-admin.status :label="$source->allow_api_redistribution ? 'API permis' : 'API interzis'"
+                                                :tone="$source->allow_api_redistribution ? 'positive' : 'warning'" />
+                            </td>
+
+                            <td class="text-right tabular-nums">{{ number_format($source->records_count, 0, ',', '.') }}</td>
+                            <td class="text-right tabular-nums">{{ number_format($source->import_runs_count, 0, ',', '.') }}</td>
+
+                            <td class="whitespace-nowrap text-stone-500">
+                                {{ $source->last_successful_sync_at?->format('d.m.Y H:i') ?? '—' }}
+                            </td>
+
+                            <td>
+                                <x-admin.row-actions>
+                                    <x-admin.row-action wire:click="sync({{ $source->id }}, 'catalog')">Pornește sincronizarea</x-admin.row-action>
+                                    <x-admin.row-action href="{{ route('admin.catalog-platform.sources.edit', $source) }}">Configurare</x-admin.row-action>
+                                    <x-admin.row-action href="{{ route('admin.catalog-platform.source-records', $source) }}">Înregistrări brute</x-admin.row-action>
+                                    <x-admin.row-action wire:click="toggle({{ $source->id }})">{{ $source->is_active ? 'Pune pe pauză' : 'Activează' }}</x-admin.row-action>
+                                </x-admin.row-actions>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">{{ $sources->links() }}</div>
+    @endif
+</div>
