@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Livewire\Storefront\Contact;
 use App\Models\Article;
 use App\Models\ArticleCategory;
-use App\Models\ContactMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
