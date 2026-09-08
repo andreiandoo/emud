@@ -148,7 +148,22 @@ Ce există acum:
 
 ---
 
-### Etapa 2 — Model complet de ofertă, FX și cost real
+### Etapa 2 — Model complet de ofertă, FX și cost real — **LIVRATĂ**
+
+Ce există acum:
+
+- `supplier_offers` extins: depozit, cost brut, `map_price`/`msrp`, taxă dropship și manipulare per ofertă, estimare transport, `pack_quantity`, fereastră de expediere, clasă de transport, greutate/dimensiuni, flaguri oversize/hazmat, eligibilitate dropship tri-state, `is_active`, tipul sursei și `source_seller_ref`/`source_seller_name` pentru marketplace-uri;
+- `supplier_warehouses` și `supplier_stock_history` (scris doar la schimbare, ca un feed la 15 minute să nu adauge patru rânduri identice pe oră per SKU);
+- `exchange_rates` + `CurrencyConverter`: prețul original al furnizorului nu se suprascrie niciodată; se adaugă valoarea în moneda de bază, cursul și ziua din care vine. Lipsa unui curs înseamnă „nu pot compara", **niciodată** curs 1. Cursurile inverse și încrucișate se derivă (BNR publică doar față de RON);
+- `ExchangeRateImporter` + `exchange-rates:fetch`, rulat zilnic la 01:30, înainte de sincronizarea de catalog. Respectă `multiplier` (HUF e cotat la 100);
+- `LandedCostCalculator`: cost produs + taxă dropship + manipulare + transport, cu taxele per comandă împărțite la cantitate. Un cost incomplet se declară incomplet, cu lista câmpurilor lipsă, în loc să pară o cifră decisă;
+- `ContributionMarginCalculator`: venit net minus cost aterizat, comision de plată, rezervă de retur și de garanție. Clasele voluminoase primesc un multiplicator de transport retur, iar taxa de restocare a furnizorului intră în calcul;
+- pagina de admin **Economia ofertelor**, care închide criteriul etapei.
+
+**De ce contează multiplicatorul:** o bară de protecție cu 40% marjă brută și 120 lei transport retur poate contribui mai puțin decât un panou de comutatoare cu 50% care se expediază într-un plic. Marja brută flatează un catalog de dropshipping.
+
+<details>
+<summary>Specificația inițială a etapei</summary>
 
 Migrare `expand_supplier_offers` + `create_supplier_warehouses`:
 
@@ -180,11 +195,13 @@ Servicii noi:
 - `ContributionMarginCalculator`: minus comision plată, minus rezervă retur, minus rezervă garanție, minus subvenție transport. Formula din `high_margin_product_opportunities` §2.2 și §11.
 - `SupplierRecord` DTO și `SupplierRecordMapper` extinse cu noile chei (rămâne mapare declarativă, fără cod per furnizor).
 
-**Definition of done:** pentru orice ofertă pot afișa în admin cost aterizat în RON și contribuția estimată la un preț de vânzare dat.
+**Definition of done:** pentru orice ofertă pot afișa în admin cost aterizat în RON și contribuția estimată la un preț de vânzare dat. ✔
+
+</details>
 
 ---
 
-### Etapa 3 — Scara de matching completă
+### Etapa 3 — Scara de matching completă ← **următoarea**
 
 Migrare `create_supplier_product_identifiers`:
 
@@ -400,7 +417,7 @@ Estimare de efort, orientativă:
 |---|---|
 | 0 — profil comercial + seeder prospecți + admin | **livrată** |
 | 1 — erori, gardă, sănătate, alerte | **livrată** |
-| 2 — ofertă completă, FX, landed cost | medie |
+| 2 — ofertă completă, FX, landed cost | **livrată** |
 | 3 — scara de matching + identificatori | medie |
 | 4 — routing, prețuri, checkout | medie-mare |
 | 5 — fulfilment multi-furnizor | mare |
@@ -429,7 +446,7 @@ Cu zero conturi deschise, asta e tot ce rămâne pe masă — și e mult:
 
 - ~~Etapa 0~~ — livrată în `19bc117`.
 - ~~Etapa 1~~ — livrată.
-- Etapa 2 integral (FX din BNR/ECB e public).
+- ~~Etapa 2~~ — livrată.
 - Etapa 3 integral, testat pe adaptorul mock cu fixtures.
 - Etapa 4 integral, cu oferte generate de mock — routingul și revalidarea la checkout nu au nevoie de furnizor real ca să fie corecte.
 - Etapa 5 în modul manual (PO generat, plasat de operator) — funcționează chiar și fără niciun API de furnizor.
