@@ -9,6 +9,7 @@ use App\Models\PaymentProvider;
 use App\Models\ShippingMethod;
 use App\Notifications\OrderPlaced;
 use App\Payments\PaymentService;
+use App\Storefront\VehicleContext;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -17,13 +18,17 @@ use Throwable;
 
 class CheckoutService
 {
-    public function __construct(private PaymentService $payments) {}
+    public function __construct(private PaymentService $payments, private VehicleContext $vehicles) {}
 
     public function place(Cart $cart, array $customer, ShippingMethod $method, ?PaymentProvider $provider = null, array $paymentContext = []): Order
     {
         abort_unless($cart->status === 'active' && $cart->items()->exists(), 422, 'Coșul nu poate fi finalizat.');
 
-        $order = DB::transaction(function () use ($cart, $customer, $method): Order {
+        // Read before the transaction so the line stamp reflects what the customer was
+        // shopping for, and so a session lookup never happens with a transaction open.
+        $activeVehicleId = $this->vehicles->current()?->customerVehicleId;
+
+        $order = DB::transaction(function () use ($cart, $customer, $method, $activeVehicleId): Order {
             $cart->load('items.product', 'items.variant');
             $shipping = Address::create([...$customer['shipping'], 'user_id' => $cart->user_id, 'type' => 'shipping']);
             $billingData = $customer['billing'] ?? $customer['shipping'];
@@ -54,6 +59,7 @@ class CheckoutService
             foreach ($cart->items as $index => $item) {
                 $order->items()->create([
                     'product_id' => $item->product_id, 'variant_id' => $item->variant_id,
+                    'customer_vehicle_id' => $activeVehicleId,
                     'name' => $item->snapshot['name'] ?? $item->product->name,
                     'sku' => $item->snapshot['sku'] ?? $item->variant?->sku ?? $item->product->sku,
                     'quantity' => $item->quantity, 'unit_price' => $item->unit_price,

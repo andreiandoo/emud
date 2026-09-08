@@ -40,6 +40,7 @@ use App\Livewire\Customer\Orders as CustomerOrders;
 use App\Livewire\Customer\Profile as CustomerProfile;
 use App\Livewire\Customer\Register as CustomerRegister;
 use App\Livewire\Customer\ResetPassword as CustomerResetPassword;
+use App\Livewire\Customer\VehicleDetail as CustomerVehicleDetail;
 use App\Livewire\Storefront\CartPage as StorefrontCart;
 use App\Livewire\Storefront\CategoryPage as StorefrontCategory;
 use App\Livewire\Storefront\CheckoutPage as StorefrontCheckout;
@@ -106,6 +107,7 @@ Route::prefix('cont')->name('customer.')->group(function (): void {
     Route::middleware('auth')->group(function (): void {
         Route::get('/', CustomerDashboard::class)->name('dashboard');
         Route::get('/garaj', CustomerGarage::class)->name('garage');
+        Route::get('/garaj/{vehicle}', CustomerVehicleDetail::class)->whereNumber('vehicle')->name('garage.vehicle');
         Route::get('/comenzi', CustomerOrders::class)->name('orders');
         Route::get('/date', CustomerProfile::class)->name('profile');
         Route::post('/iesire', function (Request $request) {

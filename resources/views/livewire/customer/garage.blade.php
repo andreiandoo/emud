@@ -29,6 +29,7 @@
                 </div>
 
                 <div class="flex items-center gap-3 text-sm">
+                    <a href="{{ route('customer.garage.vehicle', $vehicle->id) }}" class="font-semibold underline hover:text-stone-900">Detalii</a>
                     @unless($vehicle->is_primary)
                         <button wire:click="makePrimary({{ $vehicle->id }})" class="text-stone-600 underline hover:text-stone-900">Fă principală</button>
                     @endunless
