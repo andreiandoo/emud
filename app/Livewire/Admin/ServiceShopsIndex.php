@@ -99,14 +99,21 @@ class ServiceShopsIndex extends Component
 
         $shop = $this->editingId === null ? new ServiceShop : ServiceShop::query()->findOrFail($this->editingId);
 
+        // Listed column by column rather than spread from the validated array: the form field
+        // is called shopStatus to avoid clashing with Livewire's own status handling, and
+        // spreading would mass-assign that name straight at a column that does not exist.
         $shop->fill([
-            ...$data,
-            'status' => $data['shopStatus'],
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'county' => $data['county'],
+            'city' => $data['city'],
             'address' => $data['address'] ?: null,
             'phone' => $data['phone'] ?: null,
             'email' => $data['email'] ?: null,
             'website' => $data['website'] ?: null,
             'description' => $data['description'] ?: null,
+            'status' => $data['shopStatus'],
+            'promotion_tier' => $data['promotion_tier'],
             'promotion_notes' => $data['promotion_notes'] ?: null,
             'promoted_until' => $data['promotion_tier'] === 'none' ? null : $data['promoted_until'],
             'fits_parts_bought_here' => $this->fits_parts_bought_here,
