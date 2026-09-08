@@ -12,7 +12,12 @@ class ProductAlertTriggered extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public readonly ProductAlert $alert) {}
+    public function __construct(public readonly ProductAlert $alert)
+    {
+        // Without this the notification queues onto the connection default, which no worker in
+        // this deployment listens to, and the email is never sent.
+        $this->onQueue('notifications');
+    }
 
     public function via(object $notifiable): array
     {
@@ -30,7 +35,7 @@ class ProductAlertTriggered extends Notification implements ShouldQueue
             ->subject("Alertă eMUD: {$product->name}")
             ->greeting("Salut, {$notifiable->name}!")
             ->line($message)
-            ->action('Vezi produsul', url('/produse/'.$product->slug))
+            ->action('Vezi produsul', route('storefront.product', $product))
             ->line('Disponibilitatea se poate modifica rapid la furnizor.');
     }
 }

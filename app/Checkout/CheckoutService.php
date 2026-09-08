@@ -7,8 +7,10 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\PaymentProvider;
 use App\Models\ShippingMethod;
+use App\Notifications\OrderPlaced;
 use App\Payments\PaymentService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -66,6 +68,24 @@ class CheckoutService
 
         $cart->update(['status' => 'converted']);
 
+        $this->confirmByEmail($order);
+
         return $order->refresh();
+    }
+
+    /**
+     * Addressed to the email captured on the order rather than to an account, because a guest
+     * checkout has no account to notify. Failures are swallowed: the order is already placed and
+     * paid for, and refusing to return it because a mail server was unreachable would leave the
+     * customer thinking nothing happened.
+     */
+    private function confirmByEmail(Order $order): void
+    {
+        try {
+            Notification::route('mail', $order->customer_email)
+                ->notify(new OrderPlaced($order->load('items')));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 }
