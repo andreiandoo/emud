@@ -5,6 +5,7 @@ namespace App\Livewire\Storefront;
 use App\Models\ServiceShop;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -78,8 +79,8 @@ class ServiceDirectory extends Component
                      ELSE 0 END DESC";
     }
 
-    /** @return \Illuminate\Support\Collection<int, string> */
-    private function availableSpecialities()
+    /** @return Collection<int, string> */
+    private function availableSpecialities(): Collection
     {
         return ServiceShop::query()
             ->published()
