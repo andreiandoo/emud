@@ -29,7 +29,7 @@
             <div class="rounded-xl bg-white p-5 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <div class="text-lg font-bold">{{ $consumer->name }}</div>
+                        <div class="text-base font-semibold">{{ $consumer->name }}</div>
                         <div class="text-sm text-stone-500">
                             {{ $consumer->plan }} · {{ number_format($consumer->requests_used) }} /
                             {{ $consumer->monthly_quota > 0 ? number_format($consumer->monthly_quota) : 'nelimitat local' }} requests

@@ -13,6 +13,51 @@
 [x-cloak] { display: none !important; }
 
 /*
+ * Form controls.
+ *
+ * Tailwind's Preflight sets border-width to 0 on every element, and this project does not use
+ * @tailwindcss/forms, so a control marked `border-stone-300` had colour but no border and no
+ * padding — it rendered as an invisible box. These base rules give every control a real shape
+ * on both the shop and the back office; utilities in the markup still override them.
+ */
+@layer base {
+    input:where([type='text'], [type='email'], [type='password'], [type='number'], [type='date'],
+        [type='datetime-local'], [type='month'], [type='search'], [type='tel'], [type='time'],
+        [type='url'], [type='week']),
+    select,
+    textarea {
+        @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm
+               text-stone-900 transition
+               placeholder:text-stone-400
+               focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900
+               disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400;
+    }
+
+    select {
+        /* Native arrows differ wildly between platforms; a drawn one keeps selects looking like
+           the rest of the controls. */
+        @apply appearance-none bg-no-repeat pr-9;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2357534e' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+        background-position: right 0.6rem center;
+        background-size: 1.1rem;
+    }
+
+    textarea {
+        @apply min-h-24 leading-relaxed;
+    }
+
+    input:where([type='checkbox'], [type='radio']) {
+        @apply h-4 w-4 rounded border border-stone-300 text-stone-900
+               focus:ring-1 focus:ring-stone-900 focus:ring-offset-0;
+    }
+
+    input:where([type='radio']) {
+        @apply rounded-full;
+    }
+}
+
+
+/*
  * Back-office surface.
  *
  * Applied to bare elements rather than through a class on every tag: there are two dozen admin
@@ -27,22 +72,6 @@
  * resolves @apply against real utilities only, so composing component classes fails the build.
  */
 @layer components {
-    .admin-surface :where(input[type='text'], input[type='email'], input[type='password'],
-        input[type='number'], input[type='date'], input[type='search'], input[type='tel'],
-        input[type='url'], select, textarea) {
-        @apply w-full rounded-lg border-stone-300 bg-white text-sm text-stone-900
-               placeholder:text-stone-400
-               focus:border-stone-900 focus:ring-1 focus:ring-stone-900;
-    }
-
-    .admin-surface :where(input[type='checkbox'], input[type='radio']) {
-        @apply border-stone-300 text-stone-900 focus:ring-stone-900;
-    }
-
-    .admin-surface :where(input:disabled, select:disabled, textarea:disabled) {
-        @apply cursor-not-allowed bg-stone-100 text-stone-400;
-    }
-
     .admin-surface :where(table) {
         @apply w-full border-collapse text-sm;
     }

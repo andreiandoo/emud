@@ -52,7 +52,7 @@
             @else
                 <div class="card-padded space-y-5">
                     <div>
-                        <h2 class="text-lg font-bold">{{ $selected->name }}</h2>
+                        <h2 class="text-base font-semibold">{{ $selected->name }}</h2>
                         <p class="text-sm text-stone-600">{{ $selected->email }}</p>
                         @if($selected->phone)<p class="text-sm text-stone-600">{{ $selected->phone }}</p>@endif
                     </div>

@@ -101,13 +101,15 @@
         </div>
     </section>
 
-    @if(($supplier?->commercial_profile['unresolved'] ?? []) !== [])
+    @php($unresolved = data_get($supplier, 'commercial_profile.unresolved', []))
+    @php($researchSources = data_get($supplier, 'commercial_profile.sources', []))
+    @if($unresolved !== [])
         <section class="rounded-xl border border-sky-200 bg-sky-50 p-5">
             <h2 class="font-bold text-sky-950">Unresolved with this supplier</h2>
             <p class="mt-1 text-xs text-sky-900">Open questions recorded during public research. Answer these in writing before building an adapter.</p>
-            <ul class="mt-3 flex flex-wrap gap-2">@foreach($supplier->commercial_profile['unresolved'] as $item)<li class="rounded border border-sky-200 bg-white px-2 py-1 text-xs text-sky-900">{{ $item }}</li>@endforeach</ul>
-            @if(($supplier->commercial_profile['sources'] ?? []) !== [])
-                <div class="mt-3 flex flex-wrap gap-3 text-xs">@foreach($supplier->commercial_profile['sources'] as $source)<a href="{{ $source }}" target="_blank" rel="noopener" class="text-sky-800 underline">{{ parse_url($source, PHP_URL_HOST) }}</a>@endforeach</div>
+            <ul class="mt-3 flex flex-wrap gap-2">@foreach($unresolved as $item)<li class="rounded border border-sky-200 bg-white px-2 py-1 text-xs text-sky-900">{{ $item }}</li>@endforeach</ul>
+            @if($researchSources !== [])
+                <div class="mt-3 flex flex-wrap gap-3 text-xs">@foreach($researchSources as $source)<a href="{{ $source }}" target="_blank" rel="noopener" class="text-sky-800 underline">{{ parse_url($source, PHP_URL_HOST) }}</a>@endforeach</div>
             @endif
         </section>
     @endif

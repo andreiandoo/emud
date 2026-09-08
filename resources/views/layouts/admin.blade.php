@@ -16,8 +16,6 @@
 
 <div x-data="{ mobile: false }" class="flex min-h-full">
 
-    {{-- Sidebar. Fixed on desktop, slide-over on mobile: an operator on a phone is usually
-         checking one thing, not navigating, so it stays out of the way until asked for. --}}
     <div x-show="mobile" x-cloak @click="mobile = false" class="fixed inset-0 z-30 bg-stone-950/50 lg:hidden"></div>
 
     <aside :class="mobile ? 'translate-x-0' : '-translate-x-full'"
@@ -28,14 +26,30 @@
             <button @click="mobile = false" class="text-stone-400 lg:hidden" aria-label="Închide meniul">✕</button>
         </div>
 
-        <nav class="flex-1 space-y-6 overflow-y-auto px-3 pb-6">
+        {{-- Collapse state is kept in localStorage rather than the session: it is a per-device
+             preference about screen space, and syncing it across a laptop and a phone would get
+             it wrong on one of them. Groups default to open, so a new operator sees everything. --}}
+        <nav class="flex-1 space-y-1 overflow-y-auto px-3 pb-6"
+             x-data="{
+                 state: (() => { try { return JSON.parse(localStorage.getItem('emud.nav.groups')) ?? {} } catch (e) { return {} } })(),
+                 isOpen(key) { return this.state[key] ?? true },
+                 toggle(key) {
+                     this.state = { ...this.state, [key]: ! this.isOpen(key) };
+                     try { localStorage.setItem('emud.nav.groups', JSON.stringify(this.state)) } catch (e) {}
+                 },
+             }">
             @foreach($groups as $group)
+                @php($key = Str::slug($group['label']))
                 <div>
-                    <p class="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
-                        {{ $group['label'] }}
-                    </p>
+                    <button type="button" @click="toggle('{{ $key }}')"
+                            :aria-expanded="isOpen('{{ $key }}') ? 'true' : 'false'"
+                            class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500 transition hover:text-stone-300">
+                        <span>{{ $group['label'] }}</span>
+                        <span class="text-stone-600 transition-transform"
+                              :class="isOpen('{{ $key }}') ? 'rotate-0' : '-rotate-90'" aria-hidden="true">▾</span>
+                    </button>
 
-                    <ul class="space-y-0.5">
+                    <ul x-show="isOpen('{{ $key }}')" x-transition.opacity.duration.150ms class="space-y-0.5 pb-2">
                         @foreach($group['items'] as $item)
                             @php($current = request()->routeIs($item['route']))
                             <li>
@@ -43,7 +57,7 @@
                                    @if($current) aria-current="page" @endif
                                    @class([
                                        'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition',
-                                       'bg-stone-800 font-semibold text-white' => $current,
+                                       'bg-stone-800 font-medium text-white' => $current,
                                        'text-stone-400 hover:bg-stone-900 hover:text-white' => ! $current,
                                    ])>
                                     <x-admin.icon :name="$item['icon']" />
@@ -61,7 +75,7 @@
                 @php($current = request()->routeIs($item['route']))
                 <a href="{{ route($item['route']) }}" @class([
                     'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition',
-                    'bg-stone-800 font-semibold text-white' => $current,
+                    'bg-stone-800 font-medium text-white' => $current,
                     'text-stone-400 hover:bg-stone-900 hover:text-white' => ! $current,
                 ])>
                     <x-admin.icon :name="$item['icon']" />

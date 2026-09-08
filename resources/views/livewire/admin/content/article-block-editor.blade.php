@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-            <h1 class="text-lg font-bold">{{ $article->title }}</h1>
+            <h1 class="text-base font-semibold">{{ $article->title }}</h1>
             <p class="text-sm text-stone-500">Conținut pe blocuri și mașinile de care ține articolul.</p>
         </div>
         <div class="flex items-center gap-3 text-sm">

@@ -1,7 +1,7 @@
 <div class="grid gap-6 lg:grid-cols-[22rem_1fr]">
     <aside class="space-y-3">
         <div class="flex items-center justify-between">
-            <h1 class="text-lg font-bold">Service auto</h1>
+            <h1 class="text-base font-semibold">Service auto</h1>
             <button wire:click="create" class="rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-semibold text-white">Adaugă</button>
         </div>
 
@@ -32,7 +32,7 @@
 
     <form wire:submit="save" class="space-y-4 rounded-xl border border-stone-200 bg-white p-6">
         <div class="flex items-baseline justify-between gap-3">
-            <h2 class="text-lg font-bold">{{ $editingId ? 'Editează service-ul' : 'Service nou' }}</h2>
+            <h2 class="text-base font-semibold">{{ $editingId ? 'Editează service-ul' : 'Service nou' }}</h2>
             @if($saved)<span class="text-sm font-semibold text-lime-700">{{ $saved }}</span>@endif
         </div>
 
