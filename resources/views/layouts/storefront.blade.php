@@ -47,16 +47,7 @@
         </nav>
     </div>
 
-    @php($menu = \App\Models\Category::query()->whereNull('parent_id')->where('is_active', true)->where('is_visible_in_menu', true)->orderBy('position')->orderBy('name')->get())
-    <nav class="border-t border-stone-100">
-            <div class="mx-auto flex max-w-6xl gap-5 overflow-x-auto px-4 py-2.5 text-sm">
-                @foreach($menu as $item)
-                    <a href="{{ route('storefront.category', $item) }}" class="whitespace-nowrap text-stone-600 hover:text-stone-900">{{ $item->name }}</a>
-                @endforeach
-                <a href="{{ route('storefront.guides') }}" class="whitespace-nowrap text-stone-600 hover:text-stone-900">Ghiduri</a>
-                <a href="{{ route('storefront.contact') }}" class="whitespace-nowrap text-stone-600 hover:text-stone-900">Contact</a>
-            </div>
-    </nav>
+    <x-mega-menu />
 </header>
 
 <main class="mx-auto max-w-6xl px-4 py-8">{{ $slot }}</main>

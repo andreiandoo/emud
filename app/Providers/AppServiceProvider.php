@@ -5,11 +5,13 @@ namespace App\Providers;
 use App\Models\CatalogPart;
 use App\Models\CatalogPartNumber;
 use App\Models\CatalogSource;
+use App\Models\Category;
 use App\Models\VehicleAlias;
 use App\Models\VehicleConfiguration;
 use App\Models\VehicleIdentifier;
 use App\Observers\CatalogSearchMutationObserver;
 use App\Observers\CatalogSourceSearchObserver;
+use App\Observers\CategoryMenuObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -44,5 +46,6 @@ class AppServiceProvider extends ServiceProvider
         }
 
         CatalogSource::observe(CatalogSourceSearchObserver::class);
+        Category::observe(CategoryMenuObserver::class);
     }
 }
