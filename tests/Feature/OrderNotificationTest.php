@@ -83,7 +83,6 @@ class OrderNotificationTest extends TestCase
         Notification::assertNothingSent();
     }
 
-
     /**
      * The totals a customer is charged must match the totals stored, to the ban. Computed as
      * floats these drifted apart on orders with many lines.

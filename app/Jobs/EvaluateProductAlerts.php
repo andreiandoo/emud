@@ -28,9 +28,7 @@ class EvaluateProductAlerts implements ShouldQueue
             ->where('is_active', true)
             ->each(function (ProductAlert $alert): void {
                 $conditionMet = match ($alert->type) {
-                    'price' => $alert->variant && $alert->target_price !== null
-                        && Money::of($alert->variant->retail_price, (string) $alert->currency)
-                            ->isLessThanOrEqualTo(Money::of($alert->target_price, (string) $alert->currency)),
+                    'price' => $this->priceReached($alert),
                     'back_in_stock' => $alert->product->supplierProducts()
                         ->where(function ($query) use ($alert): void {
                             $query->when($alert->variant_id, fn ($q) => $q->where('variant_id', $alert->variant_id));
@@ -50,5 +48,21 @@ class EvaluateProductAlerts implements ShouldQueue
                     $alert->update(['condition_met' => false]);
                 }
             });
+    }
+
+    /**
+     * Compared as exact amounts: a float comparison could fire a price alert a ban early or
+     * miss one that had genuinely been reached.
+     */
+    private function priceReached(ProductAlert $alert): bool
+    {
+        if ($alert->variant === null || $alert->target_price === null) {
+            return false;
+        }
+
+        $currency = (string) $alert->currency;
+
+        return Money::of($alert->variant->retail_price, $currency)
+            ->isLessThanOrEqualTo(Money::of($alert->target_price, $currency));
     }
 }
