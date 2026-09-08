@@ -30,7 +30,8 @@ class ReturnsIndex extends Component
         $this->resetPage();
     }
 
-    public function transition(int $returnId, string $to, ReturnService $returns): void
+    /** Named advance() because Livewire\Component already declares transition(). */
+    public function advance(int $returnId, string $to, ReturnService $returns): void
     {
         $this->error = '';
 

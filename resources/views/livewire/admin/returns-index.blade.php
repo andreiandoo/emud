@@ -58,7 +58,7 @@
                             <td>
                                 <div class="flex flex-wrap justify-end gap-1.5">
                                     @forelse($return->status->allowedNext() as $next)
-                                        <button wire:click="transition({{ $return->id }}, '{{ $next->value }}')"
+                                        <button wire:click="advance({{ $return->id }}, '{{ $next->value }}')"
                                                 class="rounded-lg border border-stone-300 px-2.5 py-1 text-xs font-semibold hover:border-stone-900">
                                             {{ $next->label() }}
                                         </button>

@@ -138,7 +138,7 @@ class OrderReturnsTest extends TestCase
         $return = app(ReturnService::class)->request($this->order, ReturnReason::WrongPart, [$this->lineId => 1]);
 
         Livewire::test(ReturnsIndex::class)
-            ->call('transition', $return->id, ReturnStatus::Approved->value);
+            ->call('advance', $return->id, ReturnStatus::Approved->value);
 
         $this->assertSame(ReturnStatus::Approved, $return->refresh()->status);
     }
@@ -153,7 +153,7 @@ class OrderReturnsTest extends TestCase
         $return = app(ReturnService::class)->request($this->order, ReturnReason::WrongPart, [$this->lineId => 1]);
 
         Livewire::test(ReturnsIndex::class)
-            ->call('transition', $return->id, ReturnStatus::Refunded->value)
+            ->call('advance', $return->id, ReturnStatus::Refunded->value)
             ->assertSet('error', fn (string $error): bool => $error !== '');
 
         $this->assertSame(ReturnStatus::Requested, $return->refresh()->status);
