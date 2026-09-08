@@ -1,25 +1,312 @@
 <div x-data="{ tab: 'general' }">
-    <div class="mb-6 flex items-start justify-between"><div><h1 class="text-2xl font-semibold tracking-tight">{{ $product ? 'Editează produsul' : 'Produs nou' }}</h1><p class="text-stone-500">Catalog, variante, filtre, media, compatibilitate și SEO.</p></div><a href="{{ route('admin.products.index') }}" class="text-sm text-stone-600">← Înapoi</a></div>
-    @if(session('success'))<div class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('success') }}</div>@endif
-    @if($errors->any())<div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">Verifică toate câmpurile marcate. {{ $errors->first() }}</div>@endif
-    <div class="mb-4 flex flex-wrap gap-2">@foreach(['general'=>'General','variants'=>'Variante & preț','attributes'=>'Filtre','media'=>'Imagini','fitments'=>'Compatibilitate','seo'=>'SEO'] as $key=>$label)<button type="button" @click="tab='{{ $key }}'" :class="tab==='{{ $key }}' ? 'bg-stone-950 text-white' : 'bg-white'" class="rounded-lg border px-4 py-2 text-sm font-medium">{{ $label }}</button>@endforeach</div>
-    <form wire:submit="save" class="card-padded">
-        <section x-show="tab==='general'" class="grid gap-4 lg:grid-cols-2">
-            <div><label class="text-sm font-medium">Nume *</label><input wire:model.live.debounce.400ms="name" class="mt-1"></div><div><label class="text-sm font-medium">Slug *</label><input wire:model="slug" class="mt-1"></div>
-            <div><label class="text-sm font-medium">SKU produs</label><input wire:model="sku" class="mt-1"></div><div><label class="text-sm font-medium">Cod producător</label><input wire:model="manufacturerPartNumber" class="mt-1"></div>
-            <div><label class="text-sm font-medium">Brand</label><select wire:model="brandId" class="mt-1"><option value="">Fără brand</option>@foreach($brands as $brand)<option value="{{ $brand->id }}">{{ $brand->name }}</option>@endforeach</select></div><div><label class="text-sm font-medium">Status</label><select wire:model="status" class="mt-1">@foreach(['draft'=>'Draft','review'=>'De verificat','active'=>'Publicat','archived'=>'Arhivat'] as $key=>$label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
-            <div class="lg:col-span-2"><label class="text-sm font-medium">Categorii * (prima este principală)</label><select wire:model.live="categoryIds" multiple size="8" class="mt-1">@foreach($categories as $category)<option value="{{ $category->id }}">{{ str_repeat('— ', $category->depth) }}{{ $category->name }}</option>@endforeach</select></div>
-            <div class="lg:col-span-2"><label class="text-sm font-medium">Descriere scurtă</label><textarea wire:model="shortDescription" rows="3" class="mt-1"></textarea></div><div class="lg:col-span-2"><label class="text-sm font-medium">Descriere completă (HTML permis)</label><textarea wire:model="description" rows="12" class="mt-1 font-mono text-sm"></textarea></div>
-            <div><label class="text-sm font-medium">Garanție (luni)</label><input type="number" wire:model="warrantyMonths" class="mt-1"></div><div><label class="text-sm font-medium">Greutate (kg)</label><input type="number" step="0.001" wire:model="weightKg" class="mt-1"></div>
-            <div class="flex gap-5 text-sm lg:col-span-2"><label><input type="checkbox" wire:model="isUniversal"> Produs universal</label><label><input type="checkbox" wire:model="isFeatured"> Recomandat</label></div>
+    <x-admin.page-header :title="$product ? 'Editează produsul' : 'Produs nou'"
+                         subtitle="Catalog, variante, filtre, media, compatibilitate și SEO.">
+        <x-slot:actions>
+            <a href="{{ route('admin.products.index') }}" class="btn-secondary">← Toate produsele</a>
+        </x-slot:actions>
+    </x-admin.page-header>
+
+    @if(session('success'))
+        <p class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('success') }}</p>
+    @endif
+
+    @if($errors->any())
+        <p class="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+            Verifică toate câmpurile marcate. {{ $errors->first() }}
+        </p>
+    @endif
+
+    {{-- Alpine rather than Livewire tabs: switching a tab must not lose what has been typed into
+         the other ones, and every field on this form belongs to a single unsaved product. --}}
+    <div class="mb-6 flex flex-wrap items-center gap-1">
+        @foreach([
+            'general' => 'General',
+            'variants' => 'Variante & preț',
+            'attributes' => 'Filtre',
+            'media' => 'Imagini',
+            'fitments' => 'Compatibilitate',
+            'seo' => 'SEO',
+        ] as $key => $label)
+            <button type="button" @click="tab = '{{ $key }}'"
+                    :class="tab === '{{ $key }}' ? 'bg-stone-100 font-semibold text-stone-900' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900'"
+                    class="rounded-lg px-3 py-1.5 text-sm transition">{{ $label }}</button>
+        @endforeach
+    </div>
+
+    <form wire:submit="save" class="card-padded space-y-5">
+        <section x-show="tab === 'general'" class="grid gap-4 lg:grid-cols-2">
+            <label class="block">
+                <span class="field-label">Nume *</span>
+                <input wire:model.live.debounce.400ms="name">
+                @error('name') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="block">
+                <span class="field-label">Slug *</span>
+                <input wire:model="slug">
+                @error('slug') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="block">
+                <span class="field-label">SKU produs</span>
+                <input wire:model="sku">
+                @error('sku') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="block">
+                <span class="field-label">Cod producător</span>
+                <input wire:model="manufacturerPartNumber">
+            </label>
+
+            <label class="block">
+                <span class="field-label">Brand</span>
+                <select wire:model="brandId">
+                    <option value="">Fără brand</option>
+                    @foreach($brands as $brand)<option value="{{ $brand->id }}">{{ $brand->name }}</option>@endforeach
+                </select>
+            </label>
+
+            <label class="block">
+                <span class="field-label">Status</span>
+                <select wire:model="status">
+                    @foreach(['draft' => 'Ciornă', 'review' => 'De verificat', 'active' => 'Publicat', 'archived' => 'Arhivat'] as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+
+            <label class="block lg:col-span-2">
+                <span class="field-label">Categorii *</span>
+                <select wire:model.live="categoryIds" multiple size="8">
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}">{{ str_repeat('— ', $category->depth) }}{{ $category->name }}</option>
+                    @endforeach
+                </select>
+                <span class="field-hint">Prima selectată devine categoria principală.</span>
+                @error('categoryIds') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="block lg:col-span-2">
+                <span class="field-label">Descriere scurtă</span>
+                <textarea wire:model="shortDescription" rows="3"></textarea>
+            </label>
+
+            <label class="block lg:col-span-2">
+                <span class="field-label">Descriere completă (HTML permis)</span>
+                <textarea wire:model="description" rows="12" class="font-mono text-sm"></textarea>
+            </label>
+
+            <label class="block">
+                <span class="field-label">Garanție (luni)</span>
+                <input type="number" min="0" wire:model="warrantyMonths">
+            </label>
+
+            <label class="block">
+                <span class="field-label">Greutate (kg)</span>
+                <input type="number" step="0.001" min="0" wire:model="weightKg">
+            </label>
+
+            <div class="flex flex-wrap gap-5 text-sm text-stone-700 lg:col-span-2">
+                <label class="flex items-center gap-2"><input type="checkbox" wire:model="isUniversal"> Produs universal</label>
+                <label class="flex items-center gap-2"><input type="checkbox" wire:model="isFeatured"> Recomandat</label>
+            </div>
         </section>
-        <section x-show="tab==='variants'" x-cloak><div class="mb-3 flex justify-between"><h2 class="font-semibold">Variante comerciale</h2><button type="button" wire:click="addVariant" class="rounded bg-stone-900 px-3 py-1.5 text-sm text-white">+ Variantă</button></div>
-            <div class="space-y-3">@foreach($variants as $index=>$variant)<div wire:key="variant-{{ $index }}" class="grid gap-3 rounded-lg border p-3 md:grid-cols-4"><input wire:model="variants.{{ $index }}.name" placeholder="Nume" ><input wire:model="variants.{{ $index }}.sku" placeholder="SKU *" ><input wire:model="variants.{{ $index }}.mpn" placeholder="Cod producător" ><input wire:model="variants.{{ $index }}.barcode" placeholder="EAN/UPC" ><input type="number" step="0.01" wire:model="variants.{{ $index }}.price" placeholder="Preț" ><input type="number" step="0.01" wire:model="variants.{{ $index }}.compare_at_price" placeholder="Preț vechi" ><input type="number" step="0.001" wire:model="variants.{{ $index }}.weight_kg" placeholder="kg" ><div class="flex items-center justify-between"><label class="text-sm"><input type="checkbox" wire:model="variants.{{ $index }}.is_active"> Activă</label>@if(count($variants)>1)<button type="button" wire:click="removeVariant({{ $index }})" class="text-sm text-red-600">Elimină</button>@endif</div></div>@endforeach</div>
+
+        <section x-show="tab === 'variants'" x-cloak class="space-y-4">
+            <div class="flex items-center justify-between gap-3">
+                <h2 class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Variante comerciale</h2>
+                <button type="button" wire:click="addVariant" class="btn-secondary">+ Variantă</button>
+            </div>
+
+            @foreach($variants as $index => $variant)
+                <div wire:key="variant-{{ $index }}" class="grid gap-4 rounded-xl bg-stone-50 p-4 md:grid-cols-4">
+                    <label class="block">
+                        <span class="field-label">Nume</span>
+                        <input wire:model="variants.{{ $index }}.name">
+                    </label>
+                    <label class="block">
+                        <span class="field-label">SKU *</span>
+                        <input wire:model="variants.{{ $index }}.sku">
+                        @error('variants.'.$index.'.sku') <span class="field-error">{{ $message }}</span> @enderror
+                    </label>
+                    <label class="block">
+                        <span class="field-label">Cod producător</span>
+                        <input wire:model="variants.{{ $index }}.mpn">
+                    </label>
+                    <label class="block">
+                        <span class="field-label">EAN / UPC</span>
+                        <input wire:model="variants.{{ $index }}.barcode">
+                    </label>
+                    <label class="block">
+                        <span class="field-label">Preț</span>
+                        <input type="number" step="0.01" min="0" wire:model="variants.{{ $index }}.price">
+                        @error('variants.'.$index.'.price') <span class="field-error">{{ $message }}</span> @enderror
+                    </label>
+                    <label class="block">
+                        <span class="field-label">Preț vechi</span>
+                        <input type="number" step="0.01" min="0" wire:model="variants.{{ $index }}.compare_at_price">
+                    </label>
+                    <label class="block">
+                        <span class="field-label">Greutate (kg)</span>
+                        <input type="number" step="0.001" min="0" wire:model="variants.{{ $index }}.weight_kg">
+                    </label>
+
+                    <div class="flex items-end justify-between gap-3 pb-2">
+                        <label class="flex items-center gap-2 text-sm text-stone-700">
+                            <input type="checkbox" wire:model="variants.{{ $index }}.is_active"> Activă
+                        </label>
+
+                        @if(count($variants) > 1)
+                            <button type="button" wire:click="removeVariant({{ $index }})"
+                                    class="text-sm font-semibold text-red-700 hover:underline">Elimină</button>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
         </section>
-        <section x-show="tab==='attributes'" x-cloak><h2 class="mb-3 font-semibold">Atribute disponibile pentru categoriile selectate</h2><div class="grid gap-4 md:grid-cols-2">@forelse($attributes as $attribute)<div><label class="text-sm font-medium">{{ $attribute->name }} @if($attribute->unit)({{ $attribute->unit }})@endif</label>@if(in_array($attribute->type,['select','color']))<select wire:model="attributeValues.{{ $attribute->id }}" class="mt-1"><option value="">—</option>@foreach($attribute->options as $option)<option value="{{ $option->id }}">{{ $option->label }}</option>@endforeach</select>@elseif($attribute->type==='multiselect')<select multiple wire:model="attributeValues.{{ $attribute->id }}" class="mt-1">@foreach($attribute->options as $option)<option value="{{ $option->id }}">{{ $option->label }}</option>@endforeach</select>@elseif($attribute->type==='boolean')<label class="mt-2 block text-sm"><input type="checkbox" wire:model="attributeValues.{{ $attribute->id }}"> Da</label>@else<input type="{{ $attribute->type==='number' ? 'number':'text' }}" wire:model="attributeValues.{{ $attribute->id }}" class="mt-1">@endif@if($attribute->help_text)<p class="text-xs text-stone-500">{{ $attribute->help_text }}</p>@endif</div>@empty<p class="text-stone-500">Selectează cel puțin o categorie sau definește atribute globale.</p>@endforelse</div></section>
-        <section x-show="tab==='media'" x-cloak><label class="font-semibold">Încarcă imagini</label><input type="file" multiple accept="image/*" wire:model="images" class="mt-2 block w-full rounded border p-3"><div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">@foreach($existingMedia as $media)<div><img src="{{ Storage::disk($media->disk)->url($media->path) }}" alt="{{ $media->alt_text }}" class="aspect-square w-full object-cover"><button type="button" wire:click="removeMedia({{ $media->id }})" class="mt-2 text-xs text-red-600">Elimină</button></div>@endforeach</div></section>
-        <section x-show="tab==='fitments'" x-cloak><div class="mb-3 flex justify-between"><h2 class="font-semibold">Compatibilitate auto</h2><button type="button" wire:click="addFitment" class="rounded bg-stone-900 px-3 py-1.5 text-sm text-white">+ Compatibilitate</button></div>@foreach($fitments as $index=>$fitment)<div wire:key="fitment-{{ $index }}" class="mb-3 grid gap-3 rounded border p-3 md:grid-cols-5"><select wire:model="fitments.{{ $index }}.generation_id" class="rounded border px-2 py-2 md:col-span-2"><option value="">Alege generația</option>@foreach($generations as $generation)<option value="{{ $generation->id }}">{{ $generation->model->make->name }} {{ $generation->model->name }} · {{ $generation->name }} ({{ $generation->year_from }}–{{ $generation->year_to ?: 'prezent' }})</option>@endforeach</select><input type="number" wire:model="fitments.{{ $index }}.year_from" placeholder="An de la" class="rounded border px-2"><input type="number" wire:model="fitments.{{ $index }}.year_to" placeholder="An până la" class="rounded border px-2"><input wire:model="fitments.{{ $index }}.position" placeholder="Poziție" class="rounded border px-2"><textarea wire:model="fitments.{{ $index }}.notes" placeholder="Note montaj" class="rounded border px-2 md:col-span-3"></textarea><label class="text-sm"><input type="checkbox" wire:model="fitments.{{ $index }}.requires_modification"> Necesită modificări</label><button type="button" wire:click="removeFitment({{ $index }})" class="text-sm text-red-600">Elimină</button></div>@endforeach</section>
-        <section x-show="tab==='seo'" x-cloak class="grid gap-4"><div><label class="text-sm font-medium">Titlu SEO</label><input wire:model="seoTitle" maxlength="255" class="mt-1"></div><div><label class="text-sm font-medium">Descriere SEO</label><textarea wire:model="seoDescription" maxlength="320" class="mt-1"></textarea></div><div><label class="text-sm font-medium">URL canonical</label><input type="url" wire:model="canonicalUrl" class="mt-1"></div><div class="flex gap-5 text-sm"><label><input type="checkbox" wire:model="robotsIndex"> Index</label><label><input type="checkbox" wire:model="robotsFollow"> Follow</label></div></section>
-        <div class="mt-6 flex justify-between border-t pt-4"><button class="btn-primary">Salvează produsul</button>@if($product)<button type="button" wire:click="deleteProduct" wire:confirm="Arhivezi produsul?" class="btn-danger">Arhivează produsul</button>@endif</div>
+
+        <section x-show="tab === 'attributes'" x-cloak class="space-y-4">
+            <h2 class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                Atribute disponibile pentru categoriile selectate
+            </h2>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                @forelse($attributes as $attribute)
+                    <label class="block" wire:key="attribute-{{ $attribute->id }}">
+                        <span class="field-label">{{ $attribute->name }}@if($attribute->unit) ({{ $attribute->unit }})@endif</span>
+
+                        @if(in_array($attribute->type, ['select', 'color'], true))
+                            <select wire:model="attributeValues.{{ $attribute->id }}">
+                                <option value="">—</option>
+                                @foreach($attribute->options as $option)<option value="{{ $option->id }}">{{ $option->label }}</option>@endforeach
+                            </select>
+                        @elseif($attribute->type === 'multiselect')
+                            <select multiple wire:model="attributeValues.{{ $attribute->id }}">
+                                @foreach($attribute->options as $option)<option value="{{ $option->id }}">{{ $option->label }}</option>@endforeach
+                            </select>
+                        @elseif($attribute->type === 'boolean')
+                            <span class="mt-1 flex items-center gap-2 text-sm text-stone-700">
+                                <input type="checkbox" wire:model="attributeValues.{{ $attribute->id }}"> Da
+                            </span>
+                        @else
+                            <input type="{{ $attribute->type === 'number' ? 'number' : 'text' }}" wire:model="attributeValues.{{ $attribute->id }}">
+                        @endif
+
+                        @if($attribute->help_text)<span class="field-hint">{{ $attribute->help_text }}</span>@endif
+                    </label>
+                @empty
+                    <p class="text-sm text-stone-500 md:col-span-2">
+                        Selectează cel puțin o categorie sau definește atribute globale.
+                    </p>
+                @endforelse
+            </div>
+        </section>
+
+        <section x-show="tab === 'media'" x-cloak class="space-y-4">
+            <label class="block">
+                <span class="field-label">Încarcă imagini</span>
+                <input type="file" multiple accept="image/*" wire:model="images">
+                @error('images.*') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            @if(count($existingMedia) > 0)
+                <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
+                    @foreach($existingMedia as $media)
+                        <figure class="overflow-hidden rounded-xl border border-stone-200" wire:key="media-{{ $media->id }}">
+                            <img src="{{ Storage::disk($media->disk)->url($media->path) }}" alt="{{ $media->alt_text }}"
+                                 class="aspect-square w-full bg-stone-100 object-cover">
+                            <figcaption class="p-2 text-center">
+                                <button type="button" wire:click="removeMedia({{ $media->id }})"
+                                        class="text-xs font-semibold text-red-700 hover:underline">Elimină</button>
+                            </figcaption>
+                        </figure>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+
+        <section x-show="tab === 'fitments'" x-cloak class="space-y-4">
+            <div class="flex items-center justify-between gap-3">
+                <h2 class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Compatibilitate auto</h2>
+                <button type="button" wire:click="addFitment" class="btn-secondary">+ Compatibilitate</button>
+            </div>
+
+            @foreach($fitments as $index => $fitment)
+                <div wire:key="fitment-{{ $index }}" class="grid gap-4 rounded-xl bg-stone-50 p-4 md:grid-cols-5">
+                    <label class="block md:col-span-2">
+                        <span class="field-label">Generație</span>
+                        <select wire:model="fitments.{{ $index }}.generation_id">
+                            <option value="">Alege generația</option>
+                            @foreach($generations as $generation)
+                                <option value="{{ $generation->id }}">
+                                    {{ $generation->model->make->name }} {{ $generation->model->name }} · {{ $generation->name }}
+                                    ({{ $generation->year_from }}–{{ $generation->year_to ?: 'prezent' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('fitments.'.$index.'.generation_id') <span class="field-error">{{ $message }}</span> @enderror
+                    </label>
+
+                    <label class="block">
+                        <span class="field-label">An de la</span>
+                        <input type="number" wire:model="fitments.{{ $index }}.year_from">
+                    </label>
+
+                    <label class="block">
+                        <span class="field-label">An până la</span>
+                        <input type="number" wire:model="fitments.{{ $index }}.year_to">
+                    </label>
+
+                    <label class="block">
+                        <span class="field-label">Poziție</span>
+                        <input wire:model="fitments.{{ $index }}.position" placeholder="față, spate, stânga...">
+                    </label>
+
+                    <label class="block md:col-span-3">
+                        <span class="field-label">Note montaj</span>
+                        <textarea wire:model="fitments.{{ $index }}.notes" rows="2"></textarea>
+                    </label>
+
+                    <div class="flex items-end justify-between gap-3 pb-2 md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm text-stone-700">
+                            <input type="checkbox" wire:model="fitments.{{ $index }}.requires_modification"> Necesită modificări
+                        </label>
+
+                        <button type="button" wire:click="removeFitment({{ $index }})"
+                                class="text-sm font-semibold text-red-700 hover:underline">Elimină</button>
+                    </div>
+                </div>
+            @endforeach
+        </section>
+
+        <section x-show="tab === 'seo'" x-cloak class="grid gap-4">
+            <label class="block">
+                <span class="field-label">Titlu SEO</span>
+                <input wire:model="seoTitle" maxlength="255">
+            </label>
+
+            <label class="block">
+                <span class="field-label">Descriere SEO</span>
+                <textarea wire:model="seoDescription" maxlength="320" rows="2"></textarea>
+            </label>
+
+            <label class="block">
+                <span class="field-label">URL canonical</span>
+                <input type="url" wire:model="canonicalUrl">
+            </label>
+
+            <div class="flex gap-5 text-sm text-stone-700">
+                <label class="flex items-center gap-2"><input type="checkbox" wire:model="robotsIndex"> Index</label>
+                <label class="flex items-center gap-2"><input type="checkbox" wire:model="robotsFollow"> Follow</label>
+            </div>
+        </section>
+
+        <div class="flex justify-between border-t border-stone-100 pt-5">
+            <button type="submit" class="btn-primary">Salvează produsul</button>
+
+            @if($product)
+                <button type="button" wire:click="deleteProduct" wire:confirm="Arhivezi produsul?" class="btn-danger">Arhivează produsul</button>
+            @endif
+        </div>
     </form>
 </div>

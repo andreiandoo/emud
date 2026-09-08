@@ -1,7 +1,110 @@
 <div>
-    <div class="mb-6 flex justify-between"><div><h1 class="text-2xl font-semibold tracking-tight">{{ $article ? 'Editează articolul' : 'Articol nou' }}</h1><p class="text-stone-500">Imagine principală, categorie, conținut și metadate.</p></div><a href="{{ route('admin.articles.index') }}" class="text-sm">← Articole</a></div>
-    @if(session('success'))<div class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('success') }}</div>@endif
-    @if($errors->any())<div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ $errors->first() }}</div>@endif
-    <form wire:submit="save" class="grid gap-5 lg:grid-cols-[1fr_20rem]"><div class="space-y-4 rounded-xl border bg-white p-5"><div><label class="text-sm font-medium">Titlu</label><input wire:model.live.debounce.400ms="title" class="mt-1"></div><div><label class="text-sm font-medium">Slug</label><input wire:model="slug" class="mt-1"></div><div><label class="text-sm font-medium">Rezumat</label><textarea wire:model="excerpt" rows="3" class="mt-1"></textarea></div><div><label class="text-sm font-medium">Conținut (HTML)</label><textarea wire:model="content" rows="24" class="mt-1 font-mono text-sm"></textarea></div><h2 class="border-t pt-4 font-semibold">SEO</h2><input wire:model="seoTitle" placeholder="Titlu SEO" ><textarea wire:model="seoDescription" maxlength="320" placeholder="Descriere SEO" ></textarea><input wire:model="canonicalUrl" type="url" placeholder="URL canonical" ><div class="flex gap-4 text-sm"><label><input type="checkbox" wire:model="robotsIndex"> Index</label><label><input type="checkbox" wire:model="robotsFollow"> Follow</label></div></div>
-        <aside class="space-y-4"><div class="card p-4"><label class="text-sm font-medium">Status</label><select wire:model="status" class="mt-1">@foreach(['draft','review','published','archived'] as $item)<option>{{ $item }}</option>@endforeach</select><label class="mt-3 block text-sm"><input type="checkbox" wire:model="isFeatured"> Articol recomandat</label></div><div class="card p-4"><label class="text-sm font-medium">Categorie</label><select wire:model="articleCategoryId" class="mt-1"><option value="">Fără categorie</option>@foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select></div><div class="card p-4"><label class="text-sm font-medium">Imagine principală</label><input type="file" wire:model="featuredImage" accept="image/*" class="mt-2 w-full text-sm"><input wire:model="featuredImageAlt" placeholder="Text alternativ" class="mt-3">@if($article?->featured_image_path)<img src="{{ Storage::disk('public')->url($article->featured_image_path) }}" class="mt-3 w-full rounded">@endif</div><button class="btn-primary">Salvează articolul</button></aside></form>
+    <x-admin.page-header :title="$article ? 'Editează articolul' : 'Articol nou'"
+                         subtitle="Imagine principală, categorie, conținut și metadate.">
+        <x-slot:actions>
+            <a href="{{ route('admin.articles.index') }}" class="btn-secondary">← Toate articolele</a>
+        </x-slot:actions>
+    </x-admin.page-header>
+
+    @if(session('success'))
+        <p class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('success') }}</p>
+    @endif
+
+    @if($errors->any())
+        <p class="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{{ $errors->first() }}</p>
+    @endif
+
+    <form wire:submit="save" class="grid gap-6 lg:grid-cols-[1fr_20rem]">
+        <x-admin.panel title="Conținut" subtitle="HTML-ul este filtrat la afișare printr-o listă de etichete permise.">
+            <label class="block">
+                <span class="field-label">Titlu</span>
+                <input wire:model.live.debounce.400ms="title">
+                @error('title') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="block">
+                <span class="field-label">Slug</span>
+                <input wire:model="slug">
+                @error('slug') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="block">
+                <span class="field-label">Rezumat</span>
+                <textarea wire:model="excerpt" rows="3"></textarea>
+                @error('excerpt') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="block">
+                <span class="field-label">Conținut (HTML)</span>
+                <textarea wire:model="content" rows="24" class="font-mono text-sm"></textarea>
+                @error('content') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+
+            <x-admin.section title="SEO">
+                <label class="block">
+                    <span class="field-label">Titlu SEO</span>
+                    <input wire:model="seoTitle">
+                </label>
+
+                <label class="block">
+                    <span class="field-label">Descriere SEO</span>
+                    <textarea wire:model="seoDescription" maxlength="320" rows="2"></textarea>
+                </label>
+
+                <label class="block">
+                    <span class="field-label">URL canonical</span>
+                    <input type="url" wire:model="canonicalUrl">
+                </label>
+
+                <div class="flex gap-5 text-sm text-stone-700">
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="robotsIndex"> Index</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="robotsFollow"> Follow</label>
+                </div>
+            </x-admin.section>
+        </x-admin.panel>
+
+        <aside class="space-y-6">
+            <x-admin.section title="Publicare">
+                <label class="block">
+                    <span class="field-label">Status</span>
+                    <select wire:model="status">
+                        @foreach(['draft' => 'Ciornă', 'review' => 'De verificat', 'published' => 'Publicat', 'archived' => 'Arhivat'] as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <label class="flex items-center gap-2 text-sm text-stone-700">
+                    <input type="checkbox" wire:model="isFeatured"> Articol recomandat
+                </label>
+            </x-admin.section>
+
+            <x-admin.section title="Categorie">
+                <select wire:model="articleCategoryId" aria-label="Categorie">
+                    <option value="">Fără categorie</option>
+                    @foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach
+                </select>
+            </x-admin.section>
+
+            <x-admin.section title="Imagine principală">
+                @if($article?->featured_image_path)
+                    <img src="{{ Storage::disk('public')->url($article->featured_image_path) }}"
+                         alt="{{ $featuredImageAlt }}" class="w-full rounded-xl bg-stone-100 object-cover">
+                @endif
+
+                <input type="file" wire:model="featuredImage" accept="image/*" aria-label="Imagine principală">
+                @error('featuredImage') <span class="field-error">{{ $message }}</span> @enderror
+
+                <label class="block">
+                    <span class="field-label">Text alternativ</span>
+                    <input wire:model="featuredImageAlt">
+                    {{-- Not decoration: this is what a screen reader announces and what stands in
+                         for the image when it fails to load. --}}
+                    <span class="field-hint">Descrie ce se vede în imagine.</span>
+                </label>
+            </x-admin.section>
+
+            <button type="submit" class="btn-primary w-full">Salvează articolul</button>
+        </aside>
+    </form>
 </div>
