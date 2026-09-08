@@ -85,7 +85,7 @@ class AdminNavigation
     public static function footerItems(): array
     {
         return [
-            ['route' => 'admin.commerce.settings', 'label' => 'Plăți & livrare', 'icon' => 'settings'],
+            ['route' => 'admin.settings', 'label' => 'Setări', 'icon' => 'settings'],
         ];
     }
 

@@ -32,6 +32,7 @@ use App\Livewire\Admin\OrderEditor;
 use App\Livewire\Admin\OrdersIndex;
 use App\Livewire\Admin\ReturnsIndex;
 use App\Livewire\Admin\ServiceShopsIndex;
+use App\Livewire\Admin\Settings\SettingsPage;
 use App\Livewire\Admin\Suppliers\SupplierEditor;
 use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
@@ -169,7 +170,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/returns', ReturnsIndex::class)->name('returns.index');
     Route::get('/customers', CustomersIndex::class)->name('customers.index');
     Route::get('/orders/{order}', OrderEditor::class)->name('orders.edit');
-    Route::get('/commerce-settings', CommerceSettings::class)->name('commerce.settings');
+    Route::get('/settings', SettingsPage::class)->name('settings');
+    // Kept so bookmarks and older links still land somewhere sensible.
+    Route::redirect('/commerce-settings', '/admin/settings?tab=commerce')->name('commerce.settings');
 });
 
 // Registered last on purpose: legal and informational pages get clean root URLs, and every
