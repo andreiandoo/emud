@@ -32,13 +32,17 @@ class VehicleDetail extends Component
     /**
      * Scoped to the signed-in customer, so a vehicle id from someone else's garage is a 404
      * rather than a readable page of their plate number and service history.
+     *
+     * The route parameter is deliberately not called "vehicle": matching the typed
+     * CustomerVehicle property makes implicit binding resolve it by primary key before mount
+     * runs, which would hand over any customer's car and skip this scoping entirely.
      */
-    public function mount(int $vehicle): void
+    public function mount(int $vehicleId): void
     {
         $this->vehicle = CustomerVehicle::query()
             ->where('user_id', auth()->id())
             ->with(['make', 'model', 'generation', 'configuration.engine'])
-            ->findOrFail($vehicle);
+            ->findOrFail($vehicleId);
 
         $this->mileage_km = $this->vehicle->mileage_km;
     }

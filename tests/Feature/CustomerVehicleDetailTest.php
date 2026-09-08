@@ -54,7 +54,7 @@ class CustomerVehicleDetailTest extends TestCase
 
     public function test_mileage_is_recorded_with_the_date_it_was_read(): void
     {
-        Livewire::test(VehicleDetail::class, ['vehicle' => $this->vehicle->id])
+        Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
             ->set('mileage_km', 128000)
             ->call('saveMileage')
             ->assertHasNoErrors();
@@ -67,7 +67,7 @@ class CustomerVehicleDetailTest extends TestCase
 
     public function test_a_reminder_can_be_added(): void
     {
-        Livewire::test(VehicleDetail::class, ['vehicle' => $this->vehicle->id])
+        Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
             ->set('reminderType', ServiceReminderType::Itp->value)
             ->set('reminderDueOn', now()->addMonths(3)->toDateString())
             ->call('addReminder')
@@ -85,7 +85,7 @@ class CustomerVehicleDetailTest extends TestCase
      */
     public function test_adding_the_same_kind_twice_updates_rather_than_duplicates(): void
     {
-        $component = Livewire::test(VehicleDetail::class, ['vehicle' => $this->vehicle->id]);
+        $component = Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id]);
 
         $component->set('reminderType', ServiceReminderType::Itp->value)
             ->set('reminderDueOn', now()->addMonth()->toDateString())
@@ -164,7 +164,7 @@ class CustomerVehicleDetailTest extends TestCase
     {
         $reminder = $this->reminder(ServiceReminderType::Itp, dueOn: now()->addMonth());
 
-        Livewire::test(VehicleDetail::class, ['vehicle' => $this->vehicle->id])
+        Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
             ->call('removeReminder', $reminder->id);
 
         $this->assertDatabaseCount('vehicle_service_reminders', 0);
@@ -176,7 +176,7 @@ class CustomerVehicleDetailTest extends TestCase
         $foreign = VehicleServiceReminder::create(['customer_vehicle_id' => $stranger->id, 'type' => 'itp']);
 
         try {
-            Livewire::test(VehicleDetail::class, ['vehicle' => $this->vehicle->id])
+            Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
                 ->call('removeReminder', $foreign->id);
             $this->fail('A reminder on another vehicle must not be reachable.');
         } catch (ModelNotFoundException) {

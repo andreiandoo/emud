@@ -107,7 +107,7 @@ Route::prefix('cont')->name('customer.')->group(function (): void {
     Route::middleware('auth')->group(function (): void {
         Route::get('/', CustomerDashboard::class)->name('dashboard');
         Route::get('/garaj', CustomerGarage::class)->name('garage');
-        Route::get('/garaj/{vehicle}', CustomerVehicleDetail::class)->whereNumber('vehicle')->name('garage.vehicle');
+        Route::get('/garaj/{vehicleId}', CustomerVehicleDetail::class)->whereNumber('vehicleId')->name('garage.vehicle');
         Route::get('/comenzi', CustomerOrders::class)->name('orders');
         Route::get('/date', CustomerProfile::class)->name('profile');
         Route::post('/iesire', function (Request $request) {
