@@ -1,15 +1,7 @@
 <div>
     <x-admin.page-header title="Setări" subtitle="Identitatea magazinului, datele firmei și configurarea comercială." />
 
-    <nav class="mb-6 flex flex-wrap gap-1 border-b border-stone-200">
-        @foreach($tabs as $key => $label)
-            <button wire:click="$set('tab', '{{ $key }}')" @class([
-                '-mb-px border-b-2 px-3 py-2 text-sm transition',
-                'border-stone-900 font-semibold text-stone-900' => $tab === $key,
-                'border-transparent text-stone-500 hover:text-stone-900' => $tab !== $key,
-            ])>{{ $label }}</button>
-        @endforeach
-    </nav>
+    <x-admin.tabs :tabs="$tabs" :current="$tab" field="tab" class="mb-6" />
 
     @switch($tab)
         @case('company')
