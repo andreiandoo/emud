@@ -13,10 +13,10 @@
     </div>
 
     @if($status)
-        <p class="rounded-lg border border-lime-300 bg-lime-50 p-3 text-sm text-lime-900">{{ $status }}</p>
+        <p class="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ $status }}</p>
     @endif
 
-    <section class="rounded-xl border border-stone-200 bg-white p-5">
+    <section class="card-padded">
         <h2 class="mb-3 font-bold">Mașini asociate</h2>
         <p class="mb-3 text-xs text-stone-500">
             Un carusel de piese setat pe „mașinile articolului” folosește aceste legături ca să
@@ -36,28 +36,28 @@
 
         <div class="grid gap-3 sm:grid-cols-4">
             <label class="block">
-                <span class="mb-1 block text-xs font-medium text-stone-600">Marcă</span>
-                <select wire:model.live="vehicleMakeId" class="w-full rounded-lg border-stone-300 text-sm">
+                <span class="field-label">Marcă</span>
+                <select wire:model.live="vehicleMakeId" >
                     <option value="">Selectează</option>
                     @foreach($makes as $make)<option value="{{ $make->id }}">{{ $make->name }}</option>@endforeach
                 </select>
-                @error('vehicleMakeId') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
+                @error('vehicleMakeId') <span class="field-error">{{ $message }}</span> @enderror
             </label>
             <label class="block">
-                <span class="mb-1 block text-xs font-medium text-stone-600">Model</span>
-                <select wire:model.live="vehicleModelId" @disabled($models->isEmpty()) class="w-full rounded-lg border-stone-300 text-sm disabled:bg-stone-100">
+                <span class="field-label">Model</span>
+                <select wire:model.live="vehicleModelId" @disabled($models->isEmpty()) >
                     <option value="">Toate</option>
                     @foreach($models as $model)<option value="{{ $model->id }}">{{ $model->name }}</option>@endforeach
                 </select>
-                @error('vehicleModelId') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
+                @error('vehicleModelId') <span class="field-error">{{ $message }}</span> @enderror
             </label>
             <label class="block">
-                <span class="mb-1 block text-xs font-medium text-stone-600">Generație</span>
-                <select wire:model.live="vehicleGenerationId" @disabled($generations->isEmpty()) class="w-full rounded-lg border-stone-300 text-sm disabled:bg-stone-100">
+                <span class="field-label">Generație</span>
+                <select wire:model.live="vehicleGenerationId" @disabled($generations->isEmpty()) >
                     <option value="">Toate</option>
                     @foreach($generations as $generation)<option value="{{ $generation->id }}">{{ $generation->name }}</option>@endforeach
                 </select>
-                @error('vehicleGenerationId') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
+                @error('vehicleGenerationId') <span class="field-error">{{ $message }}</span> @enderror
             </label>
             <div class="flex items-end">
                 <button wire:click="addVehicle" class="w-full rounded-lg bg-stone-900 px-4 py-2 text-sm font-semibold text-white">Leagă</button>
@@ -67,7 +67,7 @@
 
     <section class="space-y-4">
         @forelse($blocks as $index => $block)
-            <div class="rounded-xl border border-stone-200 bg-white p-5">
+            <div class="card-padded">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold">{{ $block['label'] }}</span>
                     <div class="flex items-center gap-2 text-sm">
@@ -79,15 +79,15 @@
 
                 @switch($block['type'])
                     @case('rich_text')
-                        <textarea wire:model="blocks.{{ $index }}.data.html" rows="8" class="w-full rounded-lg border-stone-300 font-mono text-xs" placeholder="<p>Text…</p>"></textarea>
+                        <textarea wire:model="blocks.{{ $index }}.data.html" rows="8" class="font-mono text-xs" placeholder="<p>Text…</p>"></textarea>
                         <p class="mt-1 text-xs text-stone-500">HTML filtrat la afișare printr-o listă de etichete permise.</p>
                         @break
 
                     @case('image')
                         <div class="grid gap-3 sm:grid-cols-3">
-                            <input wire:model="blocks.{{ $index }}.data.url" placeholder="URL imagine" class="rounded-lg border-stone-300 text-sm">
-                            <input wire:model="blocks.{{ $index }}.data.alt" placeholder="Text alternativ" class="rounded-lg border-stone-300 text-sm">
-                            <input wire:model="blocks.{{ $index }}.data.caption" placeholder="Legendă" class="rounded-lg border-stone-300 text-sm">
+                            <input wire:model="blocks.{{ $index }}.data.url" placeholder="URL imagine" >
+                            <input wire:model="blocks.{{ $index }}.data.alt" placeholder="Text alternativ" >
+                            <input wire:model="blocks.{{ $index }}.data.caption" placeholder="Legendă" >
                         </div>
                         @break
 
@@ -95,8 +95,8 @@
                         <div class="space-y-2">
                             @for($i = 0; $i < 6; $i++)
                                 <div class="grid gap-2 sm:grid-cols-2">
-                                    <input wire:model="blocks.{{ $index }}.data.images.{{ $i }}.url" placeholder="URL imagine {{ $i + 1 }}" class="rounded-lg border-stone-300 text-sm">
-                                    <input wire:model="blocks.{{ $index }}.data.images.{{ $i }}.alt" placeholder="Text alternativ" class="rounded-lg border-stone-300 text-sm">
+                                    <input wire:model="blocks.{{ $index }}.data.images.{{ $i }}.url" placeholder="URL imagine {{ $i + 1 }}" >
+                                    <input wire:model="blocks.{{ $index }}.data.images.{{ $i }}.alt" placeholder="Text alternativ" >
                                 </div>
                             @endfor
                         </div>
@@ -104,8 +104,8 @@
 
                     @case('video')
                         <div class="grid gap-3 sm:grid-cols-2">
-                            <input wire:model="blocks.{{ $index }}.data.url" placeholder="Link YouTube sau Vimeo" class="rounded-lg border-stone-300 text-sm">
-                            <input wire:model="blocks.{{ $index }}.data.caption" placeholder="Legendă" class="rounded-lg border-stone-300 text-sm">
+                            <input wire:model="blocks.{{ $index }}.data.url" placeholder="Link YouTube sau Vimeo" >
+                            <input wire:model="blocks.{{ $index }}.data.caption" placeholder="Legendă" >
                         </div>
                         @if(($block['data']['url'] ?? '') !== '' && ! ($block['data']['recognised'] ?? true))
                             <p class="mt-2 text-xs font-semibold text-red-600">
@@ -116,22 +116,22 @@
 
                     @case('callout')
                         <div class="grid gap-3 sm:grid-cols-2">
-                            <input wire:model="blocks.{{ $index }}.data.title" placeholder="Titlu" class="rounded-lg border-stone-300 text-sm">
-                            <select wire:model="blocks.{{ $index }}.data.tone" class="rounded-lg border-stone-300 text-sm">
+                            <input wire:model="blocks.{{ $index }}.data.title" placeholder="Titlu" >
+                            <select wire:model="blocks.{{ $index }}.data.tone" >
                                 <option value="info">Informativ</option>
                                 <option value="warning">Atenționare</option>
                                 <option value="danger">Pericol</option>
                             </select>
                         </div>
-                        <textarea wire:model="blocks.{{ $index }}.data.html" rows="3" class="mt-2 w-full rounded-lg border-stone-300 font-mono text-xs"></textarea>
+                        <textarea wire:model="blocks.{{ $index }}.data.html" rows="3" class="mt-2 font-mono text-xs"></textarea>
                         @break
 
                     @case('steps')
                         <div class="space-y-2">
                             @for($i = 0; $i < 8; $i++)
                                 <div class="grid gap-2 sm:grid-cols-[12rem_1fr]">
-                                    <input wire:model="blocks.{{ $index }}.data.steps.{{ $i }}.title" placeholder="Pasul {{ $i + 1 }}" class="rounded-lg border-stone-300 text-sm">
-                                    <input wire:model="blocks.{{ $index }}.data.steps.{{ $i }}.text" placeholder="Ce se face" class="rounded-lg border-stone-300 text-sm">
+                                    <input wire:model="blocks.{{ $index }}.data.steps.{{ $i }}.title" placeholder="Pasul {{ $i + 1 }}" >
+                                    <input wire:model="blocks.{{ $index }}.data.steps.{{ $i }}.text" placeholder="Ce se face" >
                                 </div>
                             @endfor
                         </div>
@@ -139,19 +139,19 @@
 
                     @case('parts_carousel')
                         <div class="grid gap-3 sm:grid-cols-4">
-                            <input wire:model="blocks.{{ $index }}.data.title" placeholder="Titlu secțiune" class="rounded-lg border-stone-300 text-sm">
-                            <select wire:model.live="blocks.{{ $index }}.data.source" class="rounded-lg border-stone-300 text-sm">
+                            <input wire:model="blocks.{{ $index }}.data.title" placeholder="Titlu secțiune" >
+                            <select wire:model.live="blocks.{{ $index }}.data.source" >
                                 <option value="vehicle">Mașinile articolului</option>
                                 <option value="category">O categorie</option>
                                 <option value="products">Listă de produse</option>
                             </select>
-                            <select wire:model="blocks.{{ $index }}.data.category_id" class="rounded-lg border-stone-300 text-sm">
+                            <select wire:model="blocks.{{ $index }}.data.category_id" >
                                 <option value="">Categorie…</option>
                                 @foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->full_path }}</option>@endforeach
                             </select>
-                            <input type="number" wire:model="blocks.{{ $index }}.data.limit" min="1" max="12" class="rounded-lg border-stone-300 text-sm">
+                            <input type="number" wire:model="blocks.{{ $index }}.data.limit" min="1" max="12" >
                         </div>
-                        <input wire:model="blocks.{{ $index }}.data.product_ids" placeholder="ID-uri produse, separate prin virgulă" class="mt-2 w-full rounded-lg border-stone-300 text-sm">
+                        <input wire:model="blocks.{{ $index }}.data.product_ids" placeholder="ID-uri produse, separate prin virgulă" class="mt-2">
                         <p class="mt-1 text-xs text-stone-500">
                             Caruselul se rezolvă la afișare, deci nu rămâne cu piese ieșite din catalog.
                         </p>
@@ -166,10 +166,10 @@
     </section>
 
     <div class="flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white p-5">
-        <select wire:model="newBlockType" class="rounded-lg border-stone-300 text-sm">
+        <select wire:model="newBlockType" >
             @foreach($types as $type)<option value="{{ $type->value }}">{{ $type->label() }}</option>@endforeach
         </select>
-        <button wire:click="addBlock" class="rounded-lg border border-stone-300 px-4 py-2 text-sm font-semibold hover:border-stone-900">Adaugă bloc</button>
+        <button wire:click="addBlock" class="btn-secondary">Adaugă bloc</button>
 
         <button wire:click="saveBlocks" class="ml-auto rounded-lg bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-stone-700">
             Salvează blocurile

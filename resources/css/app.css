@@ -21,16 +21,27 @@
  * on both the shop and the back office; utilities in the markup still override them.
  */
 @layer base {
-    input:where([type='text'], [type='email'], [type='password'], [type='number'], [type='date'],
-        [type='datetime-local'], [type='month'], [type='search'], [type='tel'], [type='time'],
-        [type='url'], [type='week']),
+    /*
+     * Matched by exclusion, not by listing text-like types. An <input> with no type attribute
+     * is a text field, but [type='text'] only matches when the attribute is literally written —
+     * so every `<input wire:model="...">` in the app went unstyled while the typed ones looked
+     * fine, which is exactly the kind of gap that is invisible until someone points at a page.
+     */
+    input:not([type='checkbox'], [type='radio'], [type='file'], [type='submit'], [type='button'],
+        [type='reset'], [type='image'], [type='hidden'], [type='range'], [type='color']),
     select,
     textarea {
         @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm
                text-stone-900 transition
-               placeholder:text-stone-400
                focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900
                disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400;
+    }
+
+    /* Written on its own rather than as a placeholder: variant inside the grouped rule above:
+       Tailwind mis-generates the variant for a selector list and emits an unbalanced paren,
+       which the browser then throws away. */
+    ::placeholder {
+        @apply text-stone-400;
     }
 
     select {
@@ -46,12 +57,18 @@
         @apply min-h-24 leading-relaxed;
     }
 
+    input[type='file'] {
+        @apply block w-full text-sm text-stone-600
+               file:mr-3 file:rounded-lg file:border-0 file:bg-stone-900 file:px-3 file:py-2
+               file:text-sm file:font-semibold file:text-white hover:file:bg-stone-700;
+    }
+
     input:where([type='checkbox'], [type='radio']) {
         @apply h-4 w-4 rounded border border-stone-300 text-stone-900
                focus:ring-1 focus:ring-stone-900 focus:ring-offset-0;
     }
 
-    input:where([type='radio']) {
+    input[type='radio'] {
         @apply rounded-full;
     }
 }

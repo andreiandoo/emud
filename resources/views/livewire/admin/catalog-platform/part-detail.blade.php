@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div>
         <a href="{{ route('admin.catalog-platform.explorer') }}" class="text-sm text-stone-500 hover:text-stone-900">← Catalog Explorer</a>
-        <h1 class="mt-2 text-2xl font-bold">{{ $part->brand?->name }} {{ $part->mpn_raw }}</h1>
+        <h1 class="mt-2 text-2xl font-semibold tracking-tight">{{ $part->brand?->name }} {{ $part->mpn_raw }}</h1>
         <p class="text-stone-500">{{ $part->name }}</p>
     </div>
 
@@ -13,7 +13,7 @@
         <div class="rounded-xl bg-white p-4"><div class="text-xs uppercase text-stone-400">Graph QA</div><div class="mt-1 font-semibold">{{ $part->outgoingRelations->count() + $part->incomingRelations->count() }} edges · {{ $part->unresolvedRelations->where('status', 'pending')->count() }} pending</div></div>
     </div>
 
-    <section class="rounded-xl border bg-white p-5">
+    <section class="card-padded">
         <h2 class="mb-3 font-bold">Identifiers</h2>
         <div class="grid gap-2 md:grid-cols-2">
             @foreach($part->numbers as $number)
@@ -25,7 +25,7 @@
         </div>
     </section>
 
-    <section class="rounded-xl border bg-white p-5">
+    <section class="card-padded">
         <h2 class="mb-3 font-bold">Vehicle fitments</h2>
         <div class="divide-y">
             @foreach($part->fitments as $fitment)
@@ -38,11 +38,11 @@
         </div>
     </section>
 
-    <section class="rounded-xl border bg-white p-5">
+    <section class="card-padded">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 class="font-bold">Canonical relation graph</h2><p class="text-sm text-stone-500">Resolved equivalents, cross-references and supersession edges with source provenance.</p></div>
+            <div><h2 class="font-semibold">Canonical relation graph</h2><p class="text-sm text-stone-500">Resolved equivalents, cross-references and supersession edges with source provenance.</p></div>
             @if($part->unresolvedRelations->where('status', 'pending')->isNotEmpty())
-                <a href="{{ route('admin.catalog-platform.unresolved-relations', ['q' => $part->mpn_raw]) }}" class="rounded border px-3 py-2 text-sm">Open relation QA</a>
+                <a href="{{ route('admin.catalog-platform.unresolved-relations', ['q' => $part->mpn_raw]) }}" class="text-sm">Open relation QA</a>
             @endif
         </div>
         <div class="mt-4 grid gap-3 lg:grid-cols-2">

@@ -2,20 +2,20 @@
     <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
             <p class="text-sm text-stone-500">Catalog platform</p>
-            <h1 class="text-2xl font-bold">Database schema explorer</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">Database schema explorer</h1>
             <p class="mt-1 text-sm text-stone-500">Inspect all application tables, columns, indexes and foreign keys without opening a database client.</p>
         </div>
         <div class="text-sm text-stone-500">{{ $tableCount }} tables</div>
     </div>
 
     <div class="grid gap-5 lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside class="rounded-xl border bg-white p-4">
-            <input wire:model.live.debounce.250ms="search" placeholder="Filter tables..." class="mb-3 w-full rounded-lg border px-3 py-2 text-sm">
+        <aside class="card p-4">
+            <input wire:model.live.debounce.250ms="search" placeholder="Filter tables..." class="mb-3 text-sm">
             <div class="max-h-[70vh] space-y-1 overflow-y-auto pr-1">
                 @forelse($tables as $table)
                     <button type="button" wire:click="selectTable('{{ $table['name'] }}')" @class([
                         'w-full rounded-lg px-3 py-2 text-left text-sm transition',
-                        'bg-lime-100 font-semibold text-lime-950' => $selected === $table['name'],
+                        'bg-emerald-100 font-semibold text-emerald-950' => $selected === $table['name'],
                         'hover:bg-stone-100' => $selected !== $table['name'],
                     ])>
                         <span class="block break-all font-mono">{{ $table['name'] }}</span>
@@ -33,9 +33,9 @@
             @endif
 
             @if($selected)
-                <div class="rounded-xl border bg-white p-5">
+                <div class="card-padded">
                     <p class="text-xs uppercase tracking-wide text-stone-400">Selected table</p>
-                    <h2 class="mt-1 break-all font-mono text-xl font-bold">{{ $selected }}</h2>
+                    <h2 class="mt-1 break-all font-mono text-lg font-semibold">{{ $selected }}</h2>
                 </div>
 
                 <div class="overflow-hidden rounded-xl border bg-white">

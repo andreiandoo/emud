@@ -1,18 +1,18 @@
 <div class="space-y-6">
     <div>
-        <h1 class="text-2xl font-bold">Catalog conflicts</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">Catalog conflicts</h1>
         <p class="mt-1 text-sm text-stone-500">Review contradictory assertions and canonicalization decisions without deleting source evidence.</p>
     </div>
 
     @if(session('status'))
-        <div class="rounded-lg bg-lime-100 p-3 text-sm text-lime-900">{{ session('status') }}</div>
+        <div class="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('status') }}</div>
     @endif
 
     <div class="grid gap-3 sm:grid-cols-3">
         @foreach(['open' => 'Open', 'resolved' => 'Resolved', 'dismissed' => 'Dismissed'] as $key => $label)
-            <button wire:click="$set('status', '{{ $key }}')" class="rounded-xl border bg-white p-4 text-left {{ $status === $key ? 'ring-2 ring-lime-400' : '' }}">
+            <button wire:click="$set('status', '{{ $key }}')" class="rounded-xl border bg-white p-4 text-left {{ $status === $key ? 'ring-2 ring-stone-900' : '' }}">
                 <div class="text-xs uppercase tracking-wide text-stone-500">{{ $label }}</div>
-                <div class="mt-1 text-2xl font-bold">{{ number_format((int) ($counts[$key] ?? 0)) }}</div>
+                <div class="mt-1 text-2xl font-semibold tracking-tight">{{ number_format((int) ($counts[$key] ?? 0)) }}</div>
             </button>
         @endforeach
     </div>
@@ -20,18 +20,18 @@
     <section class="grid gap-3 rounded-xl border bg-white p-4 md:grid-cols-4">
         <label class="space-y-1 md:col-span-2">
             <span class="text-xs font-medium text-stone-500">Search entity, relation or conflict details</span>
-            <input wire:model.live.debounce.300ms="q" class="w-full rounded border px-3 py-2" placeholder="technical_identity_mismatch, fitment, part number…">
+            <input wire:model.live.debounce.300ms="q"  placeholder="technical_identity_mismatch, fitment, part number…">
         </label>
         <label class="space-y-1">
             <span class="text-xs font-medium text-stone-500">Entity type</span>
-            <select wire:model.live="type" class="w-full rounded border px-3 py-2">
+            <select wire:model.live="type" >
                 <option value="">All</option>
                 @foreach($types as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach
             </select>
         </label>
         <label class="space-y-1">
             <span class="text-xs font-medium text-stone-500">Severity</span>
-            <select wire:model.live="severity" class="w-full rounded border px-3 py-2">
+            <select wire:model.live="severity" >
                 <option value="">All</option>
                 @foreach(['error', 'warning', 'info'] as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach
             </select>
@@ -40,7 +40,7 @@
 
     <div class="space-y-4">
         @forelse($conflicts as $conflict)
-            <article class="rounded-xl border bg-white p-5">
+            <article class="card-padded">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2">
@@ -59,14 +59,14 @@
                     </div>
 
                     <div class="w-full space-y-2 sm:w-72">
-                        <textarea wire:model="notes.{{ $conflict->id }}" rows="3" class="w-full rounded border p-2 text-xs" placeholder="Review note / reason"></textarea>
+                        <textarea wire:model="notes.{{ $conflict->id }}" rows="3" class="w-full text-xs" placeholder="Review note / reason"></textarea>
                         @if($conflict->status === 'open')
-                            <button wire:click="resolve({{ $conflict->id }}, 'keep_canonical')" class="w-full rounded bg-lime-400 px-3 py-2 text-sm font-semibold text-stone-950">Keep canonical value</button>
-                            <button wire:click="resolve({{ $conflict->id }}, 'accept_source')" class="w-full rounded border px-3 py-2 text-sm">Accept source decision</button>
-                            <button wire:click="resolve({{ $conflict->id }}, 'not_a_conflict')" class="w-full rounded border px-3 py-2 text-sm">Mark not a conflict</button>
+                            <button wire:click="resolve({{ $conflict->id }}, 'keep_canonical')" class="btn-primary">Keep canonical value</button>
+                            <button wire:click="resolve({{ $conflict->id }}, 'accept_source')" class="text-sm">Accept source decision</button>
+                            <button wire:click="resolve({{ $conflict->id }}, 'not_a_conflict')" class="text-sm">Mark not a conflict</button>
                             <button wire:click="dismiss({{ $conflict->id }})" wire:confirm="Dismiss this conflict?" class="w-full rounded border border-red-200 px-3 py-2 text-sm text-red-700">Dismiss</button>
                         @else
-                            <button wire:click="reopen({{ $conflict->id }})" class="w-full rounded border px-3 py-2 text-sm">Reopen conflict</button>
+                            <button wire:click="reopen({{ $conflict->id }})" class="text-sm">Reopen conflict</button>
                         @endif
                     </div>
                 </div>

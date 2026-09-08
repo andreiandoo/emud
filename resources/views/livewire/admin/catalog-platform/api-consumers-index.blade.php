@@ -1,27 +1,27 @@
 <div class="space-y-6">
     <div>
-        <h1 class="text-2xl font-bold">Catalog API</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">Catalog API</h1>
         <p class="text-sm text-stone-500">Consumers, chei, identități externe și cote pentru API-ul tehnic /api/v1.</p>
     </div>
 
     @if($issuedToken)
-        <div class="rounded-xl border-2 border-lime-400 bg-lime-50 p-5">
-            <div class="font-bold">Cheie nouă — copiaz-o acum</div>
+        <div class="rounded-xl border-2 border-stone-900 bg-stone-50 p-5">
+            <div class="font-semibold">Cheie nouă — copiaz-o acum</div>
             <code class="mt-2 block break-all rounded bg-white p-3">{{ $issuedToken }}</code>
             <button wire:click="$set('issuedToken', null)" class="mt-3 rounded bg-stone-900 px-3 py-2 text-sm text-white">Am salvat cheia</button>
         </div>
     @endif
 
     <form wire:submit="createConsumer" class="grid gap-3 rounded-xl bg-white p-5 shadow-sm md:grid-cols-5">
-        <input wire:model="name" class="rounded border px-3 py-2" placeholder="Nume" required>
-        <input wire:model="email" class="rounded border px-3 py-2" placeholder="Email">
-        <select wire:model="plan" class="rounded border px-3 py-2">
+        <input wire:model="name"  placeholder="Nume" required>
+        <input wire:model="email"  placeholder="Email">
+        <select wire:model="plan" >
             @foreach(['basic','pro','ultra','mega','enterprise'] as $p)
                 <option>{{ $p }}</option>
             @endforeach
         </select>
-        <input wire:model="monthlyQuota" type="number" min="0" class="rounded border px-3 py-2" placeholder="Quota">
-        <button class="rounded bg-lime-400 px-4 py-2 font-semibold">Creează consumer</button>
+        <input wire:model="monthlyQuota" type="number" min="0"  placeholder="Quota">
+        <button class="btn-primary">Creează consumer</button>
     </form>
 
     <div class="space-y-4">
@@ -37,7 +37,7 @@
                     </div>
                     <div class="flex gap-2">
                         <button wire:click="issueKey({{ $consumer->id }})" class="rounded bg-stone-950 px-3 py-2 text-sm text-white">Emite cheie</button>
-                        <button wire:click="toggleConsumer({{ $consumer->id }})" class="rounded border px-3 py-2 text-sm">{{ $consumer->is_active ? 'Dezactivează' : 'Activează' }}</button>
+                        <button wire:click="toggleConsumer({{ $consumer->id }})" class="text-sm">{{ $consumer->is_active ? 'Dezactivează' : 'Activează' }}</button>
                     </div>
                 </div>
 

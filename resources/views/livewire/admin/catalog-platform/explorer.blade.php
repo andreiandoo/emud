@@ -1,5 +1,5 @@
 <div class="space-y-6">
-    <div><h1 class="text-2xl font-bold">Catalog Explorer</h1><p class="text-sm text-stone-500">Caută din orice direcție: vehicul, OE/OEM/IAM, MPN, fitment, sursă sau conflict.</p></div>
+    <div><h1 class="text-2xl font-semibold tracking-tight">Catalog Explorer</h1><p class="text-sm text-stone-500">Caută din orice direcție: vehicul, OE/OEM/IAM, MPN, fitment, sursă sau conflict.</p></div>
 
     <div class="space-y-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
         <div class="grid gap-3 lg:grid-cols-[14rem_1fr_auto]">
@@ -8,20 +8,20 @@
             <button wire:click="clearFilters" class="rounded-lg border px-4 py-2 text-sm">Reset filtre</button>
         </div>
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <select wire:model.live="make" class="rounded-lg border px-3 py-2"><option value="">Marcă auto</option>@foreach($makes as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
-            <select wire:model.live="model" class="rounded-lg border px-3 py-2" @disabled(!$make)><option value="">Model</option>@foreach($models as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
-            <select wire:model.live="generation" class="rounded-lg border px-3 py-2" @disabled(!$model)><option value="">Generație</option>@foreach($generations as $item)<option value="{{ $item->id }}">{{ $item->name }} ({{ $item->year_from }}–{{ $item->year_to ?? '...' }})</option>@endforeach</select>
-            <input wire:model.live.debounce.300ms="year" type="number" min="1900" max="2100" class="rounded-lg border px-3 py-2" placeholder="An">
-            <select wire:model.live="fuel" class="rounded-lg border px-3 py-2"><option value="">Combustibil</option>@foreach($fuels as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach</select>
-            <select wire:model.live="category" class="rounded-lg border px-3 py-2"><option value="">Categorie piesă</option>@foreach($categories as $item)<option value="{{ $item->id }}">{{ $item->full_path ?: $item->name }}</option>@endforeach</select>
-            <select wire:model.live="brand" class="rounded-lg border px-3 py-2"><option value="">Brand piesă</option>@foreach($brands as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
-            <select wire:model.live="source" class="rounded-lg border px-3 py-2"><option value="">Sursă date</option>@foreach($sources as $item)<option value="{{ $item->id }}">{{ $item->code }} · {{ $item->name }}</option>@endforeach</select>
-            <select wire:model.live="position" class="rounded-lg border px-3 py-2"><option value="">Poziție</option>@foreach($positions as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach</select>
-            <input wire:model.live.debounce.300ms="minConfidence" type="number" min="0" max="100" step="1" class="rounded-lg border px-3 py-2" placeholder="Confidence minim">
+            <select wire:model.live="make" ><option value="">Marcă auto</option>@foreach($makes as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="model"  @disabled(!$make)><option value="">Model</option>@foreach($models as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="generation"  @disabled(!$model)><option value="">Generație</option>@foreach($generations as $item)<option value="{{ $item->id }}">{{ $item->name }} ({{ $item->year_from }}–{{ $item->year_to ?? '...' }})</option>@endforeach</select>
+            <input wire:model.live.debounce.300ms="year" type="number" min="1900" max="2100"  placeholder="An">
+            <select wire:model.live="fuel" ><option value="">Combustibil</option>@foreach($fuels as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach</select>
+            <select wire:model.live="category" ><option value="">Categorie piesă</option>@foreach($categories as $item)<option value="{{ $item->id }}">{{ $item->full_path ?: $item->name }}</option>@endforeach</select>
+            <select wire:model.live="brand" ><option value="">Brand piesă</option>@foreach($brands as $item)<option value="{{ $item->id }}">{{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="source" ><option value="">Sursă date</option>@foreach($sources as $item)<option value="{{ $item->id }}">{{ $item->code }} · {{ $item->name }}</option>@endforeach</select>
+            <select wire:model.live="position" ><option value="">Poziție</option>@foreach($positions as $item)<option value="{{ $item }}">{{ $item }}</option>@endforeach</select>
+            <input wire:model.live.debounce.300ms="minConfidence" type="number" min="0" max="100" step="1"  placeholder="Confidence minim">
         </div>
     </div>
 
-    @if($mode === 'sources')<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Surse ({{ $sourcesFound->count() }})</h2><div class="divide-y">@foreach($sourcesFound as $item)<div class="flex flex-wrap items-center justify-between gap-3 py-3"><div><a class="font-semibold underline" href="{{ route('admin.catalog-platform.sources.edit', $item) }}">{{ $item->code }} · {{ $item->name }}</a><div class="text-sm text-stone-500">{{ $item->source_type }} · {{ number_format($item->records_count) }} raw records · {{ $item->import_runs_count }} runs</div></div><a class="rounded border px-3 py-2 text-sm" href="{{ route('admin.catalog-platform.source-records', $item) }}">Raw records</a></div>@endforeach</div></section>@endif
+    @if($mode === 'sources')<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Surse ({{ $sourcesFound->count() }})</h2><div class="divide-y">@foreach($sourcesFound as $item)<div class="flex flex-wrap items-center justify-between gap-3 py-3"><div><a class="font-semibold underline" href="{{ route('admin.catalog-platform.sources.edit', $item) }}">{{ $item->code }} · {{ $item->name }}</a><div class="text-sm text-stone-500">{{ $item->source_type }} · {{ number_format($item->records_count) }} raw records · {{ $item->import_runs_count }} runs</div></div><a class="text-sm" href="{{ route('admin.catalog-platform.source-records', $item) }}">Raw records</a></div>@endforeach</div></section>@endif
 
     @if($mode === 'conflicts')<section class="rounded-xl bg-white p-4 shadow-sm"><h2 class="mb-3 font-bold">Conflicte ({{ $conflicts->count() }})</h2><div class="divide-y">@foreach($conflicts as $item)<div class="grid gap-2 py-3 text-sm md:grid-cols-[10rem_1fr_8rem_8rem]"><div class="font-semibold">{{ $item->entity_type }} #{{ $item->entity_id }}</div><div>{{ $item->field_or_relation }}</div><div>{{ $item->severity }}</div><div>{{ $item->status }}</div></div>@endforeach</div></section>@endif
 
