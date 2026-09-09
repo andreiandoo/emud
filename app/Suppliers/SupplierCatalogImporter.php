@@ -273,14 +273,40 @@ class SupplierCatalogImporter
         $this->attachAttributes($product, $record);
         $this->attachFitments($product, $record);
 
+        $retail = $this->retailInBaseCurrency($record);
+
         return $product->variants()->create([
             'sku' => $supplier->code.'-'.($record->sku ?: $record->externalId),
             'barcode' => $record->ean,
             'manufacturer_part_number' => $record->manufacturerPartNumber,
-            'retail_price' => $record->recommendedRetailPrice,
-            'currency' => $record->currency,
+            'retail_price' => $retail['amount'],
+            'currency' => $retail['currency'],
             'weight_kg' => $record->weightKg,
         ]);
+    }
+
+    /**
+     * The shop quotes one currency. A supplier's own is kept on the offer, alongside the
+     * converted cost and the rate it used, but what reaches the shelf is converted.
+     *
+     * Without a rate the supplier's currency is kept rather than relabelled: printing a EUR
+     * number as RON is not a rounding error, it is a wrong price on a product page.
+     *
+     * @return array{amount: ?float, currency: string}
+     */
+    private function retailInBaseCurrency(SupplierRecord $record): array
+    {
+        $base = $this->converter->baseCurrency();
+
+        if ($record->recommendedRetailPrice === null) {
+            return ['amount' => null, 'currency' => $base];
+        }
+
+        $converted = $this->converter->convert($record->recommendedRetailPrice, $record->currency);
+
+        return $converted
+            ? ['amount' => $converted['amount'], 'currency' => $converted['currency']]
+            : ['amount' => $record->recommendedRetailPrice, 'currency' => $record->currency];
     }
 
     /**

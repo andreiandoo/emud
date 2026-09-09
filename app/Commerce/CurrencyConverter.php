@@ -3,6 +3,7 @@
 namespace App\Commerce;
 
 use App\Models\ExchangeRate;
+use App\Settings\StoreSettings;
 use Illuminate\Support\Carbon;
 
 /**
@@ -21,9 +22,16 @@ class CurrencyConverter
     /** @var array<string, array{rate: float, date: string}|null> */
     private array $memo = [];
 
+    /**
+     * The admin setting wins over the config default. Reading only the config meant the shop
+     * currency chosen in /admin/settings was ignored, so prices stayed in whatever currency the
+     * supplier's feed happened to use.
+     */
     public function baseCurrency(): string
     {
-        return strtoupper((string) config('emud.catalog.default_currency', 'RON'));
+        $configured = (string) config('emud.catalog.default_currency', 'RON');
+
+        return strtoupper(app(StoreSettings::class)->string('default_currency', $configured) ?: $configured);
     }
 
     /**
