@@ -42,7 +42,7 @@ class SupplierHealthCheckTest extends TestCase
     {
         $supplier = $this->supplier(['last_successful_sync_at' => now()->subDays(5)]);
         $this->schedule($supplier, 'stock');
-        $this->run($supplier, 'stock', SyncStatus::Completed, finishedAt: now()->subDays(5));
+        $this->syncRun($supplier, 'stock', SyncStatus::Completed, finishedAt: now()->subDays(5));
 
         $report = app(SupplierHealthInspector::class)->inspect($supplier->fresh());
 
@@ -54,8 +54,8 @@ class SupplierHealthCheckTest extends TestCase
     {
         $supplier = $this->supplier(['last_successful_sync_at' => now()]);
         $this->schedule($supplier, 'catalog');
-        $this->run($supplier, 'catalog', SyncStatus::Completed, finishedAt: now()->subMinutes(30));
-        $this->run($supplier, 'catalog', SyncStatus::AbortedGuard, finishedAt: now()->subMinutes(5));
+        $this->syncRun($supplier, 'catalog', SyncStatus::Completed, finishedAt: now()->subMinutes(30));
+        $this->syncRun($supplier, 'catalog', SyncStatus::AbortedGuard, finishedAt: now()->subMinutes(5));
 
         $report = app(SupplierHealthInspector::class)->inspect($supplier->fresh());
 
@@ -67,7 +67,7 @@ class SupplierHealthCheckTest extends TestCase
     {
         $supplier = $this->supplier(['last_successful_sync_at' => now()]);
         $this->schedule($supplier, 'catalog');
-        $this->run($supplier, 'catalog', SyncStatus::Completed, finishedAt: now()->subMinutes(5), received: 1000, failed: 300);
+        $this->syncRun($supplier, 'catalog', SyncStatus::Completed, finishedAt: now()->subMinutes(5), received: 1000, failed: 300);
 
         $report = app(SupplierHealthInspector::class)->inspect($supplier->fresh());
 
@@ -120,7 +120,9 @@ class SupplierHealthCheckTest extends TestCase
         ]);
     }
 
-    private function run(Supplier $supplier, string $mode, SyncStatus $status, \DateTimeInterface $finishedAt, int $received = 10, int $failed = 0): void
+    /** Not named run(): PHPUnit's TestCase::run() is final, and overriding it is a fatal error
+     *  at class load that takes down the whole suite rather than this one test. */
+    private function syncRun(Supplier $supplier, string $mode, SyncStatus $status, \DateTimeInterface $finishedAt, int $received = 10, int $failed = 0): void
     {
         SupplierSyncRun::query()->create([
             'uuid' => (string) Str::uuid(),

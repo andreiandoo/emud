@@ -6,6 +6,7 @@ use App\Directory\OpeningSchedule;
 use App\Models\ServiceShop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class OpeningScheduleTest extends TestCase
@@ -57,9 +58,8 @@ class OpeningScheduleTest extends TestCase
      * The filter and the badge have to agree. They are two implementations of one rule, and a
      * directory that lists a workshop as open while its own page says closed is worse than
      * having no filter.
-     *
-     * @dataProvider moments
      */
+    #[DataProvider('moments')]
     public function test_the_sql_filter_agrees_with_the_php_rule(string $moment): void
     {
         $open = $this->shop([3 => ['09:00', '18:00']], 'deschis');
