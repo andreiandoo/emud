@@ -19,6 +19,7 @@ class SettingsPage extends Component
     /** @var array<string, string> */
     public const TABS = [
         'general' => 'General',
+        'header' => 'Header',
         'company' => 'Date firmă',
         'contact' => 'Contact',
         'documents' => 'Serii documente',

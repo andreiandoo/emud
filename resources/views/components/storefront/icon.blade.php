@@ -1,0 +1,58 @@
+@props(['name' => 'part'])
+
+{{-- Inline paths rather than an icon package. The set is small, fixed, and half of it is
+     automotive — no general-purpose icon library ships a winch or a leaf spring, so the
+     dependency would have to be supplemented by hand anyway.
+
+     Category icons are chosen in the back office by key; an unknown key falls back to a
+     generic part rather than rendering nothing, so a mistyped key still leaves the menu
+     aligned. --}}
+@php($paths = [
+    // Interface.
+    'search' => 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4-4',
+    'user' => 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+    'cart' => 'M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6M10 21h.01M17 21h.01',
+    'heart' => 'M12 20s-7-4.5-7-9.2A4 4 0 0 1 12 8a4 4 0 0 1 7-1.2c0 4.7-7 13.2-7 13.2z',
+    'chevron-down' => 'M6 9l6 6 6-6',
+    'chevron-right' => 'M9 6l6 6-6 6',
+    'close' => 'M6 6l12 12M18 6L6 18',
+    'menu' => 'M4 7h16M4 12h16M4 17h16',
+    'phone' => 'M5 3h4l2 5-2.5 1.5a12 12 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z',
+    'pin' => 'M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+    'plus' => 'M12 5v14M5 12h14',
+    'check' => 'M5 13l4 4L19 7',
+    'truck' => 'M3 7h11v9H3zM14 10h4l3 3v3h-7M6.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+    'car' => 'M4 16h16M5 16V9l2-4h10l2 4v7M7 19h2M15 19h2M6 12h12',
+    'logout' => 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h11',
+
+    // Catalogue.
+    'suspension' => 'M8 3v18M16 3v18M8 6h8M8 10h8M8 14h8M8 18h8',
+    'shock' => 'M12 3v4M12 17v4M9 7h6v10H9zM9 10h6M9 13h6',
+    'wheel' => 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 3v6M12 15v6M3 12h6M15 12h6',
+    'tyre' => 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 8l3 2M19 8l-3 2M5 16l3-2M19 16l-3-2',
+    'brake' => 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17 5l-3 4M20 14h-5',
+    'engine' => 'M4 12h2V9h4V7h4v2h3l3 3v5H8l-2-2H4zM10 12h4M17 9V6',
+    'exhaust' => 'M3 14h10a4 4 0 0 1 4 4v2M3 11h7M17 12h4M17 8h4M6 17h4',
+    'cooling' => 'M5 4h14v16H5zM9 4v16M15 4v16M5 9h14M5 14h14',
+    'transmission' => 'M6 6h.01M12 6h.01M18 6h.01M6 12h.01M12 12h.01M6 6v12M6 6h12M12 6v6M18 6v6M6 18h.01',
+    'electrical' => 'M13 3L5 14h6l-1 7 8-11h-6z',
+    'light' => 'M12 3a6 6 0 0 0-3 11v3h6v-3a6 6 0 0 0-3-11zM10 21h4',
+    'body' => 'M3 15l2-6h14l2 6v3H3zM7 9V6h10v3M6 18v2M18 18v2',
+    'interior' => 'M7 20V9a3 3 0 0 1 3-3h1a3 3 0 0 1 3 3v2h3a2 2 0 0 1 2 2v6M7 14h7',
+    'winch' => 'M4 8h9a4 4 0 0 1 0 8H8M4 5v6M8 16l-3 3M8 16h4',
+    'roof-rack' => 'M3 8h18M5 8v3M12 8v3M19 8v3M4 15h16v4H4zM8 15V8M16 15V8',
+    'oil' => 'M12 3l5 7a5 5 0 1 1-10 0zM9 13a3 3 0 0 0 3 3',
+    'filter' => 'M4 5h16l-6 7v6l-4 2v-8z',
+    'tool' => 'M15 4a5 5 0 0 0-6.5 6.5L3 16v5h5l5.5-5.5A5 5 0 0 0 20 9l-3 3-3-3 3-3a5 5 0 0 0-2-2z',
+    'offroad' => 'M4 17h16M6 17V8l3-3h6l3 3v9M8 20h2M14 20h2M4 11l2-2M20 11l-2-2M9 11h6',
+    'part' => 'M12 3l8 4v10l-8 4-8-4V7zM4 7l8 4 8-4M12 11v10',
+])
+
+{{-- Size comes from presentation attributes rather than a default class: a `class="h-4 w-4"`
+     on the call site would merge with a default `h-5 w-5` and lose, because Tailwind resolves
+     the pair by stylesheet order, not by who wrote it. A CSS class beats a width attribute, so
+     this way the caller always wins. --}}
+<svg {{ $attributes->merge(['width' => 20, 'height' => 20]) }} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="{{ $paths[$name] ?? $paths['part'] }}" />
+</svg>

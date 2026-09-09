@@ -1,59 +1,29 @@
 <!doctype html>
 <html lang="ro">
 <head>
+    {{-- Inside <head> rather than above the doctype: whitespace before a doctype is enough to
+         put some browsers into quirks mode. --}}
+    @php($settings = app(\App\Settings\StoreSettings::class))
+    @php($faviconPath = $settings->string('favicon_path'))
+
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Piese și accesorii 4x4' }} · eMUD</title>
+    <title>{{ $title ?? $settings->string('site_tagline', 'Piese și accesorii 4x4') }} · {{ $settings->string('site_title', 'eMUD') }}</title>
+    @if($faviconPath !== '')
+        <link rel="icon" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($faviconPath) }}">
+    @endif
     @stack('meta')
     @vite(['resources/css/app.css','resources/js/app.js'])
     @livewireStyles
 </head>
 <body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
-<header class="border-b border-stone-200 bg-white">
-    <div class="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-        <a href="{{ route('storefront.home') }}" class="text-xl font-black tracking-[.18em]">eMUD</a>
+<x-storefront.header />
 
-        @php($vehicle = app(\App\Storefront\VehicleContext::class)->current())
-        @if($vehicle)
-            <span class="hidden items-center gap-2 rounded-full bg-lime-100 px-3 py-1 text-xs font-semibold text-lime-900 sm:inline-flex">
-                {{ $vehicle->label() }}
-                @if($vehicle->isFromGarage())<span class="font-normal text-lime-700">· din garaj</span>@endif
-            </span>
-        @endif
-
-        <form action="{{ route('storefront.search') }}" method="get" class="hidden flex-1 md:block">
-            <input type="search" name="q" value="{{ request('q') }}" placeholder="Caută cod piesă, MPN sau denumire"
-                   class="w-full max-w-md rounded-lg border-stone-300 text-sm">
-        </form>
-
-        <nav class="ml-auto flex items-center gap-4 text-sm">
-            @auth
-                <a href="{{ route('customer.favourites') }}" class="text-stone-600 hover:text-stone-900">Favorite</a>
-                <a href="{{ route('customer.garage') }}" class="text-stone-600 hover:text-stone-900">Garajul meu</a>
-                <a href="{{ route('customer.dashboard') }}" class="font-semibold">{{ auth()->user()->name }}</a>
-            @else
-                <a href="{{ route('customer.login') }}" class="text-stone-600 hover:text-stone-900">Autentificare</a>
-                <a href="{{ route('customer.register') }}" class="rounded-lg bg-stone-900 px-3 py-1.5 font-semibold text-white">Cont nou</a>
-            @endauth
-
-            @php($cartCount = (int) (app(\App\Storefront\CartManager::class)->current()?->items()->sum('quantity') ?? 0))
-            <a href="{{ route('storefront.cart') }}" class="relative whitespace-nowrap text-stone-600 hover:text-stone-900">
-                Coș
-                @if($cartCount > 0)
-                    <span class="ml-1 rounded-full bg-stone-900 px-1.5 py-0.5 text-xs font-bold text-white">{{ $cartCount }}</span>
-                @endif
-            </a>
-        </nav>
-    </div>
-
-    <x-mega-menu />
-</header>
-
-<main class="mx-auto max-w-6xl px-4 py-8">{{ $slot }}</main>
+<main class="shell py-8">{{ $slot }}</main>
 
 <footer class="mt-16 border-t border-stone-200 bg-white">
-    <div class="mx-auto max-w-6xl space-y-4 px-4 py-8 text-xs text-stone-500">
+    <div class="shell space-y-4 py-8 text-xs text-stone-500">
         @php($footerPages = \App\Models\Page::query()->published()->where('show_in_footer', true)->orderBy('position')->orderBy('title')->get())
         @if($footerPages->isNotEmpty())
             <nav class="flex flex-wrap gap-x-5 gap-y-2">
@@ -63,7 +33,17 @@
                 <a href="{{ route('storefront.contact') }}" class="hover:text-stone-900 hover:underline">Contact</a>
             </nav>
         @endif
-        <p>eMUD · piese și accesorii 4x4, off-road și overlanding</p>
+
+        @php($social = collect($settings->array('social_links'))->filter())
+        @if($social->isNotEmpty())
+            <nav class="flex flex-wrap gap-x-5 gap-y-2">
+                @foreach($social as $network => $url)
+                    <a href="{{ $url }}" target="_blank" rel="noopener" class="capitalize hover:text-stone-900 hover:underline">{{ $network }}</a>
+                @endforeach
+            </nav>
+        @endif
+
+        <p>{{ $settings->string('site_title', 'eMUD') }} · piese și accesorii 4x4, off-road și overlanding</p>
     </div>
 </footer>
 @livewireScripts

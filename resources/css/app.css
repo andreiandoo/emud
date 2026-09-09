@@ -89,6 +89,13 @@
  * resolves @apply against real utilities only, so composing component classes fails the build.
  */
 @layer components {
+    /* One page gutter for the whole storefront: the header, the mega panel and the page body
+       have to line up at every width, and three separate max-widths is how that stops being
+       true the first time one of them is edited. */
+    .shell {
+        @apply mx-auto w-full max-w-7xl px-4 sm:px-6;
+    }
+
     .admin-surface :where(table) {
         @apply w-full border-collapse text-sm;
     }

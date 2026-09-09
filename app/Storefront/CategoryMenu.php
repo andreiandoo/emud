@@ -51,7 +51,7 @@ class CategoryMenu
             ->orderBy('depth')
             ->orderBy('position')
             ->orderBy('name')
-            ->get(['id', 'parent_id', 'name', 'full_path', 'depth', 'icon']);
+            ->get(['id', 'parent_id', 'name', 'full_path', 'depth', 'icon', 'image_path']);
 
         $byParent = $categories->groupBy(fn (Category $category) => $category->parent_id ?? 0);
 
@@ -68,7 +68,8 @@ class CategoryMenu
             'id' => $category->id,
             'name' => $category->name,
             'path' => $category->full_path,
-            'icon' => $category->icon,
+            'icon' => CategoryIcons::resolve($category->icon),
+            'image' => $category->image_path,
             'children' => $this->nest($byParent, $category->id),
         ])->values();
     }

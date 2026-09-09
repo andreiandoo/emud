@@ -4,6 +4,9 @@
     <x-admin.tabs :tabs="$tabs" :current="$tab" field="tab" class="mb-6" />
 
     @switch($tab)
+        @case('header')
+            <livewire:admin.settings.header-settings />
+            @break
         @case('company')
             <livewire:admin.settings.company-settings />
             @break

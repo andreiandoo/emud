@@ -3,7 +3,9 @@
 namespace App\Livewire\Admin\Catalog;
 
 use App\Models\Category;
+use App\Storefront\CategoryIcons;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -26,6 +28,9 @@ class CategoriesIndex extends Component
     public string $slug = '';
 
     public string $description = '';
+
+    /** Drawn beside the category in the storefront mega menu. */
+    public string $icon = '';
 
     public $image;
 
@@ -60,6 +65,7 @@ class CategoriesIndex extends Component
         $this->name = $category->name;
         $this->slug = $category->slug;
         $this->description = $category->description ?? '';
+        $this->icon = $category->icon ?? '';
         $this->currentImage = $category->image_path;
         $this->seoTitle = $category->seo_title ?? '';
         $this->seoDescription = $category->seo_description ?? '';
@@ -88,6 +94,9 @@ class CategoriesIndex extends Component
                 }
             }],
             'description' => ['nullable', 'string'],
+            // A fixed list rather than free text: the icon is drawn from a set the storefront
+            // knows, and an unrecognised key would render a blank square in the menu.
+            'icon' => ['nullable', 'string', Rule::in(array_keys(CategoryIcons::OPTIONS))],
             'image' => ['nullable', 'image', 'max:4096'],
             'seoTitle' => ['nullable', 'string', 'max:255'],
             'seoDescription' => ['nullable', 'string', 'max:320'],
@@ -105,6 +114,7 @@ class CategoriesIndex extends Component
             'depth' => $parent ? $parent->depth + 1 : 0,
             'position' => $category->exists ? $category->position : ((int) Category::where('parent_id', $parent?->id)->max('position') + 1),
             'description' => $validated['description'] ?: null,
+            'icon' => $validated['icon'] ?: null,
             'image_path' => $imagePath,
             'seo_title' => $validated['seoTitle'] ?: null,
             'seo_description' => $validated['seoDescription'] ?: null,
@@ -144,7 +154,7 @@ class CategoriesIndex extends Component
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'parentId', 'name', 'slug', 'description', 'image', 'currentImage', 'seoTitle', 'seoDescription', 'canonicalUrl']);
+        $this->reset(['editingId', 'parentId', 'name', 'slug', 'description', 'icon', 'image', 'currentImage', 'seoTitle', 'seoDescription', 'canonicalUrl']);
         $this->resetValidation();
         $this->robotsIndex = $this->robotsFollow = $this->isActive = $this->isVisibleInMenu = true;
     }
@@ -173,6 +183,7 @@ class CategoriesIndex extends Component
                 ->orderBy('full_path')
                 ->get(),
             'parentOptions' => Category::query()->when($this->editingId, fn ($query) => $query->whereKeyNot($this->editingId))->orderBy('full_path')->get(),
+            'iconOptions' => CategoryIcons::OPTIONS,
         ]);
     }
 }

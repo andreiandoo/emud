@@ -32,7 +32,11 @@
     'logout' => 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
 ])
 
-<svg {{ $attributes->merge(['class' => 'h-4 w-4 shrink-0']) }} viewBox="0 0 24 24" fill="none"
+{{-- Size comes from presentation attributes rather than a default class: a `class="h-4 w-4"` on
+     the call site would merge with a default and lose, because Tailwind resolves the pair by
+     stylesheet order, not by who wrote it. A CSS class beats a width attribute, so this way the
+     caller always wins. --}}
+<svg {{ $attributes->merge(['width' => 16, 'height' => 16, 'class' => 'shrink-0']) }} viewBox="0 0 24 24" fill="none"
      stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
      aria-hidden="true">
     <path d="{{ $paths[$name] ?? $paths['grid'] }}" />

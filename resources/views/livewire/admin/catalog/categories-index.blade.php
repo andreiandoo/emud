@@ -36,9 +36,22 @@
                 </label>
 
                 <label class="block">
+                    <span class="field-label">Iconiță în meniu</span>
+                    <select wire:model="icon">
+                        <option value="">Fără iconiță</option>
+                        @foreach($iconOptions as $key => $label)
+                            <option value="{{ $key }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <span class="field-hint">Se vede în mega meniul magazinului, lângă numele categoriei.</span>
+                    @error('icon') <span class="field-error">{{ $message }}</span> @enderror
+                </label>
+
+                <label class="block">
                     <span class="field-label">Imagine</span>
                     <input type="file" wire:model="image" accept="image/*">
                     @if($currentImage)<span class="field-hint">Curentă: {{ $currentImage }}</span>@endif
+                    <span class="field-hint">Apare în mega meniu, ca imagine care duce la categorie.</span>
                     @error('image') <span class="field-error">{{ $message }}</span> @enderror
                 </label>
 
