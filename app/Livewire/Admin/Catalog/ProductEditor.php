@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\VehicleGeneration;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -45,6 +46,12 @@ class ProductEditor extends Component
     public $weightKg = null;
 
     public array $categoryIds = [];
+
+    /** Filters the category list; the selected ones stay visible regardless. */
+    public string $categorySearch = '';
+
+    /** Nothing is offered in the fitment picker until this narrows the vehicle catalogue. */
+    public string $fitmentSearch = '';
 
     public array $variants = [];
 
@@ -318,11 +325,73 @@ class ProductEditor extends Component
         })->orderBy('name')->get();
 
         return view('livewire.admin.catalog.product-editor', [
-            'brands' => Brand::where('is_active', true)->orderBy('name')->get(),
-            'categories' => Category::where('is_active', true)->orderBy('full_path')->get(),
+            'brands' => Brand::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'categories' => $this->categoryOptions(),
             'attributes' => $attributes,
-            'generations' => VehicleGeneration::with('model.make')->orderBy('year_from')->get(),
+            'generations' => $this->generationOptions(),
             'existingMedia' => $this->product?->media()->get() ?? collect(),
         ]);
+    }
+
+    /**
+     * Only the branches the editor is actually showing. Whatever is already selected is always
+     * included, or filtering the list would silently drop a category off the product on save.
+     *
+     * @return \Illuminate\Support\Collection<int, Category>
+     */
+    private function categoryOptions(): Collection
+    {
+        $search = trim($this->categorySearch);
+
+        return Category::query()
+            ->where('is_active', true)
+            ->when($search !== '', fn ($query) => $query->where(fn ($match) => $match
+                ->where('name', 'ilike', '%'.$search.'%')
+                ->orWhere('full_path', 'ilike', '%'.$search.'%')
+                ->orWhereIn('id', $this->categoryIds)))
+            ->orderBy('full_path')
+            ->limit(300)
+            ->get(['id', 'name', 'depth']);
+    }
+
+    /**
+     * The vehicle catalogue holds tens of thousands of generations, and this select is rendered
+     * once per fitment row, so listing them all produced hundreds of thousands of options and
+     * froze the page for twenty seconds before a single click landed. Nothing is listed until
+     * there is something to list it for: a search, or a generation already on the product.
+     *
+     * Built as a plain query rather than Eloquent — these rows are option labels, and hydrating
+     * three models each to print one line of text is the expensive part.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    private function generationOptions(): Collection
+    {
+        $selected = collect($this->fitments)->pluck('generation_id')->filter()->map(fn ($id): int => (int) $id)->unique()->all();
+        $search = trim($this->fitmentSearch);
+
+        if ($search === '' && $selected === []) {
+            return collect();
+        }
+
+        return DB::table('vehicle_generations as vg')
+            ->join('vehicle_models as vm', 'vm.id', '=', 'vg.model_id')
+            ->join('vehicle_makes as mk', 'mk.id', '=', 'vm.make_id')
+            ->when($search !== '', fn ($query) => $query->where(fn ($match) => $match
+                ->where('mk.name', 'ilike', '%'.$search.'%')
+                ->orWhere('vm.name', 'ilike', '%'.$search.'%')
+                ->orWhere('vg.name', 'ilike', '%'.$search.'%')
+                ->orWhereIn('vg.id', $selected)))
+            ->when($search === '', fn ($query) => $query->whereIn('vg.id', $selected))
+            ->orderBy('mk.name')
+            ->orderBy('vm.name')
+            ->orderBy('vg.year_from')
+            ->limit(100)
+            ->get([
+                'vg.id',
+                'vg.year_from',
+                'vg.year_to',
+                DB::raw("mk.name || ' ' || vm.name || ' · ' || vg.name as label"),
+            ]);
     }
 }

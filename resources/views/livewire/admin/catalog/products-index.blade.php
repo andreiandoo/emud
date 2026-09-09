@@ -52,6 +52,7 @@
                     </th>
                     <th>Produs</th>
                     <th>Brand</th>
+                    <th>Compatibilitate</th>
                     <th class="text-right">Variante</th>
                     <th class="text-right">Oferte</th>
                     <th>Status</th>
@@ -88,6 +89,18 @@
                         </td>
 
                         <td class="text-stone-600">{{ $product->brand?->name ?? '—' }}</td>
+                        <td class="text-stone-600">
+                            @if($product->is_universal)
+                                <span class="text-stone-500">Universal</span>
+                            @elseif($product->fitments_count === 0)
+                                <span class="text-amber-700">Nespecificat</span>
+                            @else
+                                {{ $product->fitments->take(2)->map(fn ($fitment) => $fitment->label())->implode(', ') }}
+                                @if($product->fitments_count > 2)
+                                    <span class="text-stone-500">+{{ $product->fitments_count - 2 }}</span>
+                                @endif
+                            @endif
+                        </td>
                         <td class="text-right tabular-nums">{{ $product->variants->count() }}</td>
                         <td class="text-right tabular-nums">
                             @if($product->supplier_products_count === 0)
@@ -120,7 +133,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="p-0">
+                        <td colspan="8" class="p-0">
                             <x-admin.empty title="Niciun produs" hint="Nimic nu se potrivește cu filtrele curente." class="border-0">
                                 <a href="{{ route('admin.products.create') }}" class="btn-primary">Adaugă un produs</a>
                             </x-admin.empty>

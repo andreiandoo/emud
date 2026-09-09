@@ -81,7 +81,12 @@ class ProductsIndex extends Component
     public function render()
     {
         return view('livewire.admin.catalog.products-index', [
-            'products' => $this->query()->with(['brand', 'variants', 'media'])->withCount('supplierProducts')->paginate(25),
+            // Fitments are eager-loaded rather than counted alone: the column names the first
+            // couple of vehicles, and a count with no names answers nothing useful.
+            'products' => $this->query()
+                ->with(['brand', 'variants', 'media', 'fitments.make', 'fitments.model', 'fitments.generation'])
+                ->withCount(['supplierProducts', 'fitments'])
+                ->paginate(25),
             'categories' => Category::query()->orderBy('full_path')->get(['id', 'name', 'full_path', 'depth']),
             'tabs' => self::TABS,
             'counts' => $this->countsByStatus(),

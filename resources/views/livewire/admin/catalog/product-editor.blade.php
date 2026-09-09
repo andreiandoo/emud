@@ -77,12 +77,13 @@
 
             <label class="block lg:col-span-2">
                 <span class="field-label">Categorii *</span>
+                <input type="search" wire:model.live.debounce.400ms="categorySearch" placeholder="Caută o categorie…" class="mb-2">
                 <select wire:model.live="categoryIds" multiple size="8">
                     @foreach($categories as $category)
                         <option value="{{ $category->id }}">{{ str_repeat('— ', $category->depth) }}{{ $category->name }}</option>
                     @endforeach
                 </select>
-                <span class="field-hint">Prima selectată devine categoria principală.</span>
+                <span class="field-hint">Prima selectată devine categoria principală. Cele deja alese rămân în listă oricât ai filtra.</span>
                 @error('categoryIds') <span class="field-error">{{ $message }}</span> @enderror
             </label>
 
@@ -231,16 +232,21 @@
                 <button type="button" wire:click="addFitment" class="btn-secondary">+ Compatibilitate</button>
             </div>
 
+            <label class="block">
+                <span class="field-label">Caută vehiculul</span>
+                <input type="search" wire:model.live.debounce.400ms="fitmentSearch" placeholder="Marcă, model sau generație — ex. Suzuki Jimny">
+                <span class="field-hint">Catalogul are zeci de mii de generații, așa că lista se completează după ce cauți. Generațiile deja alese rămân vizibile.</span>
+            </label>
+
             @foreach($fitments as $index => $fitment)
                 <div wire:key="fitment-{{ $index }}" class="grid gap-4 rounded-xl bg-stone-50 p-4 md:grid-cols-5">
                     <label class="block md:col-span-2">
                         <span class="field-label">Generație</span>
                         <select wire:model="fitments.{{ $index }}.generation_id">
-                            <option value="">Alege generația</option>
+                            <option value="">{{ $generations->isEmpty() ? 'Caută mai întâi un vehicul' : 'Alege generația' }}</option>
                             @foreach($generations as $generation)
                                 <option value="{{ $generation->id }}">
-                                    {{ $generation->model->make->name }} {{ $generation->model->name }} · {{ $generation->name }}
-                                    ({{ $generation->year_from }}–{{ $generation->year_to ?: 'prezent' }})
+                                    {{ $generation->label }} ({{ $generation->year_from }}–{{ $generation->year_to ?: 'prezent' }})
                                 </option>
                             @endforeach
                         </select>
