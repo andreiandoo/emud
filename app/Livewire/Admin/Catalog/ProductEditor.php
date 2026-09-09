@@ -471,7 +471,7 @@ class ProductEditor extends Component
         $landed = app(LandedCostCalculator::class);
 
         return SupplierProduct::query()
-            ->with(['supplier:id,code,name', 'offer.warehouse:id,code,name,country_code'])
+            ->with(['supplier:id,code,name,website', 'offer.warehouse:id,code,name,country_code'])
             ->where('product_id', $this->product->id)
             ->whereHas('offer')
             ->get()

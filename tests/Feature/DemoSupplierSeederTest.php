@@ -152,6 +152,47 @@ class DemoSupplierSeederTest extends TestCase
         $this->assertTrue($product->is_universal);
     }
 
+    /**
+     * The offer comparison only means anything with more than one supplier, and the two demo
+     * feeds share brand and MPN precisely so they land as two offers on one product rather than
+     * as two products.
+     */
+    public function test_both_demo_suppliers_land_on_the_same_products(): void
+    {
+        Storage::fake('local');
+        $this->seed(DemoSupplierSeeder::class);
+
+        foreach (['DEMO_OFFROAD', 'DEMO_PARTS_RO'] as $code) {
+            $this->artisan("suppliers:sync {$code} --mode=catalog")->assertSuccessful();
+        }
+
+        $product = Product::query()->withCount('supplierProducts')->where('name', 'like', 'Bară față din oțel%')->firstOrFail();
+
+        $this->assertSame(2, $product->supplier_products_count);
+
+        // Both supplier products point at one canonical part, which is what makes them offers
+        // on the same thing rather than two separate parts that merely look alike.
+        $this->assertCount(1, SupplierProduct::query()
+            ->where('product_id', $product->id)
+            ->pluck('catalog_part_id')
+            ->filter()
+            ->unique());
+    }
+
+    /** Freight and the dropship fee are what make the cheaper quote the dearer part. */
+    public function test_the_feed_carries_the_costs_that_decide_which_supplier_is_cheaper(): void
+    {
+        Storage::fake('local');
+        $this->seed(DemoSupplierSeeder::class);
+        $this->artisan('suppliers:sync '.DemoSupplierSeeder::CODE.' --mode=catalog')->assertSuccessful();
+
+        $offer = SupplierOffer::query()->firstOrFail();
+
+        $this->assertNotNull($offer->shipping_cost_estimate);
+        $this->assertNotNull($offer->dropship_fee);
+        $this->assertNotNull($offer->dispatch_days_min);
+    }
+
     public function test_the_demo_supplier_passes_its_own_onboarding_check(): void
     {
         Storage::fake('local');

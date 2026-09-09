@@ -33,6 +33,43 @@ class DemoSupplierSeeder extends Seeder
 
     public const FEED_PATH = 'demo/demo-offroad-catalog.csv';
 
+    /**
+     * Two suppliers listing the same parts on deliberately different terms, because the offer
+     * comparison only means something with more than one. The importer maps them onto the same
+     * product through brand and MPN, so each part ends up with two offers to rank.
+     *
+     * The euro supplier is cheaper per unit and charges for dropship and freight; the Romanian
+     * one is dearer per unit and ships free. Which one actually wins therefore depends on the
+     * part, which is the whole point — and it is why the multiplier below is not the real
+     * exchange rate.
+     *
+     * @var list<array{code: string, name: string, website: string, currency: string, multiplier: float, shipping: float, dropship_fee: float, dispatch: array{0: int, 1: int}, path: string}>
+     */
+    private const SUPPLIERS = [
+        [
+            'code' => self::CODE,
+            'name' => 'Demo Offroad Supply (date fictive)',
+            'website' => 'https://example.com/demo-offroad',
+            'currency' => 'EUR',
+            'multiplier' => 1.0,
+            'shipping' => 18.0,
+            'dropship_fee' => 9.0,
+            'dispatch' => [3, 6],
+            'path' => self::FEED_PATH,
+        ],
+        [
+            'code' => 'DEMO_PARTS_RO',
+            'name' => 'Demo Parts România (date fictive)',
+            'website' => 'https://example.com/demo-parts-ro',
+            'currency' => 'RON',
+            'multiplier' => 5.55,
+            'shipping' => 0.0,
+            'dropship_fee' => 0.0,
+            'dispatch' => [1, 2],
+            'path' => 'demo/demo-parts-ro-catalog.csv',
+        ],
+    ];
+
     /** Makes worth fitting an off-road catalogue to, in the order they are preferred. */
     private const PREFERRED_MAKES = [
         'SUZUKI', 'TOYOTA', 'JEEP', 'LAND ROVER', 'DACIA',
@@ -70,22 +107,28 @@ class DemoSupplierSeeder extends Seeder
     public function run(): void
     {
         $vehicles = $this->vehicles();
-        $rows = $this->rows($vehicles);
 
-        Storage::disk('local')->put(self::FEED_PATH, $this->csv($rows));
-        $supplier = $this->supplier();
+        foreach (self::SUPPLIERS as $index => $profile) {
+            $rows = $this->rows($vehicles, $profile);
+            Storage::disk('local')->put($profile['path'], $this->csv($rows));
+            $this->supplier($profile, createsParts: $index === 0);
 
-        $this->command?->info(sprintf(
-            'Furnizor demo %s: %d SKU-uri pentru %d vehicule, scrise în %s.',
-            $supplier->code,
-            count($rows),
-            count($vehicles),
-            Storage::disk('local')->path(self::FEED_PATH),
-        ));
-        $this->command?->line('1. php artisan suppliers:onboarding-check '.self::CODE);
-        $this->command?->line('2. php artisan suppliers:sync '.self::CODE.' --mode=catalog');
+            $this->command?->info(sprintf(
+                'Furnizor demo %s: %d SKU-uri pentru %d vehicule, în %s.',
+                $profile['code'],
+                count($rows),
+                count($vehicles),
+                Storage::disk('local')->path($profile['path']),
+            ));
+        }
+
+        $codes = implode(' ', array_column(self::SUPPLIERS, 'code'));
+        $this->command?->newLine();
+        $this->command?->line('Pentru fiecare cod din: '.$codes);
+        $this->command?->line('  php artisan suppliers:onboarding-check <COD>');
+        $this->command?->line('  php artisan suppliers:sync <COD> --mode=catalog');
         // Feed-created products land in review by design; the shop shows only active ones.
-        $this->command?->line('3. php artisan suppliers:publish-feed-products '.self::CODE);
+        $this->command?->line('  php artisan suppliers:publish-feed-products <COD>');
     }
 
     /**
@@ -174,14 +217,14 @@ class DemoSupplierSeeder extends Seeder
      * @param  list<array{label: string, slug: string, configuration_ids: list<int>}>  $vehicles
      * @return list<array<string, string>>
      */
-    private function rows(array $vehicles): array
+    private function rows(array $vehicles, array $profile): array
     {
         $rows = [];
 
         foreach (self::FAMILIES as $family) {
             if ($family['specific']) {
                 foreach ($vehicles as $index => $vehicle) {
-                    $rows[] = $this->row($family, $vehicle['label'], $vehicle['slug'], $vehicle['configuration_ids'], $index);
+                    $rows[] = $this->row($family, $profile, $vehicle['label'], $vehicle['slug'], $vehicle['configuration_ids'], $index);
                 }
 
                 continue;
@@ -189,6 +232,7 @@ class DemoSupplierSeeder extends Seeder
 
             $rows[] = $this->row(
                 $family,
+                $profile,
                 'universal',
                 'UNIV',
                 array_merge(...array_column($vehicles, 'configuration_ids')),
@@ -204,13 +248,15 @@ class DemoSupplierSeeder extends Seeder
      * @param  list<int>  $configurationIds
      * @return array<string, string>
      */
-    private function row(array $family, string $vehicleLabel, string $vehicleSlug, array $configurationIds, int $index): array
+    private function row(array $family, array $profile, string $vehicleLabel, string $vehicleSlug, array $configurationIds, int $index): array
     {
+        // Deliberately not prefixed with the supplier: both feeds must carry the same brand and
+        // MPN, or they would map onto two products instead of two offers on one.
         $mpn = sprintf('%s-%s-%s', Str::upper(Str::substr(Str::slug($family['brand']), 0, 3)), $family['code'], $vehicleSlug);
         $sku = 'DEMO-'.$mpn;
         // Prices drift a little per vehicle so that sorting, filtering and margin maths have
         // something other than one repeated number to work on.
-        $drift = 1 + ($index % 5) * 0.04;
+        $drift = (1 + ($index % 5) * 0.04) * $profile['multiplier'];
 
         return [
             'sku' => $sku,
@@ -222,8 +268,14 @@ class DemoSupplierSeeder extends Seeder
             'category' => $family['category'],
             'dealer_price' => number_format($family['cost'] * $drift, 2, '.', ''),
             'rrp' => number_format($family['rrp'] * $drift, 2, '.', ''),
-            'currency' => 'EUR',
+            'currency' => $profile['currency'],
             'qty' => (string) (3 + ($index * 7) % 40),
+            // Freight and the dropship fee are what make one supplier's cheaper quote the dearer
+            // part at the door, so the feed has to carry them or the comparison is decorative.
+            'shipping_cost' => number_format($profile['shipping'], 2, '.', ''),
+            'dropship_fee' => number_format($profile['dropship_fee'], 2, '.', ''),
+            'dispatch_min' => (string) $profile['dispatch'][0],
+            'dispatch_max' => (string) $profile['dispatch'][1],
             'weight_kg' => number_format($family['weight'], 2, '.', ''),
             'length_cm' => number_format($family['dims'][0], 1, '.', ''),
             'width_cm' => number_format($family['dims'][1], 1, '.', ''),
@@ -279,16 +331,18 @@ class DemoSupplierSeeder extends Seeder
         return $csv;
     }
 
-    private function supplier(): Supplier
+    /** @param array<string, mixed> $profile */
+    private function supplier(array $profile, bool $createsParts): Supplier
     {
-        $supplier = Supplier::query()->firstOrNew(['code' => self::CODE]);
+        $supplier = Supplier::query()->firstOrNew(['code' => $profile['code']]);
 
         $supplier->fill([
-            'name' => 'Demo Offroad Supply (date fictive)',
+            'name' => $profile['name'],
+            'website' => $profile['website'],
             'protocol' => SupplierProtocol::Csv,
             'connector_class' => LocalFileFeedConnector::class,
-            'catalog_endpoint' => self::FEED_PATH,
-            'default_currency' => 'EUR',
+            'catalog_endpoint' => $profile['path'],
+            'default_currency' => $profile['currency'],
             'timezone' => 'Europe/Bucharest',
             'priority' => 50,
             'data_rights_class' => CatalogRightsClass::PermissionedRedistributable,
@@ -312,6 +366,10 @@ class DemoSupplierSeeder extends Seeder
                 'recommended_retail_price' => 'rrp',
                 'currency' => 'currency',
                 'stock_quantity' => 'qty',
+                'shipping_cost_estimate' => 'shipping_cost',
+                'dropship_fee' => 'dropship_fee',
+                'dispatch_days_min' => 'dispatch_min',
+                'dispatch_days_max' => 'dispatch_max',
                 'weight_kg' => 'weight_kg',
                 'length_cm' => 'length_cm',
                 'width_cm' => 'width_cm',
@@ -334,10 +392,11 @@ class DemoSupplierSeeder extends Seeder
                 // defeats the point of a stand-in supplier.
                 'auto_create_products' => true,
                 'technical_promotion_enabled' => true,
-                // This is the first supplier in an empty catalogue, so it has to be the one
-                // allowed to mint canonical brand+MPN identities. Later suppliers attach to
-                // what it created instead of inventing their own.
-                'technical_promotion_create_parts' => true,
+                // Only the first supplier mints canonical brand+MPN identities. The second one
+                // attaches to what the first created, which is the arrangement every supplier
+                // after the first should be in — and it is what makes both offers land on one
+                // product rather than two.
+                'technical_promotion_create_parts' => $createsParts,
                 'match_catalog_parts' => true,
                 'stale_after_minutes' => 1440,
             ]),

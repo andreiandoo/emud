@@ -133,7 +133,7 @@
 
                         <label class="block">
                             <span class="field-label">Tarif</span>
-                            <input type="number" step="0.01" min="0" wire:model="shippingMethods.{{ $index }}.base_price">
+                            <x-admin.money-input wire:model="shippingMethods.{{ $index }}.base_price" />
                             @error('shippingMethods.'.$index.'.base_price') <span class="field-error">{{ $message }}</span> @enderror
                         </label>
 

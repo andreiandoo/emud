@@ -191,13 +191,13 @@
 
                     <label class="block">
                         <span class="field-label">Preț de la</span>
-                        <input type="number" step="0.01" min="0" wire:model="priceList.{{ $index }}.price_from">
+                        <x-admin.money-input wire:model="priceList.{{ $index }}.price_from" />
                         @error('priceList.'.$index.'.price_from') <span class="field-error">{{ $message }}</span> @enderror
                     </label>
 
                     <label class="block">
                         <span class="field-label">Până la</span>
-                        <input type="number" step="0.01" min="0" wire:model="priceList.{{ $index }}.price_to">
+                        <x-admin.money-input wire:model="priceList.{{ $index }}.price_to" />
                         @error('priceList.'.$index.'.price_to') <span class="field-error">{{ $message }}</span> @enderror
                     </label>
 

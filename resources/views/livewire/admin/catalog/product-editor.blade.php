@@ -234,12 +234,12 @@
                     </label>
                     <label class="block">
                         <span class="field-label">Preț</span>
-                        <input type="number" step="0.01" min="0" wire:model="variants.{{ $index }}.price">
+                        <x-admin.money-input wire:model="variants.{{ $index }}.price" />
                         @error('variants.'.$index.'.price') <span class="field-error">{{ $message }}</span> @enderror
                     </label>
                     <label class="block">
                         <span class="field-label">Preț vechi</span>
-                        <input type="number" step="0.01" min="0" wire:model="variants.{{ $index }}.compare_at_price">
+                        <x-admin.money-input wire:model="variants.{{ $index }}.compare_at_price" />
                     </label>
                     <label class="block">
                         <span class="field-label">Greutate (kg)</span>
@@ -275,9 +275,16 @@
                         <div wire:key="offer-{{ $offer->id }}"
                              class="mb-2 grid gap-3 rounded-xl border border-stone-200 bg-white p-4 md:grid-cols-6">
                             <div class="md:col-span-2">
-                                <div class="font-medium text-stone-900">{{ $row['supplier']->name }}</div>
+                                <div class="font-medium text-stone-900">
+                                    @if($row['supplier']->website)
+                                        <a href="{{ $row['supplier']->website }}" target="_blank" rel="noopener nofollow"
+                                           class="hover:underline">{{ $row['supplier']->name }} ↗</a>
+                                    @else
+                                        {{ $row['supplier']->name }}
+                                    @endif
+                                </div>
                                 <div class="text-xs text-stone-500">
-                                    {{ $row['sku'] }}
+                                    {{ $row['supplier']->code }} · {{ $row['sku'] }}
                                     @if($offer->warehouse)· {{ $offer->warehouse->code }}@endif
                                 </div>
                             </div>
@@ -434,46 +441,61 @@
                 @endif
             </div>
 
-            @foreach($fitments as $index => $fitment)
-                <div wire:key="fitment-{{ $index }}" class="grid gap-4 rounded-xl bg-stone-50 p-4 md:grid-cols-5">
-                    <div class="block md:col-span-2">
-                        <span class="field-label">Generație</span>
-                        <p class="mt-1 text-sm {{ $fitment['generation_id'] ? 'font-medium text-stone-900' : 'text-amber-700' }}">
-                            {{ $this->fitmentLabels[$fitment['generation_id']] ?? 'Nealeasă — caută vehiculul mai sus și adaugă-l' }}
-                        </p>
-                        @error('fitments.'.$index.'.generation_id') <span class="field-error">{{ $message }}</span> @enderror
-                    </div>
-
-                    <label class="block">
-                        <span class="field-label">An de la</span>
-                        <input type="number" wire:model="fitments.{{ $index }}.year_from">
-                    </label>
-
-                    <label class="block">
-                        <span class="field-label">An până la</span>
-                        <input type="number" wire:model="fitments.{{ $index }}.year_to">
-                    </label>
-
-                    <label class="block">
-                        <span class="field-label">Poziție</span>
-                        <input wire:model="fitments.{{ $index }}.position" placeholder="față, spate, stânga...">
-                    </label>
-
-                    <label class="block md:col-span-3">
-                        <span class="field-label">Note montaj</span>
-                        <textarea wire:model="fitments.{{ $index }}.notes" rows="2"></textarea>
-                    </label>
-
-                    <div class="flex items-end justify-between gap-3 pb-2 md:col-span-2">
-                        <label class="flex items-center gap-2 text-sm text-stone-700">
-                            <input type="checkbox" wire:model="fitments.{{ $index }}.requires_modification"> Necesită modificări
-                        </label>
-
-                        <button type="button" wire:click="removeFitment({{ $index }})"
-                                class="text-sm font-semibold text-red-700 hover:underline">Elimină</button>
-                    </div>
+            {{-- One row per vehicle rather than a card each: a part that fits twenty generations
+                 was twenty screens of scrolling, and the fields are small enough to sit inline.
+                 Notes open on demand, since most rows never need one. --}}
+            @if($fitments !== [])
+                <div class="overflow-x-auto rounded-xl border border-stone-200">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-stone-50 text-xs uppercase tracking-wider text-stone-500">
+                            <tr>
+                                <th class="px-3 py-2">Vehicul</th>
+                                <th class="w-24 px-3 py-2">An de la</th>
+                                <th class="w-24 px-3 py-2">Până la</th>
+                                <th class="w-36 px-3 py-2">Poziție</th>
+                                <th class="w-28 px-3 py-2 text-center">Modificări</th>
+                                <th class="w-10 px-3 py-2"><span class="sr-only">Acțiuni</span></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-200">
+                            @foreach($fitments as $index => $fitment)
+                                <tr wire:key="fitment-{{ $index }}" x-data="{ notes: @js(filled($fitment['notes'])) }">
+                                    <td class="px-3 py-2">
+                                        <div class="{{ $fitment['generation_id'] ? 'font-medium text-stone-900' : 'text-amber-700' }}">
+                                            {{ $this->fitmentLabels[$fitment['generation_id']] ?? 'Nealeasă — caută vehiculul mai sus' }}
+                                        </div>
+                                        <button type="button" @click="notes = !notes"
+                                                class="text-xs text-stone-500 hover:underline"
+                                                x-text="notes ? 'Ascunde notele' : 'Note montaj'"></button>
+                                        <textarea x-show="notes" x-cloak rows="2" class="mt-1"
+                                                  wire:model="fitments.{{ $index }}.notes"
+                                                  placeholder="Note montaj"></textarea>
+                                        @error('fitments.'.$index.'.generation_id') <span class="field-error">{{ $message }}</span> @enderror
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input type="number" wire:model="fitments.{{ $index }}.year_from" class="text-sm">
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input type="number" wire:model="fitments.{{ $index }}.year_to" class="text-sm">
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input wire:model="fitments.{{ $index }}.position" placeholder="față, spate…" class="text-sm">
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <input type="checkbox" wire:model="fitments.{{ $index }}.requires_modification"
+                                               aria-label="Necesită modificări">
+                                    </td>
+                                    <td class="px-3 py-2 text-right">
+                                        <button type="button" wire:click="removeFitment({{ $index }})"
+                                                class="text-sm font-semibold text-red-700 hover:underline"
+                                                aria-label="Elimină compatibilitatea">×</button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
-            @endforeach
+            @endif
         </section>
 
         <section x-show="tab === 'seo'" x-cloak class="grid gap-4">
