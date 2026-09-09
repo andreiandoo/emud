@@ -64,7 +64,9 @@ class ServiceDirectoryRelationsTest extends TestCase
         $this->assertSame(1, $fresh->appointments_count);
         $this->assertSame('Schimb ulei', $fresh->services->first()->name);
         $this->assertSame('Revizie', $fresh->services->first()->serviceCategory->name);
-        $this->assertSame('150.00', (string) $fresh->services->first()->pivot->price_from);
+        // Compared as a number: Postgres hands back 150.00 and SQLite 150, and the suite runs
+        // on both.
+        $this->assertEquals(150, $fresh->services->first()->pivot->price_from);
         $this->assertSame('Suzuki', $fresh->makes->first()->name);
         $this->assertSame(1, $fresh->hours->first()->weekday);
         $this->assertSame('service-shops/a.jpg', $fresh->media->first()->path);

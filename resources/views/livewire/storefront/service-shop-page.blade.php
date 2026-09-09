@@ -7,16 +7,8 @@
            :canonical="$shop->url()" />
 
     @push('meta')
-        <script type="application/ld+json">@json(\App\Directory\ShopStructuredData::for($shop), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
-        <script type="application/ld+json">@json([
-            '@context' => 'https://schema.org',
-            '@type' => 'BreadcrumbList',
-            'itemListElement' => [
-                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Service auto', 'item' => route('storefront.services')],
-                ['@type' => 'ListItem', 'position' => 2, 'name' => $shop->city, 'item' => route('storefront.services.city', $shop->citySegment())],
-                ['@type' => 'ListItem', 'position' => 3, 'name' => $shop->name, 'item' => $shop->url()],
-            ],
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
+        <script type="application/ld+json">@json($structuredData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
+        <script type="application/ld+json">@json($breadcrumbs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
     @endpush
 
     <nav class="flex flex-wrap items-center gap-1.5 text-xs text-stone-500" aria-label="Breadcrumb">

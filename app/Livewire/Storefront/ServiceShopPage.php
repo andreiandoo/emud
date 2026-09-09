@@ -4,6 +4,7 @@ namespace App\Livewire\Storefront;
 
 use App\Directory\AppointmentService;
 use App\Directory\LeadTracker;
+use App\Directory\ShopStructuredData;
 use App\Enums\AppointmentSlot;
 use App\Enums\ServiceLeadEventType;
 use App\Models\Order;
@@ -11,6 +12,7 @@ use App\Models\ServiceShop;
 use App\Storefront\Garage;
 use App\Storefront\VehicleContext;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -82,10 +84,13 @@ class ServiceShopPage extends Component
      * that changed shape and a workshop reached at the wrong city segment. Throwing the response
      * is Laravel's own mechanism for returning early from somewhere that cannot return a
      * response, which is exactly the position a Livewire mount is in.
+     *
+     * Built directly rather than through redirect(): inside a component that helper resolves to
+     * Livewire's own Redirector, which is not a Response and cannot be thrown.
      */
     private function permanentRedirect(string $url): never
     {
-        throw new HttpResponseException(redirect()->to($url, 301));
+        throw new HttpResponseException(new RedirectResponse($url, 301));
     }
 
     public function revealPhone(LeadTracker $leads): void
@@ -160,7 +165,31 @@ class ServiceShopPage extends Component
             'slots' => AppointmentSlot::cases(),
             'linkedOrder' => $this->resolvedOrder(),
             'nearby' => $this->nearby(),
+            'structuredData' => ShopStructuredData::for($this->shop),
+            'breadcrumbs' => $this->breadcrumbs(),
         ]);
+    }
+
+    /**
+     * Built here rather than inline in the template.
+     *
+     * Blade's @json directive takes its argument by matching the first balanced closing paren,
+     * so a literal array spread over several lines is cut in half and the compiled view is a
+     * parse error — one that only appears when the page is actually rendered.
+     *
+     * @return array<string, mixed>
+     */
+    private function breadcrumbs(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => [
+                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Service auto', 'item' => route('storefront.services')],
+                ['@type' => 'ListItem', 'position' => 2, 'name' => $this->shop->city, 'item' => route('storefront.services.city', $this->shop->citySegment())],
+                ['@type' => 'ListItem', 'position' => 3, 'name' => $this->shop->name, 'item' => $this->shop->url()],
+            ],
+        ];
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\ServiceShop;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -65,10 +66,13 @@ class ServiceCityPage extends Component
      * that changed shape and a workshop reached at the wrong city segment. Throwing the response
      * is Laravel's own mechanism for returning early from somewhere that cannot return a
      * response, which is exactly the position a Livewire mount is in.
+     *
+     * Built directly rather than through redirect(): inside a component that helper resolves to
+     * Livewire's own Redirector, which is not a Response and cannot be thrown.
      */
     private function permanentRedirect(string $url): never
     {
-        throw new HttpResponseException(redirect()->to($url, 301));
+        throw new HttpResponseException(new RedirectResponse($url, 301));
     }
 
     public function updated(string $property): void

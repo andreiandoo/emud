@@ -19,6 +19,16 @@ class CustomerVehicle extends Model
         ];
     }
 
+    /**
+     * The owner. Needed as a real relation, not just a column: whereBelongsTo() — which is how
+     * every ownership check on this model is written — resolves the relationship by name and
+     * throws without it.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function make(): BelongsTo
     {
         return $this->belongsTo(VehicleMake::class, 'make_id');
