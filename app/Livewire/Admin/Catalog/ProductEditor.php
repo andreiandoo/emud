@@ -2,10 +2,13 @@
 
 namespace App\Livewire\Admin\Catalog;
 
+use App\Commerce\LandedCostCalculator;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\SupplierOffer;
+use App\Models\SupplierProduct;
 use App\Models\VehicleGeneration;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -447,6 +450,60 @@ class ProductEditor extends Component
             ->mapWithKeys(fn (object $row): array => [
                 (int) $row->id => $row->label.' ('.$row->year_from.'–'.($row->year_to ?: 'prezent').')',
             ]);
+    }
+
+    /**
+     * Every supplier's offer for this product, side by side, in one currency.
+     *
+     * Comparing two suppliers on the price they quote picks the wrong one: a cheaper part with
+     * a dropship fee and freight on top routinely lands dearer than a pricier one that ships
+     * free. So the sort is on landed cost, and an offer that cannot be landed — no rate, no
+     * cost — says so rather than sorting as if it were free.
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    public function getSupplierOffersProperty(): Collection
+    {
+        if (! $this->product?->exists) {
+            return collect();
+        }
+
+        $landed = app(LandedCostCalculator::class);
+
+        return SupplierProduct::query()
+            ->with(['supplier:id,code,name', 'offer.warehouse:id,code,name,country_code'])
+            ->where('product_id', $this->product->id)
+            ->whereHas('offer')
+            ->get()
+            ->map(function (SupplierProduct $supplierProduct) use ($landed): array {
+                $offer = $supplierProduct->offer;
+                $cost = $landed->for($offer);
+
+                return [
+                    'supplier' => $supplierProduct->supplier,
+                    'sku' => $supplierProduct->supplier_sku ?: $supplierProduct->external_id,
+                    'offer' => $offer,
+                    'landed' => $cost,
+                    'dispatch' => $this->dispatchWindow($offer),
+                ];
+            })
+            ->sortBy(fn (array $row): float => $row['landed']['complete'] ? $row['landed']['unit_landed_cost'] : INF)
+            ->values();
+    }
+
+    /** "1–3 zile", or the lead time when the supplier only quotes that. */
+    private function dispatchWindow(SupplierOffer $offer): ?string
+    {
+        $min = $offer->dispatch_days_min;
+        $max = $offer->dispatch_days_max;
+
+        return match (true) {
+            $min !== null && $max !== null && $min !== $max => "{$min}–{$max} zile",
+            $min !== null => $min.' zile',
+            $max !== null => $max.' zile',
+            $offer->lead_time_days !== null => $offer->lead_time_days.' zile',
+            default => null,
+        };
     }
 
     /** @return list<int> */

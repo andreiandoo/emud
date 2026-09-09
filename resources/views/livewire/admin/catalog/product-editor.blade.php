@@ -258,6 +258,82 @@
                     </div>
                 </div>
             @endforeach
+
+            @if($product?->exists)
+                <div class="pt-4">
+                    <h2 class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                        Oferte de la furnizori
+                    </h2>
+                    <p class="mb-3 text-sm text-stone-500">
+                        Ordonate după costul final la ușă, nu după prețul cerut — o piesă mai ieftină cu taxă
+                        de dropship și transport ajunge des mai scumpă decât una cu transport inclus.
+                    </p>
+
+                    @forelse($this->supplierOffers as $row)
+                        @php($offer = $row['offer'])
+                        @php($landed = $row['landed'])
+                        <div wire:key="offer-{{ $offer->id }}"
+                             class="mb-2 grid gap-3 rounded-xl border border-stone-200 bg-white p-4 md:grid-cols-6">
+                            <div class="md:col-span-2">
+                                <div class="font-medium text-stone-900">{{ $row['supplier']->name }}</div>
+                                <div class="text-xs text-stone-500">
+                                    {{ $row['sku'] }}
+                                    @if($offer->warehouse)· {{ $offer->warehouse->code }}@endif
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="field-label">Cost furnizor</span>
+                                <div class="text-sm tabular-nums">
+                                    {{ $offer->cost_price !== null ? \App\Support\Money::of($offer->cost_price, $offer->currency)->format() : '—' }}
+                                </div>
+                                @if($offer->base_cost_net !== null && $offer->base_currency !== $offer->currency)
+                                    <div class="text-xs text-stone-500 tabular-nums">
+                                        = {{ \App\Support\Money::of($offer->base_cost_net, $offer->base_currency)->format() }}
+                                        @if($offer->fx_rate)<span class="text-stone-400">@ {{ rtrim(rtrim(number_format((float) $offer->fx_rate, 4), '0'), '.') }}</span>@endif
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div>
+                                <span class="field-label">Transport</span>
+                                <div class="text-sm tabular-nums">
+                                    {{ $offer->shipping_cost_estimate !== null ? \App\Support\Money::of($offer->shipping_cost_estimate, $offer->currency)->format() : '—' }}
+                                </div>
+                                <div class="text-xs text-stone-500">{{ $row['dispatch'] ?? 'termen necunoscut' }}</div>
+                            </div>
+
+                            <div>
+                                <span class="field-label">Cost final</span>
+                                @if($landed['complete'])
+                                    <div class="text-sm font-semibold tabular-nums text-stone-900">
+                                        {{ \App\Support\Money::of($landed['unit_landed_cost'], $landed['currency'])->format() }}
+                                    </div>
+                                @else
+                                    {{-- Naming what is missing, because "—" here reads as "free". --}}
+                                    <div class="text-sm text-amber-700">incomplet</div>
+                                    <div class="text-xs text-amber-700">lipsă: {{ implode(', ', $landed['missing']) }}</div>
+                                @endif
+                            </div>
+
+                            <div>
+                                <span class="field-label">Stoc</span>
+                                <div class="text-sm tabular-nums">
+                                    {{ $offer->stock_quantity !== null ? number_format($offer->stock_quantity) : $offer->stock_status }}
+                                </div>
+                                @if($offer->is_dropship_eligible === false)
+                                    <div class="text-xs text-red-700">fără dropship</div>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-sm text-stone-500">
+                            Niciun furnizor nu are încă acest produs. Ofertele apar după ce un feed îl aduce
+                            și se mapează pe piesa canonică.
+                        </p>
+                    @endforelse
+                </div>
+            @endif
         </section>
 
         <section x-show="tab === 'attributes'" x-cloak class="space-y-4">
