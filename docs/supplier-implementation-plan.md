@@ -6,6 +6,32 @@
 
 ---
 
+## Jurnal de execuție
+
+Ce s-a terminat efectiv, cu deciziile luate pe parcurs. Planul de mai jos rămâne valabil; secțiunea asta spune unde suntem în el.
+
+### 2026-09-08 / 09 — stratul de vehicule, închis
+
+**EEA — complet.** 223,805 înregistrări în staging, 221,847 configurații canonice, 863 mărci cu vehicule reale în spate. Importul nu se terminase niciodată înainte: paginarea cu OFFSET peste tot tabelul îl obliga pe Discodata să resorteze întregul `DISTINCT` la fiecare pagină, deci paginile încetineau cu adâncimea — 8s la pagina 1, 22s la pagina 1,099. La ~46 înregistrări/s, cele 1,53M de rânduri cereau ~7,5 ore contra unui timeout de job de 2. Împărțirea crawl-ului pe producător aduce pagina la 1-2s. Timeout-urile Discodata (HTTP 200 cu cheie `errors`, invizibile pentru retry-ul clientului HTTP) se reîncearcă acum în loc să omoare rularea.
+
+Cele 1,53M de rânduri devin 223,805 înregistrări pentru că EEA e un registru de înmatriculări: aceeași configurație apare de zeci de ori cu măsurători diferite de CO2 și masă, iar `external_id` hash-uiește doar coloanele de identitate. **Compromis acceptat:** masa (`m (kg)`) nu e în identitate, deci se păstrează o valoare arbitrară per configurație. Irelevant pentru fitment; de reconsiderat dacă va fi nevoie de intervalul de masă.
+
+**vPIC — complet pe modul `catalog`.** 67,348 înregistrări: 22,991 producători, 12,359 mărci, 31,998 modele, în 15 minute.
+
+**vPIC — modurile de referință, respinse deliberat.** `model_years` cere 383,129 apeluri (12,359 mărci × 31 ani) cu lot de 5 mărci, adică 2,472 dispecerizări; `manufacturer_links` ~1,000; `vehicle_types` 248. În plus fiecare dispecerizare reface lista completă de mărci sau producători înainte să înceapă lucrul. Alternativa corectă e `catalog:vpic:install`, care restaurează dump-ul PostgreSQL oficial NHTSA. **Amânat:** `resolver_mode` e pe `http` și decodarea VIN funcționează; instalarea standalone costă câțiva GB pe un server partajat și se face când volumul o justifică.
+
+**Wikidata — sărit deliberat.** Nu e sursă de import (nu are `connector_class`); `catalog:wikidata:enrich` îmbogățește entități existente cu alias-uri localizate și QID-uri. După vPIC ar însemna o căutare API pentru fiecare din 13,138 de mărci, majoritatea ateliere americane fără intrare în Wikidata. De reluat restrâns, dacă și când calitatea căutării o cere.
+
+**Bug reparat, cu efect retroactiv.** `CanonicalizeCatalogSourceRecords` și `MatchSupplierProductsToCatalog` paginau cu `each()`, care e bazat pe OFFSET, în timp ce callback-ul muta înregistrările în afara statusurilor pe care query-ul filtrează. Publicarea unei pagini micșora setul cu o pagină, deci offset-ul următor sărea peste înregistrări neprocesate — iar rularea raporta „completed" după ce procesase aproximativ o pagină din două. Asta explică LIFEOFCAPO: 6,172 stageate, două rulări, 3,642 publicate. Trecut pe `chunkById`. Canonicalizarea își pune singură la coadă lotul următor, altfel o sursă mai mare decât un lot rămânea pe jumătate.
+
+**Selectorul de vehicul.** vPIC a dus dropdown-ul din magazin de la 899 la 13,138 de mărci, din care doar 863 au vehicule. Înregistrările rămân — sunt necesare pentru VIN — dar selectorul filtrează acum ambele niveluri la ce are configurații în spate.
+
+**`suppliers:onboarding-check`.** Comutatoarele care opresc promovarea tehnică eșuează toate în tăcere. Comanda le raportează înainte de import, plus câmpurile lipsă din `field_mapping` și listele mapate fără delimitator.
+
+**Ce blochează acum:** nimic tehnic. Traseul furnizor → piesă canonică e implementat și testat; lipsesc datele reale de la un furnizor.
+
+---
+
 ## 0. Punctul de plecare real
 
 Specificația de la ChatGPT presupune că pornim de la zero. Nu e cazul. Codul are deja o bună parte din „Phase 1" cerut în secțiunea 22 a spec-ului.
