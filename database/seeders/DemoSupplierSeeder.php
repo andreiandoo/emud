@@ -44,23 +44,27 @@ class DemoSupplierSeeder extends Seeder
      * ones get a single SKU fitted to everything. Categories are the Romanian names from
      * CategorySeeder, because that is what the canonicalizer matches on.
      *
-     * @var list<array{code: string, category: string, brand: string, name: string, specific: bool, cost: float, rrp: float, weight: float}>
+     * `dims` is length/width/height in centimetres. `specs` keys are deliberately the codes from
+     * AttributeSeeder: the importer only writes attributes the catalogue already defines, so a
+     * made-up key would be silently dropped and the product would look empty again.
+     *
+     * @var list<array{code: string, category: string, brand: string, name: string, specific: bool, cost: float, rrp: float, weight: float, dims: array{0: float, 1: float, 2: float}, specs: array<string, string>}>
      */
     private const FAMILIES = [
-        ['code' => 'SNK', 'category' => 'Snorkele', 'brand' => 'Kestrel 4x4', 'name' => 'Snorkel admisie aer', 'specific' => true, 'cost' => 178.0, 'rrp' => 329.0, 'weight' => 3.4],
-        ['code' => 'BUL', 'category' => 'Bare Față', 'brand' => 'Tundra Overland', 'name' => 'Bară față din oțel', 'specific' => true, 'cost' => 742.0, 'rrp' => 1290.0, 'weight' => 48.0],
-        ['code' => 'SLD', 'category' => 'Praguri laterale', 'brand' => 'Tundra Overland', 'name' => 'Praguri laterale întărite', 'specific' => true, 'cost' => 288.0, 'rrp' => 519.0, 'weight' => 22.5],
-        ['code' => 'SKD', 'category' => 'Scuturi Metalice', 'brand' => 'Axlelock', 'name' => 'Scut motor din aluminiu 6 mm', 'specific' => true, 'cost' => 214.0, 'rrp' => 389.0, 'weight' => 11.2],
-        ['code' => 'LFT', 'category' => 'Kit-uri de înălțare', 'brand' => 'Boreal Suspension', 'name' => 'Kit înălțare 50 mm', 'specific' => true, 'cost' => 396.0, 'rrp' => 715.0, 'weight' => 26.0],
-        ['code' => 'SHK', 'category' => 'Amortizoare', 'brand' => 'Boreal Suspension', 'name' => 'Set amortizoare off-road', 'specific' => true, 'cost' => 312.0, 'rrp' => 559.0, 'weight' => 14.8],
-        ['code' => 'DIF', 'category' => 'Diferențiale blocabile', 'brand' => 'Axlelock', 'name' => 'Diferențial blocabil pneumatic', 'specific' => true, 'cost' => 964.0, 'rrp' => 1690.0, 'weight' => 9.6],
-        ['code' => 'MAT', 'category' => 'Covorașe & Tăvițe portbagaj', 'brand' => 'Kestrel 4x4', 'name' => 'Tăviță portbagaj cauciuc', 'specific' => true, 'cost' => 41.0, 'rrp' => 89.0, 'weight' => 2.9],
-        ['code' => 'AIR', 'category' => 'Filtre aer', 'brand' => 'Kestrel 4x4', 'name' => 'Filtru aer sport lavabil', 'specific' => true, 'cost' => 34.0, 'rrp' => 79.0, 'weight' => 0.6],
-        ['code' => 'LED', 'category' => 'Bare LED', 'brand' => 'Northline Optics', 'name' => 'Bară LED 42" combo 240 W', 'specific' => false, 'cost' => 128.0, 'rrp' => 249.0, 'weight' => 4.1],
-        ['code' => 'SPT', 'category' => 'Proiectoare', 'brand' => 'Northline Optics', 'name' => 'Set proiectoare LED 7"', 'specific' => false, 'cost' => 96.0, 'rrp' => 189.0, 'weight' => 2.8],
-        ['code' => 'RTT', 'category' => 'Corturi de acoperiș Hard Top', 'brand' => 'Ridgeline Camp', 'name' => 'Cort de plafon hard-top 2 persoane', 'specific' => false, 'cost' => 1180.0, 'rrp' => 1990.0, 'weight' => 62.0],
-        ['code' => 'RCK', 'category' => 'Portbagaje', 'brand' => 'Ridgeline Camp', 'name' => 'Platformă portbagaj aluminiu', 'specific' => false, 'cost' => 448.0, 'rrp' => 799.0, 'weight' => 19.4],
-        ['code' => 'WHL', 'category' => 'Jante oțel Off-Road', 'brand' => 'Axlelock', 'name' => 'Jantă oțel 16x7 ET-10', 'specific' => false, 'cost' => 62.0, 'rrp' => 129.0, 'weight' => 10.8],
+        ['code' => 'SNK', 'category' => 'Snorkele', 'brand' => 'Kestrel 4x4', 'name' => 'Snorkel admisie aer', 'specific' => true, 'cost' => 178.0, 'rrp' => 329.0, 'weight' => 3.4, 'dims' => [120.0, 24.0, 18.0], 'specs' => ['material' => 'Polietilenă rotomulată', 'position' => 'Lateral dreapta']],
+        ['code' => 'BUL', 'category' => 'Bare Față', 'brand' => 'Tundra Overland', 'name' => 'Bară față din oțel', 'specific' => true, 'cost' => 742.0, 'rrp' => 1290.0, 'weight' => 48.0, 'dims' => [186.0, 62.0, 44.0], 'specs' => ['material' => 'Oțel 3 mm', 'position' => 'Față']],
+        ['code' => 'SLD', 'category' => 'Praguri laterale', 'brand' => 'Tundra Overland', 'name' => 'Praguri laterale întărite', 'specific' => true, 'cost' => 288.0, 'rrp' => 519.0, 'weight' => 22.5, 'dims' => [198.0, 28.0, 22.0], 'specs' => ['material' => 'Oțel 2,5 mm', 'position' => 'Lateral']],
+        ['code' => 'SKD', 'category' => 'Scuturi Metalice', 'brand' => 'Axlelock', 'name' => 'Scut motor din aluminiu 6 mm', 'specific' => true, 'cost' => 214.0, 'rrp' => 389.0, 'weight' => 11.2, 'dims' => [92.0, 74.0, 9.0], 'specs' => ['material' => 'Aluminiu 6 mm', 'position' => 'Sub motor']],
+        ['code' => 'LFT', 'category' => 'Kit-uri de înălțare', 'brand' => 'Boreal Suspension', 'name' => 'Kit înălțare 50 mm', 'specific' => true, 'cost' => 396.0, 'rrp' => 715.0, 'weight' => 26.0, 'dims' => [64.0, 44.0, 38.0], 'specs' => ['lift_height' => '50', 'axle_load' => '1250']],
+        ['code' => 'SHK', 'category' => 'Amortizoare', 'brand' => 'Boreal Suspension', 'name' => 'Set amortizoare off-road', 'specific' => true, 'cost' => 312.0, 'rrp' => 559.0, 'weight' => 14.8, 'dims' => [72.0, 32.0, 26.0], 'specs' => ['lift_height' => '40', 'position' => 'Față și spate']],
+        ['code' => 'DIF', 'category' => 'Diferențiale blocabile', 'brand' => 'Axlelock', 'name' => 'Diferențial blocabil pneumatic', 'specific' => true, 'cost' => 964.0, 'rrp' => 1690.0, 'weight' => 9.6, 'dims' => [38.0, 34.0, 24.0], 'specs' => ['axle_load' => '1600', 'position' => 'Punte spate']],
+        ['code' => 'MAT', 'category' => 'Covorașe & Tăvițe portbagaj', 'brand' => 'Kestrel 4x4', 'name' => 'Tăviță portbagaj cauciuc', 'specific' => true, 'cost' => 41.0, 'rrp' => 89.0, 'weight' => 2.9, 'dims' => [108.0, 96.0, 6.0], 'specs' => ['material' => 'Cauciuc TPE']],
+        ['code' => 'AIR', 'category' => 'Filtre aer', 'brand' => 'Kestrel 4x4', 'name' => 'Filtru aer sport lavabil', 'specific' => true, 'cost' => 34.0, 'rrp' => 79.0, 'weight' => 0.6, 'dims' => [24.0, 19.0, 7.0], 'specs' => ['material' => 'Bumbac uleiat']],
+        ['code' => 'LED', 'category' => 'Bare LED', 'brand' => 'Northline Optics', 'name' => 'Bară LED 42" combo 240 W', 'specific' => false, 'cost' => 128.0, 'rrp' => 249.0, 'weight' => 4.1, 'dims' => [107.0, 9.0, 8.0], 'specs' => ['lumens' => '21600', 'voltage' => '12', 'beam_pattern' => 'Combo', 'ip_rating' => 'IP68']],
+        ['code' => 'SPT', 'category' => 'Proiectoare', 'brand' => 'Northline Optics', 'name' => 'Set proiectoare LED 7"', 'specific' => false, 'cost' => 96.0, 'rrp' => 189.0, 'weight' => 2.8, 'dims' => [19.0, 19.0, 11.0], 'specs' => ['lumens' => '9800', 'voltage' => '12', 'beam_pattern' => 'Spot', 'ip_rating' => 'IP67']],
+        ['code' => 'RTT', 'category' => 'Corturi de acoperiș Hard Top', 'brand' => 'Ridgeline Camp', 'name' => 'Cort de plafon hard-top 2 persoane', 'specific' => false, 'cost' => 1180.0, 'rrp' => 1990.0, 'weight' => 62.0, 'dims' => [212.0, 128.0, 32.0], 'specs' => ['material' => 'ABS și poliester 600D']],
+        ['code' => 'RCK', 'category' => 'Portbagaje', 'brand' => 'Ridgeline Camp', 'name' => 'Platformă portbagaj aluminiu', 'specific' => false, 'cost' => 448.0, 'rrp' => 799.0, 'weight' => 19.4, 'dims' => [140.0, 105.0, 14.0], 'specs' => ['material' => 'Aluminiu anodizat', 'position' => 'Plafon']],
+        ['code' => 'WHL', 'category' => 'Jante oțel Off-Road', 'brand' => 'Axlelock', 'name' => 'Jantă oțel 16x7 ET-10', 'specific' => false, 'cost' => 62.0, 'rrp' => 129.0, 'weight' => 10.8, 'dims' => [41.0, 41.0, 19.0], 'specs' => ['rim_diameter' => '16', 'wheel_width' => '7', 'wheel_offset' => '-10', 'bolt_pattern' => '5x139.7', 'center_bore' => '108.1']],
     ];
 
     public function run(): void
@@ -221,17 +225,19 @@ class DemoSupplierSeeder extends Seeder
             'currency' => 'EUR',
             'qty' => (string) (3 + ($index * 7) % 40),
             'weight_kg' => number_format($family['weight'], 2, '.', ''),
+            'length_cm' => number_format($family['dims'][0], 1, '.', ''),
+            'width_cm' => number_format($family['dims'][1], 1, '.', ''),
+            'height_cm' => number_format($family['dims'][2], 1, '.', ''),
             'oem_refs' => implode('|', [$this->reference('OE', $mpn, 1), $this->reference('OE', $mpn, 2)]),
             'cross_refs' => $this->reference('XR', $mpn, 3),
             'fitment' => json_encode(
                 array_map(static fn (int $id): array => ['configuration_id' => $id], $configurationIds),
                 JSON_THROW_ON_ERROR,
             ),
-            'specs' => json_encode([
-                'Material' => $family['code'] === 'SKD' ? 'Aluminiu 6 mm' : 'Oțel vopsit în câmp electrostatic',
-                'Montaj' => $family['specific'] ? 'Dedicat' : 'Universal',
-                'Garanție' => '24 luni',
-            ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'specs' => json_encode(
+                $family['specs'] + ['weight_kg' => number_format($family['weight'], 2, '.', ''), 'Garanție' => '24 luni'],
+                JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+            ),
             'image_urls' => '',
         ];
     }
@@ -307,6 +313,9 @@ class DemoSupplierSeeder extends Seeder
                 'currency' => 'currency',
                 'stock_quantity' => 'qty',
                 'weight_kg' => 'weight_kg',
+                'length_cm' => 'length_cm',
+                'width_cm' => 'width_cm',
+                'height_cm' => 'height_cm',
                 'oe_numbers' => 'oem_refs',
                 'cross_references' => 'cross_refs',
                 'fitments' => 'fitment',

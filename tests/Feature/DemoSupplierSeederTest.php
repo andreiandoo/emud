@@ -9,6 +9,8 @@ use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
+use Database\Seeders\AttributeSeeder;
+use Database\Seeders\CategorySeeder;
 use Database\Seeders\DemoSupplierSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -100,6 +102,54 @@ class DemoSupplierSeederTest extends TestCase
         $this->artisan('suppliers:publish-feed-products '.DemoSupplierSeeder::CODE)->assertSuccessful();
 
         $this->assertSame(ProductStatus::Review, $handmade->fresh()->status);
+    }
+
+    /**
+     * The importer used to create a shell: name, brand, MPN, description and nothing else. Every
+     * supplier, real or demo, produced products with no category, no weight, no dimensions, no
+     * specifications and no compatibility — which is not something you can build a shop on.
+     */
+    public function test_an_imported_product_carries_the_data_the_feed_supplied(): void
+    {
+        Storage::fake('local');
+        $this->seed(CategorySeeder::class);
+        $this->seed(AttributeSeeder::class);
+        $this->seed(DemoSupplierSeeder::class);
+        $this->artisan('suppliers:sync '.DemoSupplierSeeder::CODE.' --mode=catalog')->assertSuccessful();
+
+        $product = Product::query()
+            ->with(['categories', 'attributeValues', 'fitments'])
+            ->where('name', 'like', 'Bară față din oțel%')
+            ->firstOrFail();
+
+        $this->assertNotNull($product->short_description);
+        $this->assertSame(24, $product->warranty_months);
+        $this->assertEqualsWithDelta(48.0, (float) $product->weight_kg, 0.001);
+        $this->assertSame(['length' => 186.0, 'width' => 62.0, 'height' => 44.0], array_map('floatval', $product->dimensions_cm));
+        $this->assertGreaterThan(0, $product->categories->count());
+        $this->assertGreaterThan(0, $product->attributeValues->count());
+        $this->assertGreaterThan(0, $product->fitments->count());
+        $this->assertFalse($product->is_universal);
+    }
+
+    /** A part that fits nothing in particular has to be offered to everyone, not to no one. */
+    public function test_a_part_without_fitments_is_marked_universal(): void
+    {
+        Storage::fake('local');
+        $this->seed(DemoSupplierSeeder::class);
+
+        $importer = app(\App\Suppliers\SupplierCatalogImporter::class);
+        $supplier = Supplier::query()->where('code', DemoSupplierSeeder::CODE)->firstOrFail();
+        $importer->import($supplier, new \App\Suppliers\Data\SupplierRecord(
+            externalId: 'NO-FIT-1',
+            name: 'Trusă de scule universală',
+            brand: 'Kestrel 4x4',
+            manufacturerPartNumber: 'KST-TOOL-1',
+        ), 'catalog');
+
+        $product = Product::query()->where('name', 'Trusă de scule universală')->firstOrFail();
+
+        $this->assertTrue($product->is_universal);
     }
 
     public function test_the_demo_supplier_passes_its_own_onboarding_check(): void

@@ -5,7 +5,9 @@ namespace App\Suppliers;
 use App\Commerce\CurrencyConverter;
 use App\Enums\ProductStatus;
 use App\Jobs\EvaluateProductAlerts;
+use App\Models\Attribute;
 use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Supplier;
@@ -13,6 +15,7 @@ use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
 use App\Models\SupplierSyncRun;
 use App\Models\SupplierWarehouse;
+use App\Models\VehicleConfiguration;
 use App\Suppliers\Data\SupplierRecord;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -255,9 +258,20 @@ class SupplierCatalogImporter
             'sku' => null,
             'manufacturer_part_number' => $record->manufacturerPartNumber,
             'status' => ProductStatus::Review,
+            'short_description' => $this->shortDescription($record),
             'description' => $record->description,
+            // Nothing to fit means it applies to everything, which is what the storefront reads
+            // to decide whether to show a product to a customer who has picked a vehicle.
+            'is_universal' => $record->fitments === [],
+            'warranty_months' => $this->warrantyMonths($record),
+            'weight_kg' => $record->packedWeightKg ?? $record->weightKg,
+            'dimensions_cm' => $this->dimensions($record),
             'metadata' => ['created_from_supplier' => $supplier->code],
         ]);
+
+        $this->attachCategory($supplier, $product, $record);
+        $this->attachAttributes($product, $record);
+        $this->attachFitments($product, $record);
 
         return $product->variants()->create([
             'sku' => $supplier->code.'-'.($record->sku ?: $record->externalId),
@@ -265,6 +279,174 @@ class SupplierCatalogImporter
             'manufacturer_part_number' => $record->manufacturerPartNumber,
             'retail_price' => $record->recommendedRetailPrice,
             'currency' => $record->currency,
+            'weight_kg' => $record->weightKg,
         ]);
+    }
+
+    /**
+     * Feeds rarely carry a separate teaser, so the first sentence of the description stands in.
+     * A product listing with no summary at all reads as broken; a truncated one does not.
+     */
+    private function shortDescription(SupplierRecord $record): ?string
+    {
+        if (blank($record->description)) {
+            return null;
+        }
+
+        $firstSentence = preg_split('/(?<=[.!?])\s+/', trim($record->description), 2)[0] ?? '';
+
+        return Str::limit($firstSentence !== '' ? $firstSentence : trim($record->description), 250);
+    }
+
+    /** @return array<string, float>|null */
+    private function dimensions(SupplierRecord $record): ?array
+    {
+        $dimensions = array_filter([
+            'length' => $record->lengthCm,
+            'width' => $record->widthCm,
+            'height' => $record->heightCm,
+        ], static fn (?float $value): bool => $value !== null);
+
+        return $dimensions === [] ? null : $dimensions;
+    }
+
+    /**
+     * Warranty is not a first-class feed field anywhere, but suppliers do put it in their spec
+     * blob, so it is read from there rather than left empty on every product.
+     */
+    private function warrantyMonths(SupplierRecord $record): ?int
+    {
+        foreach ($record->attributes as $key => $value) {
+            if (! preg_match('/garan|warrant/i', (string) $key)) {
+                continue;
+            }
+
+            if (preg_match('/(\d+)/', (string) $value, $matches)) {
+                $months = (int) $matches[1];
+
+                // "2 ani" and "24 luni" are the same warranty spelled two ways.
+                return preg_match('/an|year/i', (string) $value) && $months <= 10 ? $months * 12 : $months;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The supplier's own category label is matched against the tree by name or full path, the
+     * same way the canonicalizer does it, and through the same mapping rules an operator would
+     * use to correct it. An unmatched label leaves the product uncategorised rather than
+     * inventing a branch nobody asked for.
+     */
+    private function attachCategory(Supplier $supplier, Product $product, SupplierRecord $record): void
+    {
+        if (blank($record->categoryExternalId)) {
+            return;
+        }
+
+        $label = trim($record->categoryExternalId);
+        $mapped = $supplier->settings['category_map'][$label] ?? null;
+
+        $category = is_numeric($mapped)
+            ? Category::query()->find((int) $mapped)
+            : Category::query()->where('full_path', 'ilike', $label)->orWhere('name', 'ilike', $label)->first();
+
+        if ($category) {
+            $product->categories()->syncWithoutDetaching([$category->id => ['is_primary' => true]]);
+        }
+    }
+
+    /**
+     * Only attributes the catalogue already defines are written, matched on code or name. A
+     * supplier inventing attribute definitions would turn the filter sidebar into a junk drawer
+     * within one import.
+     */
+    private function attachAttributes(Product $product, SupplierRecord $record): void
+    {
+        foreach ($record->attributes as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $code = (string) $key;
+            $attribute = Attribute::query()
+                ->where('code', $code)
+                ->orWhere('name', 'ilike', $code)
+                ->first();
+
+            if (! $attribute) {
+                continue;
+            }
+
+            $product->attributeValues()->create(
+                ['attribute_id' => $attribute->id] + $this->attributeValue($attribute, $value),
+            );
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function attributeValue(Attribute $attribute, mixed $value): array
+    {
+        if (in_array($attribute->type, ['select', 'color'], true)) {
+            $option = $attribute->options()
+                ->where(fn ($query) => $query->where('value', (string) $value)->orWhere('label', 'ilike', (string) $value))
+                ->first();
+
+            // A value the attribute has no option for is still worth keeping as text: losing it
+            // would hide a real specification just because the option list is incomplete.
+            return $option ? ['option_id' => $option->id] : ['value_text' => (string) $value];
+        }
+
+        return match (true) {
+            $attribute->type === 'number' && is_numeric($value) => ['value_number' => $value],
+            $attribute->type === 'boolean' => ['value_boolean' => (bool) $value],
+            is_array($value) => ['value_json' => $value],
+            default => ['value_text' => is_scalar($value) ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE)],
+        };
+    }
+
+    /**
+     * Feed fitments name a vehicle configuration; product fitments are recorded at generation
+     * level, which is the granularity the storefront filters on. Several configurations of the
+     * same generation therefore collapse into one row rather than repeating it per engine.
+     */
+    private function attachFitments(Product $product, SupplierRecord $record): void
+    {
+        $configurationIds = [];
+
+        foreach ($record->fitments as $fitment) {
+            $id = is_array($fitment) ? ($fitment['configuration_id'] ?? null) : null;
+            if (is_numeric($id)) {
+                $configurationIds[] = (int) $id;
+            }
+        }
+
+        if ($configurationIds === []) {
+            return;
+        }
+
+        $generations = VehicleConfiguration::query()
+            ->with('generation.model')
+            ->whereIn('id', array_unique($configurationIds))
+            ->get()
+            ->groupBy('generation_id');
+
+        foreach ($generations as $configurations) {
+            $generation = $configurations->first()->generation;
+            if (! $generation?->model) {
+                continue;
+            }
+
+            $years = $configurations->pluck('year')->filter();
+
+            $product->fitments()->create([
+                'make_id' => $generation->model->make_id,
+                'model_id' => $generation->model_id,
+                'generation_id' => $generation->id,
+                'year_from' => $years->min() ?: $generation->year_from,
+                'year_to' => $years->max() ?: $generation->year_to,
+                'source' => 'supplier',
+            ]);
+        }
     }
 }
