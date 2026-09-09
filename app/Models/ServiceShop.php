@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Directory\OpeningSchedule;
+use App\Directory\ShopFacilities;
 use App\Enums\ServicePromotionTier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ServiceShop extends Model
@@ -17,7 +21,11 @@ class ServiceShop extends Model
     {
         return [
             'specialities' => 'array',
+            'amenities' => 'array',
+            'payment_methods' => 'array',
+            'certifications' => 'array',
             'fits_parts_bought_here' => 'boolean',
+            'accepts_appointments' => 'boolean',
             'promotion_tier' => ServicePromotionTier::class,
             'promoted_until' => 'date',
         ];
@@ -28,9 +36,78 @@ class ServiceShop extends Model
         return 'slug';
     }
 
+    /**
+     * The city slug is part of the public URL, so a row created by a seeder, an import or a test
+     * has to get one too. Derived here rather than in the editor, which is only one of the ways
+     * a workshop reaches the table.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $shop): void {
+            if (($shop->city_slug ?? '') === '' && ($shop->city ?? '') !== '') {
+                $shop->city_slug = str($shop->city)->slug()->value() ?: 'necunoscut';
+            }
+        });
+    }
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'published');
+    }
+
+    /**
+     * Paid position, expired promotions excluded, then name. Written as SQL rather than sorted
+     * in PHP so the ordering survives pagination: sorting a page in memory would rank twenty
+     * rows against each other instead of the whole directory.
+     */
+    public function scopePromotedFirst(Builder $query): Builder
+    {
+        return $query->orderByRaw(
+            "case when promoted_until is not null and promoted_until < current_date then 0
+                  when promotion_tier = 'premium' then 3
+                  when promotion_tier = 'featured' then 2
+                  when promotion_tier = 'listed' then 1
+                  else 0 end desc"
+        );
+    }
+
+    public function scopeOpenNow(Builder $query): Builder
+    {
+        [$sql, $bindings] = OpeningSchedule::openNowConstraint();
+
+        return $query->whereRaw($sql, $bindings);
+    }
+
+    public function hours(): HasMany
+    {
+        return $this->hasMany(ServiceShopHour::class)->orderBy('weekday');
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(ServiceShopMedium::class)->orderBy('position');
+    }
+
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class)
+            ->withPivot(['price_from', 'price_to', 'currency', 'duration_minutes', 'note'])
+            ->withTimestamps();
+    }
+
+    public function makes(): BelongsToMany
+    {
+        return $this->belongsToMany(VehicleMake::class, 'service_shop_vehicle_make')->orderBy('name');
+    }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(ServiceAppointment::class);
+    }
+
+    public function leadEvents(): HasMany
+    {
+        return $this->hasMany(ServiceShopLeadEvent::class);
     }
 
     /**
@@ -52,5 +129,56 @@ class ServiceShop extends Model
     public function specialityList(): array
     {
         return array_values(array_filter(array_map('strval', (array) $this->specialities)));
+    }
+
+    public function schedule(): OpeningSchedule
+    {
+        return OpeningSchedule::make($this->relationLoaded('hours') ? $this->hours : $this->hours()->get());
+    }
+
+    /** @return array<string, string> */
+    public function amenityLabels(): array
+    {
+        return ShopFacilities::labels($this->amenities, ShopFacilities::AMENITIES);
+    }
+
+    /** @return array<string, string> */
+    public function paymentLabels(): array
+    {
+        return ShopFacilities::labels($this->payment_methods, ShopFacilities::PAYMENT_METHODS);
+    }
+
+    /** @return array<string, string> */
+    public function certificationLabels(): array
+    {
+        return ShopFacilities::labels($this->certifications, ShopFacilities::CERTIFICATIONS);
+    }
+
+    /**
+     * The city segment of the public URL. Falls back to the slugged city so a listing saved
+     * before the column existed still resolves rather than 404ing on a null path.
+     */
+    public function citySegment(): string
+    {
+        return $this->city_slug ?: (str($this->city)->slug()->value() ?: 'necunoscut');
+    }
+
+    public function url(): string
+    {
+        return route('storefront.service', ['city' => $this->citySegment(), 'slug' => $this->slug]);
+    }
+
+    /**
+     * A link that opens the customer's own map application. Coordinates are used when we have
+     * them because a pin is unambiguous; the written address is the fallback and is often good
+     * enough for a workshop on a named street.
+     */
+    public function directionsUrl(): string
+    {
+        $destination = $this->latitude && $this->longitude
+            ? "{$this->latitude},{$this->longitude}"
+            : trim(implode(', ', array_filter([$this->address, $this->city, $this->county])));
+
+        return 'https://www.google.com/maps/dir/?api=1&destination='.urlencode($destination);
     }
 }

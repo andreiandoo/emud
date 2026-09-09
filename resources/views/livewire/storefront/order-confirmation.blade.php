@@ -43,5 +43,33 @@
         </div>
     </div>
 
+    @if($fitters->isNotEmpty())
+        {{-- The one moment the customer is certainly thinking about who will fit the part.
+             The order token travels with the link so the request arrives at the workshop with
+             the parts list attached instead of "ceva de la eMUD". --}}
+        <section class="space-y-3 rounded-xl border border-stone-900 bg-white p-6">
+            <h2 class="text-lg font-bold tracking-tight">Ai nevoie de montaj?</h2>
+            <p class="text-sm text-stone-600">
+                Service-uri din {{ $order->shippingAddress?->city }} care montează piese cumpărate de la noi.
+            </p>
+
+            <div class="space-y-2">
+                @foreach($fitters as $fitter)
+                    <a href="{{ $fitter->url() }}?order={{ $order->checkout_token }}#programare"
+                       class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 p-4 transition hover:border-stone-900">
+                        <span class="min-w-0">
+                            <span class="block font-semibold text-stone-900">{{ $fitter->name }}</span>
+                            <span class="block text-sm text-stone-500">{{ $fitter->address ?: $fitter->city }}</span>
+                        </span>
+                        <span class="shrink-0 text-sm font-semibold text-stone-900 underline underline-offset-4">Cere o programare</span>
+                    </a>
+                @endforeach
+            </div>
+
+            <a href="{{ route('storefront.services', ['city' => $order->shippingAddress?->city, 'fitsOurParts' => 1]) }}"
+               class="inline-block text-sm font-semibold underline underline-offset-4">Vezi toate service-urile din oraș</a>
+        </section>
+    @endif
+
     <a href="{{ route('storefront.home') }}" class="inline-block text-sm font-semibold underline">Înapoi în magazin</a>
 </div>

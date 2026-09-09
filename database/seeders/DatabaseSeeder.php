@@ -15,6 +15,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CategorySeeder::class,
             AttributeSeeder::class,
+            // After the categories: each job links to the parts category it consumes, and the
+            // link is looked up by path.
+            ServiceCatalogSeeder::class,
             CommerceProviderSeeder::class,
             CatalogSourceSeeder::class,
             SupplierProfileSeeder::class,

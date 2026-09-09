@@ -67,11 +67,18 @@ class AdminNavigation
                 ],
             ],
             [
+                'label' => 'Service auto',
+                'items' => [
+                    ['route' => 'admin.service-shops.index', 'label' => 'Ateliere', 'icon' => 'wrench'],
+                    ['route' => 'admin.service-catalog', 'label' => 'Lucrări & servicii', 'icon' => 'sliders'],
+                    ['route' => 'admin.service-appointments', 'label' => 'Cereri de programare', 'icon' => 'history'],
+                ],
+            ],
+            [
                 'label' => 'Conținut',
                 'items' => [
                     ['route' => 'admin.pages.index', 'label' => 'Pagini statice', 'icon' => 'file'],
                     ['route' => 'admin.articles.index', 'label' => 'Articole & ghiduri', 'icon' => 'book'],
-                    ['route' => 'admin.service-shops.index', 'label' => 'Service auto', 'icon' => 'wrench'],
                 ],
             ],
         ];

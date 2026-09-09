@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\Product;
+use App\Models\Service;
+use App\Models\ServiceShop;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
@@ -36,6 +38,31 @@ class SitemapController extends Controller
             ];
         }
 
+        $urls[] = ['loc' => route('storefront.services'), 'priority' => '0.6'];
+        $urls[] = ['loc' => route('storefront.service-types'), 'priority' => '0.6'];
+
+        // City pages before the workshops themselves: they are the pages a local search lands on,
+        // and each one is the parent of everything under it.
+        foreach (ServiceShop::query()->published()->whereNotNull('city_slug')->distinct()->orderBy('city_slug')->pluck('city_slug') as $citySlug) {
+            $urls[] = ['loc' => route('storefront.services.city', $citySlug), 'priority' => '0.6'];
+        }
+
+        foreach (ServiceShop::query()->published()->orderBy('id')->get() as $shop) {
+            $urls[] = [
+                'loc' => $shop->url(),
+                'lastmod' => $shop->updated_at?->toAtomString(),
+                'priority' => '0.6',
+            ];
+        }
+
+        foreach (Service::query()->active()->orderBy('id')->get() as $service) {
+            $urls[] = [
+                'loc' => route('storefront.service-type', $service->slug),
+                'lastmod' => $service->updated_at?->toAtomString(),
+                'priority' => '0.5',
+            ];
+        }
+
         foreach (Page::query()->published()->where('robots_index', true)->orderBy('id')->get() as $page) {
             $urls[] = [
                 'loc' => route('storefront.page', $page->slug),
@@ -60,6 +87,9 @@ class SitemapController extends Controller
             'Disallow: /cos',
             'Disallow: /finalizare',
             'Disallow: /comanda',
+            // A fitting request is reachable by its own token and carries a name and a phone
+            // number; there is nothing to index and something to leak.
+            'Disallow: /programare',
             '',
             'Sitemap: '.route('storefront.sitemap'),
         ];

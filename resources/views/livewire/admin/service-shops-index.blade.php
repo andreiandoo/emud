@@ -1,158 +1,97 @@
 <div>
-    <x-admin.page-header title="Service auto" subtitle="Directorul de service-uri și pozițiile promovate plătit.">
+    <x-admin.page-header title="Service auto" subtitle="Directorul de ateliere, listările plătite și lead-urile pe care le-au primit.">
         <x-slot:actions>
-            <button type="button" wire:click="create" class="btn-primary">Adaugă service</button>
+            <a href="{{ route('admin.service-catalog') }}" class="btn-secondary">Lucrări</a>
+            <a href="{{ route('admin.service-appointments') }}" class="btn-secondary">Programări</a>
+            <a href="{{ route('admin.service-shops.create') }}" class="btn-primary">Service nou</a>
         </x-slot:actions>
     </x-admin.page-header>
 
-    <div class="grid gap-8 lg:grid-cols-[22rem_1fr]">
-        <aside class="space-y-3">
-            <label class="relative block">
-                <span class="sr-only">Caută service</span>
-                <x-admin.icon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                <input wire:model.live.debounce.400ms="search" class="pl-9" placeholder="Caută după nume">
-            </label>
+    <x-admin.tabs :tabs="$tabs" :current="$tab" :counts="$counts" field="tab" />
 
-            @if($shops->isEmpty())
-                <x-admin.empty title="Niciun service" hint="Adaugă primul service din butonul de sus." />
-            @else
-                <ul class="space-y-1">
+    <label class="relative mb-4 block max-w-md">
+        <span class="sr-only">Caută service</span>
+        <x-admin.icon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+        <input wire:model.live.debounce.300ms="search" class="pl-9" placeholder="Nume sau oraș">
+    </label>
+
+    @if($shops->isEmpty())
+        <x-admin.empty title="Niciun service" hint="Adaugă primul atelier în director.">
+            <a href="{{ route('admin.service-shops.create') }}" class="btn-primary">Service nou</a>
+        </x-admin.empty>
+    @else
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Oraș</th>
+                        <th class="text-right">Lucrări</th>
+                        <th class="text-right">Lead-uri luna asta</th>
+                        <th>Promovare</th>
+                        <th>Stare</th>
+                        <th class="w-10"><span class="sr-only">Acțiuni</span></th>
+                    </tr>
+                </thead>
+                <tbody>
                     @foreach($shops as $shop)
-                        <li wire:key="shop-{{ $shop->id }}">
-                            <button type="button" wire:click="edit({{ $shop->id }})" @class([
-                                'w-full rounded-lg px-3 py-2.5 text-left text-sm transition',
-                                'bg-stone-900 text-white' => $editingId === $shop->id,
-                                'hover:bg-stone-100' => $editingId !== $shop->id,
-                            ])>
-                                <span class="block truncate font-medium">{{ $shop->name }}</span>
-                                <span class="block truncate text-xs opacity-70">
-                                    {{ $shop->city }}, {{ $shop->county }}
-                                    @if($shop->effectiveTier()->isPaid()) · {{ $shop->effectiveTier()->label() }} @endif
-                                    @if($shop->status !== 'published') · ciornă @endif
-                                    @if($shop->promotion_tier->isPaid() && ! $shop->isPromoted()) · promovare expirată @endif
-                                </span>
-                            </button>
-                        </li>
+                        @php($shopLeads = $leads[$shop->id] ?? [])
+                        <tr wire:key="shop-{{ $shop->id }}">
+                            <td>
+                                <a href="{{ route('admin.service-shops.edit', $shop) }}" class="font-medium text-stone-900 hover:underline">{{ $shop->name }}</a>
+                                <div class="text-xs text-stone-500">{{ $shop->address ?: '—' }}</div>
+                            </td>
+
+                            <td class="text-stone-600">{{ $shop->city }}, {{ $shop->county }}</td>
+                            <td class="text-right tabular-nums">{{ $shop->services_count }}</td>
+
+                            <td class="text-right">
+                                @if($shopLeads === [])
+                                    <span class="text-stone-400">0</span>
+                                @else
+                                    <span class="font-medium tabular-nums">{{ array_sum($shopLeads) }}</span>
+                                    <div class="text-xs text-stone-500">
+                                        {{ collect($leadTypes)
+                                            ->filter(fn ($type) => ($shopLeads[$type->value] ?? 0) > 0)
+                                            ->map(fn ($type) => $type->label().' '.$shopLeads[$type->value])
+                                            ->implode(' · ') }}
+                                    </div>
+                                @endif
+                            </td>
+
+                            <td>
+                                @php($tier = $shop->effectiveTier())
+                                <x-admin.status :label="$tier->label()" :tone="$tier->isPaid() ? 'info' : 'neutral'" />
+                                {{-- An expired promotion is still on the record, and an operator
+                                     renewing it needs to see that it lapsed, not just that it is
+                                     no longer ranking. --}}
+                                @if($shop->promotion_tier->isPaid() && ! $shop->isPromoted())
+                                    <div class="text-xs text-amber-700">expirată {{ $shop->promoted_until?->format('d.m.Y') }}</div>
+                                @endif
+                            </td>
+
+                            <td>
+                                <button type="button" wire:click="togglePublished({{ $shop->id }})">
+                                    <x-admin.status :label="$shop->status === 'published' ? 'Publicat' : 'Ciornă'"
+                                                    :tone="$shop->status === 'published' ? 'positive' : 'neutral'" />
+                                </button>
+                            </td>
+
+                            <td>
+                                <x-admin.row-actions>
+                                    <x-admin.row-action href="{{ route('admin.service-shops.edit', $shop) }}">Editează</x-admin.row-action>
+                                    @if($shop->status === 'published')
+                                        <x-admin.row-action href="{{ $shop->url() }}">Vezi public</x-admin.row-action>
+                                    @endif
+                                    <x-admin.row-action href="{{ route('admin.service-appointments', ['shop' => $shop->id, 'status' => '']) }}">Programări</x-admin.row-action>
+                                </x-admin.row-actions>
+                            </td>
+                        </tr>
                     @endforeach
-                </ul>
+                </tbody>
+            </table>
+        </div>
 
-                <div>{{ $shops->links() }}</div>
-            @endif
-        </aside>
-
-        <form wire:submit="save">
-            <x-admin.panel :title="$editingId ? 'Editează service-ul' : 'Service nou'"
-                           subtitle="Datele de aici alimentează pagina publică din directorul de service-uri.">
-                @if($saved)
-                    <p class="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ $saved }}</p>
-                @endif
-
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="block">
-                        <span class="field-label">Denumire</span>
-                        <input wire:model.live.debounce.500ms="name">
-                        @error('name') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
-                    <label class="block">
-                        <span class="field-label">Slug</span>
-                        <input wire:model="slug">
-                        @error('slug') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
-                    <label class="block">
-                        <span class="field-label">Județ</span>
-                        <input wire:model="county">
-                        @error('county') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
-                    <label class="block">
-                        <span class="field-label">Oraș</span>
-                        <input wire:model="city">
-                        @error('city') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
-                </div>
-
-                <label class="block">
-                    <span class="field-label">Adresă</span>
-                    <input wire:model="address">
-                </label>
-
-                <div class="grid gap-4 sm:grid-cols-3">
-                    <label class="block">
-                        <span class="field-label">Telefon</span>
-                        <input wire:model="phone">
-                    </label>
-                    <label class="block">
-                        <span class="field-label">Email</span>
-                        <input type="email" wire:model="email">
-                        @error('email') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
-                    <label class="block">
-                        <span class="field-label">Website</span>
-                        <input type="url" wire:model="website" placeholder="https://…">
-                        @error('website') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
-                </div>
-
-                <label class="block">
-                    <span class="field-label">Specializări</span>
-                    <input wire:model="specialities" placeholder="off-road, suspensie, diagnoză">
-                    <span class="field-hint">Separate prin virgulă. Devin filtre în director.</span>
-                </label>
-
-                <label class="block">
-                    <span class="field-label">Descriere (HTML)</span>
-                    <textarea wire:model="description" rows="6" class="font-mono text-xs"></textarea>
-                </label>
-
-                <label class="flex items-center gap-2 text-sm text-stone-700">
-                    <input type="checkbox" wire:model="fits_parts_bought_here">
-                    Montează piese cumpărate din magazinul nostru
-                </label>
-
-                <x-admin.section title="Promovare plătită">
-                    {{-- Stated in the back office too, not only on the public page: the person
-                         setting the tier is the one who needs to know it must be declared. --}}
-                    <p class="text-xs text-stone-500">
-                        Orice nivel plătit este afișat public ca atare și influențează ordinea în director.
-                        Legea cere ca poziționarea plătită să fie declarată cititorului.
-                    </p>
-
-                    <div class="grid gap-4 rounded-xl bg-stone-50 p-4 sm:grid-cols-3">
-                        <label class="block">
-                            <span class="field-label">Nivel</span>
-                            <select wire:model.live="promotion_tier">
-                                @foreach($tiers as $tier)
-                                    <option value="{{ $tier->value }}">{{ $tier->label() }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <label class="block">
-                            <span class="field-label">Valabil până la</span>
-                            <input type="date" wire:model="promoted_until" @disabled($promotion_tier === 'none')>
-                            @error('promoted_until') <span class="field-error">{{ $message }}</span> @enderror
-                        </label>
-                        <label class="block">
-                            <span class="field-label">Notă contract</span>
-                            <input wire:model="promotion_notes">
-                        </label>
-                    </div>
-                </x-admin.section>
-
-                <div class="flex flex-wrap items-end gap-3 border-t border-stone-100 pt-5">
-                    <label class="block w-40">
-                        <span class="field-label">Stare</span>
-                        <select wire:model="shopStatus">
-                            <option value="draft">Ciornă</option>
-                            <option value="published">Publicat</option>
-                        </select>
-                    </label>
-
-                    <button type="submit" class="btn-primary">Salvează</button>
-
-                    @if($editingId && $shopStatus === 'published')
-                        <a href="{{ route('storefront.service', $slug) }}" target="_blank" rel="noopener" class="btn-secondary">Vezi public</a>
-                    @endif
-                </div>
-            </x-admin.panel>
-        </form>
-    </div>
+        <div class="mt-4">{{ $shops->links() }}</div>
+    @endif
 </div>

@@ -2,168 +2,125 @@
 
 namespace App\Livewire\Admin;
 
-use App\Enums\ServicePromotionTier;
+use App\Enums\ServiceLeadEventType;
 use App\Models\ServiceShop;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use App\Models\ServiceShopLeadEvent;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+/**
+ * The directory as a list, with the numbers a paid listing is argued about from.
+ */
 #[Layout('layouts::admin')]
 class ServiceShopsIndex extends Component
 {
     use WithPagination;
 
-    public ?int $editingId = null;
+    /** @var array<string, string> */
+    public const TABS = [
+        '' => 'Toate',
+        'published' => 'Publicate',
+        'draft' => 'Ciorne',
+        'promoted' => 'Promovate',
+    ];
 
-    public string $name = '';
-
-    public string $slug = '';
-
-    public string $county = '';
-
-    public string $city = '';
-
-    public string $address = '';
-
-    public string $phone = '';
-
-    public string $email = '';
-
-    public string $website = '';
-
-    public string $description = '';
-
-    public string $specialities = '';
-
-    public bool $fits_parts_bought_here = false;
-
-    public string $shopStatus = 'draft';
-
-    public string $promotion_tier = 'none';
-
-    public ?string $promoted_until = null;
-
-    public string $promotion_notes = '';
-
+    #[Url(except: '')]
     public string $search = '';
 
-    public string $saved = '';
+    #[Url(except: '')]
+    public string $tab = '';
 
-    public function edit(int $id): void
+    public function updated(string $property): void
     {
-        $shop = ServiceShop::query()->findOrFail($id);
-
-        $this->editingId = $shop->id;
-        $this->name = (string) $shop->name;
-        $this->slug = (string) $shop->slug;
-        $this->county = (string) $shop->county;
-        $this->city = (string) $shop->city;
-        $this->address = (string) $shop->address;
-        $this->phone = (string) $shop->phone;
-        $this->email = (string) $shop->email;
-        $this->website = (string) $shop->website;
-        $this->description = (string) $shop->description;
-        $this->specialities = implode(', ', $shop->specialityList());
-        $this->fits_parts_bought_here = (bool) $shop->fits_parts_bought_here;
-        $this->shopStatus = (string) $shop->status;
-        $this->promotion_tier = $shop->promotion_tier->value;
-        $this->promoted_until = $shop->promoted_until?->format('Y-m-d');
-        $this->promotion_notes = (string) $shop->promotion_notes;
-        $this->saved = '';
-    }
-
-    public function save(): void
-    {
-        $data = $this->validate([
-            'name' => ['required', 'string', 'max:160'],
-            'slug' => ['required', 'string', 'max:180', 'regex:/^[a-z0-9-]+$/', Rule::unique('service_shops', 'slug')->ignore($this->editingId)],
-            'county' => ['required', 'string', 'max:64'],
-            'city' => ['required', 'string', 'max:96'],
-            'address' => ['nullable', 'string', 'max:180'],
-            'phone' => ['nullable', 'string', 'max:32'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'website' => ['nullable', 'url', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'shopStatus' => ['required', Rule::in(['draft', 'published'])],
-            'promotion_tier' => ['required', Rule::enum(ServicePromotionTier::class)],
-            // A paid tier without an end date would run forever without anyone revisiting it,
-            // so the date is required as soon as money is involved.
-            'promoted_until' => [Rule::requiredIf($this->promotion_tier !== 'none'), 'nullable', 'date'],
-            'promotion_notes' => ['nullable', 'string', 'max:500'],
-        ], [
-            'slug.regex' => 'Slugul poate conține doar litere mici, cifre și cratime.',
-            'promoted_until.required' => 'O listare plătită trebuie să aibă o dată de expirare.',
-        ]);
-
-        $shop = $this->editingId === null ? new ServiceShop : ServiceShop::query()->findOrFail($this->editingId);
-
-        // Listed column by column rather than spread from the validated array: the form field
-        // is called shopStatus to avoid clashing with Livewire's own status handling, and
-        // spreading would mass-assign that name straight at a column that does not exist.
-        $shop->fill([
-            'name' => $data['name'],
-            'slug' => $data['slug'],
-            'county' => $data['county'],
-            'city' => $data['city'],
-            'address' => $data['address'] ?: null,
-            'phone' => $data['phone'] ?: null,
-            'email' => $data['email'] ?: null,
-            'website' => $data['website'] ?: null,
-            'description' => $data['description'] ?: null,
-            'status' => $data['shopStatus'],
-            'promotion_tier' => $data['promotion_tier'],
-            'promotion_notes' => $data['promotion_notes'] ?: null,
-            'promoted_until' => $data['promotion_tier'] === 'none' ? null : $data['promoted_until'],
-            'fits_parts_bought_here' => $this->fits_parts_bought_here,
-            'specialities' => $this->parsedSpecialities(),
-        ]);
-
-        $shop->save();
-
-        $this->editingId = $shop->id;
-        $this->saved = 'Service-ul a fost salvat.';
-    }
-
-    public function create(): void
-    {
-        $this->reset([
-            'editingId', 'name', 'slug', 'county', 'city', 'address', 'phone', 'email',
-            'website', 'description', 'specialities', 'promotion_notes', 'promoted_until', 'saved',
-        ]);
-        $this->resetValidation();
-        $this->shopStatus = 'draft';
-        $this->promotion_tier = 'none';
-        $this->fits_parts_bought_here = false;
-    }
-
-    public function updatedName(string $value): void
-    {
-        if ($this->editingId === null && $this->slug === '') {
-            $this->slug = Str::slug($value);
+        if ($property !== 'page') {
+            $this->resetPage();
         }
+    }
+
+    public function togglePublished(int $shopId): void
+    {
+        $shop = ServiceShop::query()->findOrFail($shopId);
+
+        $shop->update(['status' => $shop->status === 'published' ? 'draft' : 'published']);
     }
 
     public function render()
     {
+        $shops = $this->query()
+            ->withCount(['services', 'appointments'])
+            ->orderBy('name')
+            ->paginate(25);
+
         return view('livewire.admin.service-shops-index', [
-            'shops' => ServiceShop::query()
-                ->when($this->search !== '', fn ($query) => $query->whereRaw('lower(name) like ?', ['%'.mb_strtolower($this->search).'%']))
-                ->orderBy('county')->orderBy('city')->orderBy('name')
-                ->paginate(25),
-            'tiers' => ServicePromotionTier::cases(),
+            'shops' => $shops,
+            'tabs' => self::TABS,
+            'counts' => $this->counts(),
+            'leads' => $this->leadsThisMonth($shops->pluck('id')),
+            'leadTypes' => ServiceLeadEventType::cases(),
         ]);
     }
 
-    /** @return list<string> */
-    private function parsedSpecialities(): array
+    private function query(): Builder
     {
-        return collect(explode(',', $this->specialities))
-            ->map(fn (string $item): string => trim($item))
-            ->filter()
-            ->unique()
-            ->values()
+        return ServiceShop::query()
+            ->when($this->search !== '', function (Builder $query): void {
+                $term = '%'.mb_strtolower($this->search).'%';
+                $query->where(fn (Builder $inner) => $inner
+                    ->whereRaw('lower(name) like ?', [$term])
+                    ->orWhereRaw('lower(city) like ?', [$term]));
+            })
+            ->when($this->tab === 'published', fn (Builder $q) => $q->where('status', 'published'))
+            ->when($this->tab === 'draft', fn (Builder $q) => $q->where('status', 'draft'))
+            // Expired promotions are not promotions, so the filter uses the same cut-off the
+            // public ordering does rather than the raw column.
+            ->when($this->tab === 'promoted', fn (Builder $q) => $q->where('promotion_tier', '!=', 'none')
+                ->where(fn (Builder $inner) => $inner->whereNull('promoted_until')->orWhere('promoted_until', '>=', now()->toDateString())));
+    }
+
+    /** @return array<string, int> */
+    private function counts(): array
+    {
+        $byStatus = ServiceShop::query()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+
+        return [
+            '' => (int) $byStatus->sum(),
+            'published' => (int) $byStatus->get('published', 0),
+            'draft' => (int) $byStatus->get('draft', 0),
+            'promoted' => ServiceShop::query()
+                ->where('promotion_tier', '!=', 'none')
+                ->where(fn (Builder $q) => $q->whereNull('promoted_until')->orWhere('promoted_until', '>=', now()->toDateString()))
+                ->count(),
+        ];
+    }
+
+    /**
+     * Leads since the start of the month, per workshop and per type. One grouped query rather
+     * than a count per row, because this column is on every row of the list.
+     *
+     * @param  Collection<int, int>  $shopIds
+     * @return array<int, array<string, int>>
+     */
+    private function leadsThisMonth(Collection $shopIds): array
+    {
+        if ($shopIds->isEmpty()) {
+            return [];
+        }
+
+        return ServiceShopLeadEvent::query()
+            ->selectRaw('service_shop_id, type, count(*) as total')
+            ->whereIn('service_shop_id', $shopIds)
+            ->where('created_at', '>=', Carbon::now()->startOfMonth())
+            ->groupBy('service_shop_id', 'type')
+            ->get()
+            ->groupBy('service_shop_id')
+            // Keyed by the enum's value, not the enum: the cast hands back an object, and an
+            // object cannot be an array key.
+            ->map(fn (Collection $rows) => $rows->mapWithKeys(fn ($row) => [$row->type->value => (int) $row->total])->all())
             ->all();
     }
 }

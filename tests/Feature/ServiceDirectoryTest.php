@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ServicePromotionTier;
-use App\Livewire\Admin\ServiceShopsIndex;
+use App\Livewire\Admin\ServiceShopEditor;
 use App\Livewire\Storefront\ServiceDirectory;
 use App\Models\ServiceShop;
 use App\Models\User;
@@ -28,7 +28,7 @@ class ServiceDirectoryTest extends TestCase
     {
         $shop = $this->shop('Service Ciornă', published: false);
 
-        $this->get('/service-auto/'.$shop->slug)->assertNotFound();
+        $this->get($shop->url())->assertNotFound();
     }
 
     public function test_shops_filter_by_county_city_and_speciality(): void
@@ -94,14 +94,14 @@ class ServiceDirectoryTest extends TestCase
         $this->shop('Promovat', tier: ServicePromotionTier::Featured, promotedUntil: now()->addMonth());
 
         $this->get('/service-auto')->assertSee('Promovat');
-        $this->get('/service-auto/promovat')->assertSee('listare plătită');
+        $this->get(ServiceShop::query()->where('slug', 'promovat')->sole()->url())->assertSee('listare plătită');
     }
 
     public function test_a_free_listing_carries_no_paid_label(): void
     {
         $this->shop('Gratuit');
 
-        $this->get('/service-auto/gratuit')->assertDontSee('listare plătită');
+        $this->get(ServiceShop::query()->where('slug', 'gratuit')->sole()->url())->assertDontSee('listare plătită');
     }
 
     /**
@@ -132,11 +132,12 @@ class ServiceDirectoryTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'admin']));
 
-        Livewire::test(ServiceShopsIndex::class)
+        Livewire::test(ServiceShopEditor::class)
             ->set('name', 'Service Nou')
             ->set('slug', 'service-nou')
             ->set('county', 'Cluj')
             ->set('city', 'Cluj-Napoca')
+            ->set('citySlug', 'cluj-napoca')
             ->set('specialities', 'off-road, suspensie')
             ->set('shopStatus', 'published')
             ->call('save')
@@ -145,7 +146,7 @@ class ServiceDirectoryTest extends TestCase
         $shop = ServiceShop::query()->where('slug', 'service-nou')->sole();
 
         $this->assertSame(['off-road', 'suspensie'], $shop->specialityList());
-        $this->get('/service-auto/service-nou')->assertOk();
+        $this->get($shop->url())->assertOk();
     }
 
     /**
@@ -155,14 +156,15 @@ class ServiceDirectoryTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'admin']));
 
-        Livewire::test(ServiceShopsIndex::class)
+        Livewire::test(ServiceShopEditor::class)
             ->set('name', 'Service Plătit')
             ->set('slug', 'service-platit')
             ->set('county', 'Cluj')
             ->set('city', 'Cluj-Napoca')
-            ->set('promotion_tier', ServicePromotionTier::Featured->value)
+            ->set('citySlug', 'cluj-napoca')
+            ->set('promotionTier', ServicePromotionTier::Featured->value)
             ->call('save')
-            ->assertHasErrors('promoted_until');
+            ->assertHasErrors('promotedUntil');
     }
 
     public function test_dropping_the_tier_clears_the_expiry(): void
@@ -170,9 +172,8 @@ class ServiceDirectoryTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'admin']));
         $shop = $this->shop('Cu promovare', tier: ServicePromotionTier::Featured, promotedUntil: now()->addMonth());
 
-        Livewire::test(ServiceShopsIndex::class)
-            ->call('edit', $shop->id)
-            ->set('promotion_tier', 'none')
+        Livewire::test(ServiceShopEditor::class, ['shop' => $shop])
+            ->set('promotionTier', 'none')
             ->call('save')
             ->assertHasNoErrors();
 

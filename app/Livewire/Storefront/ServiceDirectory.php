@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Storefront;
 
+use App\Models\Service;
 use App\Models\ServiceShop;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +18,9 @@ class ServiceDirectory extends Component
     use WithPagination;
 
     #[Url(except: '')]
+    public string $search = '';
+
+    #[Url(except: '')]
     public string $county = '';
 
     #[Url(except: '')]
@@ -25,8 +29,14 @@ class ServiceDirectory extends Component
     #[Url(except: '')]
     public string $speciality = '';
 
+    #[Url(except: '')]
+    public string $service = '';
+
     #[Url(except: false)]
     public bool $fitsOurParts = false;
+
+    #[Url(except: false)]
+    public bool $openNow = false;
 
     public function updated(string $property): void
     {
@@ -39,6 +49,18 @@ class ServiceDirectory extends Component
         }
     }
 
+    public function resetFilters(): void
+    {
+        $this->search = '';
+        $this->county = '';
+        $this->city = '';
+        $this->speciality = '';
+        $this->service = '';
+        $this->fitsOurParts = false;
+        $this->openNow = false;
+        $this->resetPage();
+    }
+
     public function render()
     {
         return view('livewire.storefront.service-directory', [
@@ -48,6 +70,8 @@ class ServiceDirectory extends Component
                 ? collect()
                 : ServiceShop::query()->published()->where('county', $this->county)->distinct()->orderBy('city')->pluck('city'),
             'specialities' => $this->availableSpecialities(),
+            'serviceOptions' => Service::query()->active()->orderBy('name')->get(['id', 'name', 'slug']),
+            'topCities' => $this->topCities(),
         ]);
     }
 
@@ -55,28 +79,42 @@ class ServiceDirectory extends Component
     {
         return ServiceShop::query()
             ->published()
+            ->with(['hours', 'services'])
+            ->when($this->search !== '', function (Builder $query): void {
+                $term = '%'.mb_strtolower($this->search).'%';
+                $query->where(fn (Builder $inner) => $inner
+                    ->whereRaw('lower(name) like ?', [$term])
+                    ->orWhereRaw('lower(city) like ?', [$term])
+                    ->orWhereRaw('lower(address) like ?', [$term]));
+            })
             ->when($this->county !== '', fn (Builder $q) => $q->where('county', $this->county))
             ->when($this->city !== '', fn (Builder $q) => $q->where('city', $this->city))
             ->when($this->speciality !== '', fn (Builder $q) => $q->whereJsonContains('specialities', $this->speciality))
+            ->when($this->service !== '', fn (Builder $q) => $q->whereHas('services', fn (Builder $inner) => $inner->where('services.slug', $this->service)))
             ->when($this->fitsOurParts, fn (Builder $q) => $q->where('fits_parts_bought_here', true))
-            // Expired promotions must not keep their position, so the ordering only counts a
-            // tier whose end date has not passed.
-            ->orderByRaw($this->promotionOrdering())
+            ->when($this->openNow, fn (Builder $q) => $q->openNow())
+            ->promotedFirst()
             ->orderBy('name')
             ->paginate(20);
     }
 
     /**
-     * Written as SQL rather than sorted in PHP so the ordering survives pagination: sorting a
-     * page in memory would rank twenty rows against each other, not the whole directory.
+     * The towns with the most listings, as links rather than another dropdown. A directory is
+     * mostly used by people who already know which town they are in.
+     *
+     * @return Collection<int, object>
      */
-    private function promotionOrdering(): string
+    private function topCities(): Collection
     {
-        return "CASE WHEN promoted_until IS NOT NULL AND promoted_until < CURRENT_DATE THEN 0
-                     WHEN promotion_tier = 'premium' THEN 3
-                     WHEN promotion_tier = 'featured' THEN 2
-                     WHEN promotion_tier = 'listed' THEN 1
-                     ELSE 0 END DESC";
+        return ServiceShop::query()
+            ->published()
+            ->selectRaw('city, city_slug, count(*) as total')
+            ->whereNotNull('city_slug')
+            ->groupBy('city', 'city_slug')
+            ->orderByDesc('total')
+            ->orderBy('city')
+            ->limit(12)
+            ->get();
     }
 
     /** @return Collection<int, string> */

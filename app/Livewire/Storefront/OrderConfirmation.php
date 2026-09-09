@@ -3,6 +3,8 @@
 namespace App\Livewire\Storefront;
 
 use App\Models\Order;
+use App\Models\ServiceShop;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -23,14 +25,41 @@ class OrderConfirmation extends Component
     {
         $this->order = Order::query()
             ->where('checkout_token', $token)
-            ->with(['items', 'shippingMethod'])
+            ->with(['items', 'shippingMethod', 'shippingAddress'])
             ->firstOrFail();
+    }
+
+    /**
+     * Workshops that will fit what was just bought, nearest first by the only measure available
+     * here: the town the parcel is going to. Shown on this page because it is the one moment the
+     * customer is certain to be thinking about the job.
+     *
+     * @return EloquentCollection<int, ServiceShop>
+     */
+    private function fitters(): EloquentCollection
+    {
+        $city = $this->order->shippingAddress?->city;
+
+        if ($city === null) {
+            return new EloquentCollection;
+        }
+
+        return ServiceShop::query()
+            ->published()
+            ->with('hours')
+            ->where('fits_parts_bought_here', true)
+            ->whereRaw('lower(city) = ?', [mb_strtolower($city)])
+            ->promotedFirst()
+            ->orderBy('name')
+            ->limit(3)
+            ->get();
     }
 
     public function render()
     {
         return view('livewire.storefront.order-confirmation', [
             'transaction' => $this->order->payments()->latest('id')->first(),
+            'fitters' => $this->fitters(),
         ]);
     }
 }

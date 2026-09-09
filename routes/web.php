@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ServiceShopLinkController;
 use App\Http\Controllers\SitemapController;
 use App\Livewire\Admin\Catalog\AttributesIndex;
 use App\Livewire\Admin\Catalog\BrandsIndex;
@@ -31,6 +32,9 @@ use App\Livewire\Admin\MediaLibrary;
 use App\Livewire\Admin\OrderEditor;
 use App\Livewire\Admin\OrdersIndex;
 use App\Livewire\Admin\ReturnsIndex;
+use App\Livewire\Admin\ServiceAppointmentsIndex;
+use App\Livewire\Admin\ServiceCatalogIndex;
+use App\Livewire\Admin\ServiceShopEditor;
 use App\Livewire\Admin\ServiceShopsIndex;
 use App\Livewire\Admin\Settings\SettingsPage;
 use App\Livewire\Admin\Suppliers\OffersIndex as SupplierOffersIndex;
@@ -38,6 +42,7 @@ use App\Livewire\Admin\Suppliers\SupplierEditor;
 use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
 use App\Livewire\Admin\VehiclesIndex;
+use App\Livewire\Customer\Appointments as CustomerAppointments;
 use App\Livewire\Customer\Dashboard as CustomerDashboard;
 use App\Livewire\Customer\Favourites as CustomerFavourites;
 use App\Livewire\Customer\ForgotPassword as CustomerForgotPassword;
@@ -57,7 +62,11 @@ use App\Livewire\Storefront\Guides as StorefrontGuides;
 use App\Livewire\Storefront\Home as StorefrontHome;
 use App\Livewire\Storefront\OrderConfirmation as StorefrontOrder;
 use App\Livewire\Storefront\ProductPage as StorefrontProduct;
+use App\Livewire\Storefront\AppointmentConfirmation as StorefrontAppointment;
 use App\Livewire\Storefront\SearchResults as StorefrontSearch;
+use App\Livewire\Storefront\ServiceCityPage as StorefrontServiceCity;
+use App\Livewire\Storefront\ServiceTypePage as StorefrontServiceType;
+use App\Livewire\Storefront\ServiceTypes as StorefrontServiceTypes;
 use App\Livewire\Storefront\ServiceDirectory as StorefrontServices;
 use App\Livewire\Storefront\ServiceShopPage as StorefrontService;
 use App\Livewire\Storefront\StaticPage as StorefrontPage;
@@ -74,7 +83,17 @@ Route::get('/produs/{product:slug}', StorefrontProduct::class)->name('storefront
 Route::get('/ghiduri', StorefrontGuides::class)->name('storefront.guides');
 Route::get('/ghiduri/{slug}', StorefrontGuide::class)->where('slug', '[a-z0-9-]+')->name('storefront.guide');
 Route::get('/service-auto', StorefrontServices::class)->name('storefront.services');
-Route::get('/service-auto/{slug}', StorefrontService::class)->where('slug', '[a-z0-9-]+')->name('storefront.service');
+Route::get('/servicii-auto', StorefrontServiceTypes::class)->name('storefront.service-types');
+Route::get('/servicii-auto/{slug}', StorefrontServiceType::class)->where('slug', '[a-z0-9-]+')->name('storefront.service-type');
+Route::get('/programare/{token}', StorefrontAppointment::class)->whereUuid('token')->name('storefront.appointment');
+// One segment is a city; two are a city and a workshop. A workshop slug still arriving on the
+// one-segment form is a link made before the city was in the URL, and the city page redirects
+// it rather than letting an old bookmark 404.
+Route::get('/service-auto/{city}', StorefrontServiceCity::class)->where('city', '[a-z0-9-]+')->name('storefront.services.city');
+Route::get('/service-auto/{city}/{slug}', StorefrontService::class)->where(['city' => '[a-z0-9-]+', 'slug' => '[a-z0-9-]+'])->name('storefront.service');
+Route::get('/service-auto/{city}/{slug}/catre/{type}', ServiceShopLinkController::class)
+    ->where(['city' => '[a-z0-9-]+', 'slug' => '[a-z0-9-]+', 'type' => 'website|directions'])
+    ->name('storefront.service.link');
 Route::get('/contact', StorefrontContact::class)->name('storefront.contact');
 Route::get('/cos', StorefrontCart::class)->name('storefront.cart');
 Route::get('/finalizare', StorefrontCheckout::class)->name('storefront.checkout');
@@ -121,6 +140,7 @@ Route::prefix('cont')->name('customer.')->group(function (): void {
         Route::get('/garaj/{vehicleId}', CustomerVehicleDetail::class)->whereNumber('vehicleId')->name('garage.vehicle');
         Route::get('/favorite', CustomerFavourites::class)->name('favourites');
         Route::get('/comenzi', CustomerOrders::class)->name('orders');
+        Route::get('/programari', CustomerAppointments::class)->name('appointments');
         Route::get('/date', CustomerProfile::class)->name('profile');
         Route::post('/iesire', function (Request $request) {
             Auth::logout();
@@ -158,6 +178,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/media', MediaLibrary::class)->name('media.index');
     Route::get('/pages', PagesIndex::class)->name('pages.index');
     Route::get('/service-shops', ServiceShopsIndex::class)->name('service-shops.index');
+    Route::get('/service-shops/create', ServiceShopEditor::class)->name('service-shops.create');
+    Route::get('/service-shops/{shop}/edit', ServiceShopEditor::class)->name('service-shops.edit');
+    Route::get('/service-catalog', ServiceCatalogIndex::class)->name('service-catalog');
+    Route::get('/service-appointments', ServiceAppointmentsIndex::class)->name('service-appointments');
     Route::get('/articles', ArticlesIndex::class)->name('articles.index');
     Route::get('/articles/create', ArticleEditor::class)->name('articles.create');
     Route::get('/articles/{article}/edit', ArticleEditor::class)->name('articles.edit');
