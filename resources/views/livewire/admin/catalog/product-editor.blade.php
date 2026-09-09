@@ -92,10 +92,56 @@
                 <textarea wire:model="shortDescription" rows="3"></textarea>
             </label>
 
-            <label class="block lg:col-span-2">
-                <span class="field-label">Descriere completă (HTML permis)</span>
-                <textarea wire:model="description" rows="12" class="font-mono text-sm"></textarea>
-            </label>
+            <div class="block lg:col-span-2">
+                <span class="field-label">Descriere completă</span>
+
+                {{-- The editor keeps its own DOM, so the whole block is hidden from Livewire's
+                     re-render and the value travels through the entangled property instead. --}}
+                <div wire:ignore x-data="{ ...richTextEditor(), content: @entangle('description') }"
+                     class="overflow-hidden rounded-xl border border-stone-300 bg-white">
+                    <div class="flex flex-wrap items-center gap-1 border-b border-stone-200 bg-stone-50 p-1.5">
+                        @foreach([
+                            ['toggleBold', 'bold', 'B', 'Îngroșat', 'font-bold'],
+                            ['toggleItalic', 'italic', 'I', 'Cursiv', 'italic'],
+                            ['toggleStrike', 'strike', 'S', 'Tăiat', 'line-through'],
+                        ] as [$command, $mark, $glyph, $title, $style])
+                            <button type="button" :title="'{{ $title }}'" @click="run('{{ $command }}')"
+                                    :class="isActive('{{ $mark }}') ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-200'"
+                                    class="h-7 w-7 rounded-md text-xs {{ $style }}">{{ $glyph }}</button>
+                        @endforeach
+
+                        <span class="mx-1 h-4 w-px bg-stone-300"></span>
+
+                        @foreach([2 => 'H2', 3 => 'H3', 4 => 'H4'] as $level => $glyph)
+                            <button type="button" @click="run('toggleHeading', { level: {{ $level }} })"
+                                    :class="isActive('heading', { level: {{ $level }} }) ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-200'"
+                                    class="h-7 rounded-md px-2 text-xs font-semibold">{{ $glyph }}</button>
+                        @endforeach
+
+                        <span class="mx-1 h-4 w-px bg-stone-300"></span>
+
+                        <button type="button" title="Listă cu buline" @click="run('toggleBulletList')"
+                                :class="isActive('bulletList') ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-200'"
+                                class="h-7 rounded-md px-2 text-xs">• Listă</button>
+                        <button type="button" title="Listă numerotată" @click="run('toggleOrderedList')"
+                                :class="isActive('orderedList') ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-200'"
+                                class="h-7 rounded-md px-2 text-xs">1. Listă</button>
+                        <button type="button" title="Link" @click="setLink()"
+                                :class="isActive('link') ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-200'"
+                                class="h-7 rounded-md px-2 text-xs">Link</button>
+
+                        <button type="button" @click="toggleSource()"
+                                :class="source ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-200'"
+                                class="ml-auto h-7 rounded-md px-2 text-xs font-mono">&lt;/&gt; HTML</button>
+                    </div>
+
+                    <div x-ref="editor" x-show="!source"></div>
+                    <textarea x-show="source" x-cloak x-model="content" rows="14"
+                              class="w-full border-0 font-mono text-xs focus:ring-0"></textarea>
+                </div>
+
+                <span class="field-hint">Butonul HTML comută pe sursă, pentru descrierile care vin dezordonate din feed-uri.</span>
+            </div>
 
             <label class="block">
                 <span class="field-label">Garanție (luni)</span>
