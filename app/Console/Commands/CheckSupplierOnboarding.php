@@ -46,31 +46,18 @@ class CheckSupplierOnboarding extends Command
             return self::FAILURE;
         }
 
-        $blocked = 0;
+        $reports = $suppliers->map(fn (Supplier $supplier): array => [
+            'supplier' => $supplier,
+            'findings' => $this->inspect($supplier),
+        ]);
 
-        foreach ($suppliers as $supplier) {
-            $findings = $this->inspect($supplier);
-            $failures = array_filter($findings, static fn (array $f): bool => $f[0] === 'BLOCHEAZĂ');
+        // One supplier gets the full reasoning; a whole prospect list gets one line each, or
+        // forty seven-row tables scroll the useful part off the screen.
+        $reports->count() === 1
+            ? $this->renderDetail($reports->first())
+            : $this->renderSummary($reports);
 
-            $this->newLine();
-            $this->line("<options=bold>{$supplier->code}</> — {$supplier->name}");
-            $this->table(['', 'Verificare', 'Detaliu'], array_map(
-                static fn (array $f): array => [
-                    match ($f[0]) {
-                        'BLOCHEAZĂ' => '<fg=red>✕</>',
-                        'ATENȚIE' => '<fg=yellow>!</>',
-                        default => '<fg=green>✓</>',
-                    },
-                    $f[1],
-                    $f[2],
-                ],
-                $findings,
-            ));
-
-            if ($failures !== []) {
-                $blocked++;
-            }
-        }
+        $blocked = $reports->filter(fn (array $report): bool => $this->blockers($report['findings']) !== [])->count();
 
         $this->newLine();
 
@@ -83,6 +70,68 @@ class CheckSupplierOnboarding extends Command
         $this->info('Toți furnizorii verificați pot produce piese canonice.');
 
         return self::SUCCESS;
+    }
+
+    /** @param array{supplier: Supplier, findings: list<array{0:string,1:string,2:string}>} $report */
+    private function renderDetail(array $report): void
+    {
+        $this->newLine();
+        $this->line("<options=bold>{$report['supplier']->code}</> — {$report['supplier']->name}");
+        $this->table(['', 'Verificare', 'Detaliu'], array_map(
+            static fn (array $finding): array => [
+                match ($finding[0]) {
+                    'BLOCHEAZĂ' => '<fg=red>✕</>',
+                    'ATENȚIE' => '<fg=yellow>!</>',
+                    default => '<fg=green>✓</>',
+                },
+                $finding[1],
+                $finding[2],
+            ],
+            $report['findings'],
+        ));
+    }
+
+    /**
+     * Sorted by how close each supplier is to working, because the question this answers for a
+     * prospect list is "which one can I onboard next", not "how is every one of them broken".
+     *
+     * @param  \Illuminate\Support\Collection<int, array{supplier: Supplier, findings: list<array{0:string,1:string,2:string}>}>  $reports
+     */
+    private function renderSummary($reports): void
+    {
+        $rows = $reports
+            ->map(function (array $report): array {
+                $blockers = $this->blockers($report['findings']);
+
+                return [
+                    'code' => $report['supplier']->code,
+                    'count' => count($blockers),
+                    'row' => [
+                        $blockers === [] ? '<fg=green>✓</>' : '<fg=red>✕</>',
+                        $report['supplier']->code,
+                        $blockers === [] ? 'gata' : count($blockers).' blocaje',
+                        $blockers === [] ? '—' : implode(', ', $blockers),
+                    ],
+                ];
+            })
+            ->sortBy(['count', 'code'])
+            ->pluck('row')
+            ->all();
+
+        $this->table(['', 'Furnizor', 'Stare', 'Ce blochează'], $rows);
+        $this->line('Rulează cu un cod de furnizor pentru detalii: <options=bold>suppliers:onboarding-check AVEX</>');
+    }
+
+    /**
+     * @param  list<array{0:string,1:string,2:string}>  $findings
+     * @return list<string>
+     */
+    private function blockers(array $findings): array
+    {
+        return array_values(array_map(
+            static fn (array $finding): string => $finding[1],
+            array_filter($findings, static fn (array $finding): bool => $finding[0] === 'BLOCHEAZĂ'),
+        ));
     }
 
     /** @return \Illuminate\Support\Collection<int, Supplier> */

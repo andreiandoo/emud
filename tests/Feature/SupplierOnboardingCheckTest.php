@@ -102,6 +102,21 @@ class SupplierOnboardingCheckTest extends TestCase
             ->assertFailed();
     }
 
+    /**
+     * The prospect list runs to forty-odd suppliers. A seven-row table each scrolls the useful
+     * part off the screen, so --all answers "which one can I onboard next" instead.
+     */
+    public function test_listing_every_supplier_stays_compact(): void
+    {
+        $this->supplier();
+        $this->supplier(['code' => 'DELDO', 'name' => 'Deldo', 'allow_derived_data' => false]);
+
+        $this->artisan('suppliers:onboarding-check --all')
+            ->expectsOutputToContain('1 blocaje')
+            ->doesntExpectOutputToContain('Produsele devin blocked_rights')
+            ->assertFailed();
+    }
+
     /** @param array<string, mixed> $overrides */
     private function supplier(array $overrides = []): Supplier
     {
