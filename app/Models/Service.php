@@ -40,7 +40,10 @@ class Service extends Model
 
     public function shops(): BelongsToMany
     {
-        return $this->belongsToMany(ServiceShop::class)
+        // Named explicitly. Laravel builds a pivot name by sorting the two model names, which
+        // gives service_service_shop — not the service_shop_service the migration creates. The
+        // guess is silent until the first query touches the relation.
+        return $this->belongsToMany(ServiceShop::class, 'service_shop_service')
             ->withPivot(['price_from', 'price_to', 'currency', 'duration_minutes', 'note'])
             ->withTimestamps();
     }
