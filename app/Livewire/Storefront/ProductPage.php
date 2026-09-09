@@ -19,11 +19,18 @@ class ProductPage extends Component
 {
     public Product $product;
 
+    /** False only for staff previewing something the public cannot reach yet. */
+    public bool $published = true;
+
     public function mount(Product $product): void
     {
         // status is cast to an enum, so comparing it against the raw string would never match
         // and every product would 404.
-        abort_unless($product->status === ProductStatus::Active && $product->published_at !== null, 404);
+        $this->published = $product->status === ProductStatus::Active && $product->published_at !== null;
+
+        // Staff can open an unpublished product to see how it will look before releasing it.
+        // Everyone else gets the 404 they would have got before.
+        abort_unless($this->published || request()->user()?->isAdmin(), 404);
 
         $this->product = $product->load(['brand', 'media', 'variants', 'fitments.make', 'fitments.model', 'fitments.generation', 'categories']);
     }

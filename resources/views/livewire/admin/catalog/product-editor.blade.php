@@ -2,6 +2,17 @@
     <x-admin.page-header :title="$product ? 'Editează produsul' : 'Produs nou'"
                          subtitle="Catalog, variante, filtre, media, compatibilitate și SEO.">
         <x-slot:actions>
+            @if($product?->exists)
+                {{-- The storefront 404s an unpublished product for the public, but lets staff
+                     through with a preview banner, so this never opens a dead page for us. --}}
+                <a href="{{ route('storefront.product', $product) }}" target="_blank" rel="noopener"
+                   class="btn-secondary">
+                    Vezi în magazin
+                    @unless($product->status === \App\Enums\ProductStatus::Active)
+                        <span class="ml-1 text-xs text-amber-700">(nepublicat)</span>
+                    @endunless
+                </a>
+            @endif
             <a href="{{ route('admin.products.index') }}" class="btn-secondary">← Toate produsele</a>
         </x-slot:actions>
     </x-admin.page-header>
@@ -75,17 +86,54 @@
                 </select>
             </label>
 
-            <label class="block lg:col-span-2">
+            {{-- A div, not a label: the picker is made of buttons, and a wrapping label would
+                 hand every click to the search input instead. --}}
+            <div class="block lg:col-span-2">
                 <span class="field-label">Categorii *</span>
-                <input type="search" wire:model.live.debounce.400ms="categorySearch" placeholder="Caută o categorie…" class="mb-2">
-                <select wire:model.live="categoryIds" multiple size="8">
-                    @foreach($categories as $category)
-                        <option value="{{ $category->id }}">{{ str_repeat('— ', $category->depth) }}{{ $category->name }}</option>
-                    @endforeach
-                </select>
-                <span class="field-hint">Prima selectată devine categoria principală. Cele deja alese rămân în listă oricât ai filtra.</span>
+
+                <div class="flex gap-2">
+                    <input type="search" wire:model.live.debounce.300ms="categorySearch"
+                           placeholder="Scrie ca să cauți o categorie…" class="flex-1">
+                    <button type="button" wire:click="$toggle('browseAllCategories')"
+                            class="{{ $browseAllCategories ? 'btn-primary' : 'btn-secondary' }} shrink-0"
+                            title="Arată tot arborele de categorii">Toate</button>
+                </div>
+
+                @if($categories->isNotEmpty())
+                    <ul class="mt-2 max-h-56 overflow-y-auto rounded-xl border border-stone-200 bg-white text-sm">
+                        @foreach($categories as $category)
+                            <li wire:key="cat-option-{{ $category->id }}">
+                                <button type="button" wire:click="addCategory({{ $category->id }})"
+                                        class="block w-full px-3 py-1.5 text-left hover:bg-stone-100">
+                                    {{ str_repeat('— ', $category->depth) }}{{ $category->name }}
+                                    <span class="text-xs text-stone-400">{{ $category->full_path }}</span>
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+                @elseif($categorySearch !== '')
+                    <p class="mt-2 text-sm text-stone-500">Nicio categorie pentru „{{ $categorySearch }}".</p>
+                @endif
+
+                @if($this->selectedCategories->isNotEmpty())
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                        @foreach($this->selectedCategories as $index => $category)
+                            <span wire:key="cat-pill-{{ $category->id }}"
+                                  class="inline-flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-1 text-xs
+                                         {{ $index === 0 ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700' }}">
+                                {{ $category->name }}
+                                @if($index === 0)<span class="text-[10px] opacity-70">principală</span>@endif
+                                <button type="button" wire:click="removeCategory({{ $category->id }})"
+                                        class="rounded-full px-1 leading-none hover:bg-black/20"
+                                        aria-label="Scoate {{ $category->name }}">×</button>
+                            </span>
+                        @endforeach
+                    </div>
+                @endif
+
+                <span class="field-hint">Prima aleasă devine categoria principală.</span>
                 @error('categoryIds') <span class="field-error">{{ $message }}</span> @enderror
-            </label>
+            </div>
 
             <label class="block lg:col-span-2">
                 <span class="field-label">Descriere scurtă</span>
@@ -275,29 +323,50 @@
         <section x-show="tab === 'fitments'" x-cloak class="space-y-4">
             <div class="flex items-center justify-between gap-3">
                 <h2 class="text-[11px] font-semibold uppercase tracking-wider text-stone-500">Compatibilitate auto</h2>
-                <button type="button" wire:click="addFitment" class="btn-secondary">+ Compatibilitate</button>
+                <button type="button" wire:click="addFitment" class="btn-secondary">+ Rând gol</button>
             </div>
 
-            <label class="block">
-                <span class="field-label">Caută vehiculul</span>
-                <input type="search" wire:model.live.debounce.400ms="fitmentSearch" placeholder="Marcă, model sau generație — ex. Suzuki Jimny">
-                <span class="field-hint">Catalogul are zeci de mii de generații, așa că lista se completează după ce cauți. Generațiile deja alese rămân vizibile.</span>
-            </label>
+            {{-- Results add a row directly. Offering them inside a per-row select meant a product
+                 with no compatibility rows yet had nowhere to show a search result at all. --}}
+            <div class="rounded-xl border border-stone-200 bg-stone-50 p-4">
+                <label class="block">
+                    <span class="field-label">Caută vehiculul</span>
+                    <input type="search" wire:model.live.debounce.300ms="fitmentSearch"
+                           placeholder="Marcă, model sau generație — ex. Suzuki Jimny">
+                </label>
+
+                @if($generations->isNotEmpty())
+                    <ul class="mt-2 max-h-64 divide-y divide-stone-200 overflow-y-auto rounded-lg border border-stone-200 bg-white text-sm">
+                        @foreach($generations as $generation)
+                            <li wire:key="gen-{{ $generation->id }}">
+                                <button type="button" wire:click="addFitment({{ $generation->id }})"
+                                        class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-stone-100">
+                                    <span>{{ $generation->label }}</span>
+                                    <span class="shrink-0 text-xs text-stone-500">
+                                        {{ $generation->year_from }}–{{ $generation->year_to ?: 'prezent' }}
+                                    </span>
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+                @elseif(trim($fitmentSearch) !== '')
+                    <p class="mt-2 text-sm text-stone-500">Niciun vehicul pentru „{{ $fitmentSearch }}".</p>
+                @else
+                    <p class="mt-2 text-sm text-stone-500">
+                        Catalogul are zeci de mii de generații, așa că lista apare după ce începi să scrii.
+                    </p>
+                @endif
+            </div>
 
             @foreach($fitments as $index => $fitment)
                 <div wire:key="fitment-{{ $index }}" class="grid gap-4 rounded-xl bg-stone-50 p-4 md:grid-cols-5">
-                    <label class="block md:col-span-2">
+                    <div class="block md:col-span-2">
                         <span class="field-label">Generație</span>
-                        <select wire:model="fitments.{{ $index }}.generation_id">
-                            <option value="">{{ $generations->isEmpty() ? 'Caută mai întâi un vehicul' : 'Alege generația' }}</option>
-                            @foreach($generations as $generation)
-                                <option value="{{ $generation->id }}">
-                                    {{ $generation->label }} ({{ $generation->year_from }}–{{ $generation->year_to ?: 'prezent' }})
-                                </option>
-                            @endforeach
-                        </select>
+                        <p class="mt-1 text-sm {{ $fitment['generation_id'] ? 'font-medium text-stone-900' : 'text-amber-700' }}">
+                            {{ $this->fitmentLabels[$fitment['generation_id']] ?? 'Nealeasă — caută vehiculul mai sus și adaugă-l' }}
+                        </p>
                         @error('fitments.'.$index.'.generation_id') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
+                    </div>
 
                     <label class="block">
                         <span class="field-label">An de la</span>

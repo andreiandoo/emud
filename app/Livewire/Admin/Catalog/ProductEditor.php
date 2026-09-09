@@ -47,8 +47,10 @@ class ProductEditor extends Component
 
     public array $categoryIds = [];
 
-    /** Filters the category list; the selected ones stay visible regardless. */
+    /** Nothing is offered in the category picker until this, or the browse-all toggle below. */
     public string $categorySearch = '';
+
+    public bool $browseAllCategories = false;
 
     /** Nothing is offered in the fitment picker until this narrows the vehicle catalogue. */
     public string $fitmentSearch = '';
@@ -143,9 +145,47 @@ class ProductEditor extends Component
         $this->variants = array_values($this->variants);
     }
 
-    public function addFitment(): void
+    public function addFitment(?int $generationId = null): void
     {
-        $this->fitments[] = ['id' => null, 'generation_id' => null, 'year_from' => null, 'year_to' => null, 'position' => '', 'requires_modification' => false, 'notes' => ''];
+        // Adding the same generation twice would save two identical compatibility rows, which
+        // then read as a data problem to anyone looking at the product later.
+        if ($generationId !== null && collect($this->fitments)->contains('generation_id', $generationId)) {
+            return;
+        }
+
+        $this->fitments[] = ['id' => null, 'generation_id' => $generationId, 'year_from' => null, 'year_to' => null, 'position' => '', 'requires_modification' => false, 'notes' => ''];
+    }
+
+    public function addCategory(int $categoryId): void
+    {
+        if (! in_array($categoryId, $this->categoryIds, true)) {
+            $this->categoryIds[] = $categoryId;
+        }
+
+        $this->categorySearch = '';
+        $this->browseAllCategories = false;
+    }
+
+    public function removeCategory(int $categoryId): void
+    {
+        $this->categoryIds = array_values(array_filter($this->categoryIds, fn (int $id): bool => $id !== $categoryId));
+    }
+
+    /**
+     * The pills under the field, in the order they were picked — the first one is the primary
+     * category on save, so the order is information, not decoration.
+     *
+     * @return \Illuminate\Support\Collection<int, Category>
+     */
+    public function getSelectedCategoriesProperty(): Collection
+    {
+        if ($this->categoryIds === []) {
+            return collect();
+        }
+
+        $categories = Category::query()->whereIn('id', $this->categoryIds)->get(['id', 'name', 'full_path'])->keyBy('id');
+
+        return collect($this->categoryIds)->map(fn (int $id) => $categories->get($id))->filter()->values();
     }
 
     public function removeFitment(int $index): void
@@ -334,8 +374,8 @@ class ProductEditor extends Component
     }
 
     /**
-     * Only the branches the editor is actually showing. Whatever is already selected is always
-     * included, or filtering the list would silently drop a category off the product on save.
+     * Candidates to add, never the whole tree by default. What is already on the product lives
+     * in the pills underneath, so it is deliberately excluded here rather than shown twice.
      *
      * @return \Illuminate\Support\Collection<int, Category>
      */
@@ -343,15 +383,19 @@ class ProductEditor extends Component
     {
         $search = trim($this->categorySearch);
 
+        if ($search === '' && ! $this->browseAllCategories) {
+            return collect();
+        }
+
         return Category::query()
             ->where('is_active', true)
+            ->whereNotIn('id', $this->categoryIds ?: [0])
             ->when($search !== '', fn ($query) => $query->where(fn ($match) => $match
                 ->where('name', 'ilike', '%'.$search.'%')
-                ->orWhere('full_path', 'ilike', '%'.$search.'%')
-                ->orWhereIn('id', $this->categoryIds)))
+                ->orWhere('full_path', 'ilike', '%'.$search.'%')))
             ->orderBy('full_path')
-            ->limit(300)
-            ->get(['id', 'name', 'depth']);
+            ->limit($search === '' ? 400 : 40)
+            ->get(['id', 'name', 'full_path', 'depth']);
     }
 
     /**
@@ -367,31 +411,67 @@ class ProductEditor extends Component
      */
     private function generationOptions(): Collection
     {
-        $selected = collect($this->fitments)->pluck('generation_id')->filter()->map(fn ($id): int => (int) $id)->unique()->all();
         $search = trim($this->fitmentSearch);
 
-        if ($search === '' && $selected === []) {
+        if ($search === '') {
             return collect();
         }
 
+        return $this->generationQuery()
+            ->whereNotIn('vg.id', $this->selectedGenerationIds() ?: [0])
+            ->where(fn ($match) => $match
+                ->where('mk.name', 'ilike', '%'.$search.'%')
+                ->orWhere('vm.name', 'ilike', '%'.$search.'%')
+                ->orWhere('vg.name', 'ilike', '%'.$search.'%'))
+            ->limit(40)
+            ->get();
+    }
+
+    /**
+     * Labels for the generations already on the product, so a compatibility row can print what
+     * it refers to without a select holding every generation in the catalogue.
+     *
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    public function getFitmentLabelsProperty(): Collection
+    {
+        $selected = $this->selectedGenerationIds();
+
+        if ($selected === []) {
+            return collect();
+        }
+
+        return $this->generationQuery()
+            ->whereIn('vg.id', $selected)
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [
+                (int) $row->id => $row->label.' ('.$row->year_from.'–'.($row->year_to ?: 'prezent').')',
+            ]);
+    }
+
+    /** @return list<int> */
+    private function selectedGenerationIds(): array
+    {
+        return collect($this->fitments)->pluck('generation_id')->filter()->map(fn ($id): int => (int) $id)->unique()->values()->all();
+    }
+
+    /**
+     * Built as a plain query rather than Eloquent: these rows are option labels, and hydrating
+     * three models each to print one line of text was most of what made this page unusable.
+     */
+    private function generationQuery(): \Illuminate\Database\Query\Builder
+    {
         return DB::table('vehicle_generations as vg')
             ->join('vehicle_models as vm', 'vm.id', '=', 'vg.model_id')
             ->join('vehicle_makes as mk', 'mk.id', '=', 'vm.make_id')
-            ->when($search !== '', fn ($query) => $query->where(fn ($match) => $match
-                ->where('mk.name', 'ilike', '%'.$search.'%')
-                ->orWhere('vm.name', 'ilike', '%'.$search.'%')
-                ->orWhere('vg.name', 'ilike', '%'.$search.'%')
-                ->orWhereIn('vg.id', $selected)))
-            ->when($search === '', fn ($query) => $query->whereIn('vg.id', $selected))
             ->orderBy('mk.name')
             ->orderBy('vm.name')
             ->orderBy('vg.year_from')
-            ->limit(100)
-            ->get([
+            ->select([
                 'vg.id',
                 'vg.year_from',
                 'vg.year_to',
-                DB::raw("mk.name || ' ' || vm.name || ' · ' || vg.name as label"),
+                DB::raw("mk.name || ' ' || vm.name || ' · ' || coalesce(vg.name, '') as label"),
             ]);
     }
 }

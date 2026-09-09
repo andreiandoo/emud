@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\Settings;
 
 use App\Settings\StoreSettings;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -43,7 +44,7 @@ class GeneralSettings extends Component
             // Kept under the length search engines actually render, so the owner sees the limit
             // here rather than discovering a truncated snippet later.
             'site_description' => ['nullable', 'string', 'max:160'],
-            'default_currency' => ['required', 'string', 'size:3'],
+            'default_currency' => ['required', 'string', Rule::in(array_keys(config('emud.catalog.currencies', ['RON' => 'RON'])))],
             'timezone' => ['required', 'timezone'],
             'logoUpload' => ['nullable', 'image', 'max:2048'],
             // No SVG for the favicon: it is served to every visitor on every page, and an SVG

@@ -4,6 +4,17 @@ return [
     'catalog' => [
         'default_currency' => env('STORE_CURRENCY', 'RON'),
         'default_vat_rate' => (float) env('STORE_VAT_RATE', 21),
+        // What the shop can be priced in. Free text let a typo through and there is no way to
+        // notice one: the wrong code just quietly formats every price with the wrong symbol.
+        'currencies' => [
+            'RON' => 'Leu românesc (RON)',
+            'EUR' => 'Euro (EUR)',
+            'USD' => 'Dolar american (USD)',
+            'GBP' => 'Liră sterlină (GBP)',
+            'BGN' => 'Levă bulgărească (BGN)',
+            'HUF' => 'Forint maghiar (HUF)',
+            'PLN' => 'Zlot polonez (PLN)',
+        ],
     ],
     'pricing' => [
         'default_markup_percent' => (float) env('DEFAULT_MARKUP_PERCENT', 25),

@@ -28,7 +28,11 @@
         <div class="grid gap-4 sm:grid-cols-2">
             <label class="block">
                 <span class="field-label">Monedă</span>
-                <input wire:model="default_currency" maxlength="3" placeholder="RON">
+                <select wire:model="default_currency">
+                    @foreach(config('emud.catalog.currencies', ['RON' => 'RON']) as $code => $label)
+                        <option value="{{ $code }}">{{ $label }}</option>
+                    @endforeach
+                </select>
                 @error('default_currency') <span class="field-error">{{ $message }}</span> @enderror
             </label>
 

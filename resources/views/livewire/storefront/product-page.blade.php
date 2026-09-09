@@ -1,4 +1,10 @@
 <div class="space-y-8">
+    @unless($published)
+        <p class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Previzualizare: produsul nu este publicat, deci clienții nu îl pot vedea încă.
+        </p>
+    @endunless
+
     <x-seo :title="$product->name"
            :description="$product->short_description"
            :canonical="route('storefront.product', $product)"
