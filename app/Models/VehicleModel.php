@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,5 +24,11 @@ class VehicleModel extends Model
     public function generations(): HasMany
     {
         return $this->hasMany(VehicleGeneration::class, 'model_id');
+    }
+
+    /** Models with a real vehicle behind them; see VehicleMake::scopeWithConfigurations(). */
+    public function scopeWithConfigurations(Builder $query): Builder
+    {
+        return $query->whereHas('generations.configurations');
     }
 }

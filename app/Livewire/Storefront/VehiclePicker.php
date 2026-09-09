@@ -8,6 +8,7 @@ use App\Models\VehicleModel;
 use App\Storefront\SelectedVehicle;
 use App\Storefront\VehicleContext;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -94,7 +95,11 @@ class VehiclePicker extends Component
     {
         return $this->makeId === null
             ? collect()
-            : VehicleModel::query()->where('make_id', $this->makeId)->orderBy('name')->get();
+            : VehicleModel::query()
+                ->where('make_id', $this->makeId)
+                ->withConfigurations()
+                ->orderBy('name')
+                ->get();
     }
 
     /** @return Collection<int, VehicleGeneration> */
@@ -105,10 +110,31 @@ class VehiclePicker extends Component
             : VehicleGeneration::query()->where('model_id', $this->modelId)->orderByDesc('year_from')->get();
     }
 
+    /**
+     * The picker renders on every storefront page, and proving that a make has no vehicle
+     * behind it means walking all of its models and generations. The list only changes when a
+     * catalogue import is canonicalized, so it is worth an hour of staleness rather than that
+     * scan on every page view.
+     *
+     * @return Collection<int, VehicleMake>
+     */
+    private function selectableMakes(): Collection
+    {
+        return Cache::remember(
+            'storefront:vehicle-picker:makes',
+            now()->addHour(),
+            fn (): Collection => VehicleMake::query()
+                ->where('is_active', true)
+                ->withConfigurations()
+                ->orderBy('name')
+                ->get(['id', 'name']),
+        );
+    }
+
     public function render()
     {
         return view('livewire.storefront.vehicle-picker', [
-            'makes' => VehicleMake::query()->where('is_active', true)->orderBy('name')->get(),
+            'makes' => $this->selectableMakes(),
             'models' => $this->models,
             'generations' => $this->generations,
         ]);
