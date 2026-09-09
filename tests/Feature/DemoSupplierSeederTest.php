@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProductStatus;
 use App\Models\CatalogFitment;
 use App\Models\CatalogPart;
+use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
@@ -63,6 +65,41 @@ class DemoSupplierSeederTest extends TestCase
 
         $this->assertNotNull($fitment);
         $this->assertNotNull($fitment->configuration);
+    }
+
+    /**
+     * The shop lists only active products, and the importer parks feed-created ones in review.
+     * Without the publish step the whole chain reports success and the storefront stays empty.
+     */
+    public function test_the_seeded_catalogue_reaches_the_storefront(): void
+    {
+        Storage::fake('local');
+        $this->seed(DemoSupplierSeeder::class);
+        $this->artisan('suppliers:sync '.DemoSupplierSeeder::CODE.' --mode=catalog')->assertSuccessful();
+
+        $this->assertSame(0, Product::query()->where('status', ProductStatus::Active)->count());
+
+        $this->artisan('suppliers:publish-feed-products '.DemoSupplierSeeder::CODE)->assertSuccessful();
+
+        $published = Product::query()->where('status', ProductStatus::Active)->whereNotNull('published_at')->count();
+        $this->assertGreaterThan(0, $published);
+    }
+
+    public function test_publishing_leaves_products_from_other_sources_alone(): void
+    {
+        Storage::fake('local');
+        $this->seed(DemoSupplierSeeder::class);
+        $this->artisan('suppliers:sync '.DemoSupplierSeeder::CODE.' --mode=catalog')->assertSuccessful();
+
+        $handmade = Product::query()->create([
+            'name' => 'Produs adăugat manual',
+            'slug' => 'produs-adaugat-manual',
+            'status' => ProductStatus::Review,
+        ]);
+
+        $this->artisan('suppliers:publish-feed-products '.DemoSupplierSeeder::CODE)->assertSuccessful();
+
+        $this->assertSame(ProductStatus::Review, $handmade->fresh()->status);
     }
 
     public function test_the_demo_supplier_passes_its_own_onboarding_check(): void

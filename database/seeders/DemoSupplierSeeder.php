@@ -78,8 +78,10 @@ class DemoSupplierSeeder extends Seeder
             count($vehicles),
             Storage::disk('local')->path(self::FEED_PATH),
         ));
-        $this->command?->line('Rulează: php artisan suppliers:onboarding-check '.self::CODE);
-        $this->command?->line('Apoi:    php artisan suppliers:sync '.self::CODE.' --mode=catalog');
+        $this->command?->line('1. php artisan suppliers:onboarding-check '.self::CODE);
+        $this->command?->line('2. php artisan suppliers:sync '.self::CODE.' --mode=catalog');
+        // Feed-created products land in review by design; the shop shows only active ones.
+        $this->command?->line('3. php artisan suppliers:publish-feed-products '.self::CODE);
     }
 
     /**
@@ -318,6 +320,10 @@ class DemoSupplierSeeder extends Seeder
                 'oe_numbers_delimiter' => '|',
                 'cross_references_delimiter' => '|',
                 'images_delimiter' => '|',
+                // The storefront sells Products, not CatalogParts, and nothing else creates
+                // them here. Without this the import succeeds and the shop stays empty, which
+                // defeats the point of a stand-in supplier.
+                'auto_create_products' => true,
                 'technical_promotion_enabled' => true,
                 // This is the first supplier in an empty catalogue, so it has to be the one
                 // allowed to mint canonical brand+MPN identities. Later suppliers attach to
