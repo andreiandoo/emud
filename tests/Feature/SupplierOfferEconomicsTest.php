@@ -186,6 +186,42 @@ class SupplierOfferEconomicsTest extends TestCase
         app(ExchangeRateImporter::class)->importFromXml('<DataSet><Body></Body></DataSet>');
     }
 
+    /**
+     * The National Bank withdrew its feed, so rates come from the European Central Bank now.
+     * Those are quoted against the euro while everything downstream expects them quoted against
+     * the store's currency, so the cross-multiplication is the part worth pinning down.
+     */
+    public function test_it_cross_multiplies_euro_reference_rates_into_the_store_currency(): void
+    {
+        $xml = <<<'XML'
+        <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+            <Cube>
+                <Cube time='2026-09-08'>
+                    <Cube currency='USD' rate='1.1614'/>
+                    <Cube currency='RON' rate='5.2500'/>
+                    <Cube currency='XX' rate='2.0'/>
+                </Cube>
+            </Cube>
+        </gesmes:Envelope>
+        XML;
+
+        $result = app(ExchangeRateImporter::class)->importFromXml($xml);
+
+        $this->assertSame('2026-09-08', $result['date']);
+        $this->assertSame(1, $result['skipped']);
+
+        // One euro buys 5.25 RON, so that is what a euro is worth on the shelf.
+        $this->assertSame('5.25000000', ExchangeRate::query()
+            ->where('base_currency', 'EUR')->where('quote_currency', 'RON')->where('rate_date', '2026-09-08')->sole()->rate);
+
+        // A dollar buys 5.25 / 1.1614 RON, which is the rate nobody publishes directly.
+        $this->assertEqualsWithDelta(4.5204, (float) ExchangeRate::query()
+            ->where('base_currency', 'USD')->where('quote_currency', 'RON')->where('rate_date', '2026-09-08')->sole()->rate, 0.0001);
+
+        // The store's own currency is not stored against itself.
+        $this->assertDatabaseMissing('exchange_rates', ['base_currency' => 'RON', 'quote_currency' => 'RON']);
+    }
+
     /** @param array<string, mixed> $attributes */
     private function offer(array $attributes, string $code = 'ECON', array $supplier = []): SupplierOffer
     {

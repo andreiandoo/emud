@@ -22,7 +22,11 @@ return [
 
         // National Bank of Romania reference rates. RON-denominated, which suits a
         // RON base currency; verify the document shape before trusting an import.
-        'exchange_rates_url' => env('EXCHANGE_RATES_URL', 'https://www.bnr.ro/nbrfxrates.xml'),
+        // The National Bank of Romania withdrew nbrfxrates.xml — every known path now redirects
+        // to its homepage, so the fetch returned HTML and the parse failed. The European Central
+        // Bank publishes the same reference rates daily at a stable address, and the importer
+        // cross-multiplies them into the store's currency.
+        'exchange_rates_url' => env('EXCHANGE_RATES_URL', 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml'),
 
         // Inputs to contribution margin. Planning defaults until real processor and
         // returns data exist; they are configuration precisely so they can be
