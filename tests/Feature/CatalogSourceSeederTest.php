@@ -76,6 +76,10 @@ class CatalogSourceSeederTest extends TestCase
 
         $source = CatalogSource::query()->where('code', 'EEA')->sole();
         $settings = $source->settings;
+        // Read from the profile rather than written here: the default is tuned against
+        // Discodata's timeout (1000, then 5000 once the crawl was split by manufacturer),
+        // and what this test guards is that the current default arrives, not its value.
+        $profileDefault = $settings['page_size'];
         unset($settings['page_size']);
         $settings['timeout_seconds'] = 600;
         $source->update(['settings' => $settings]);
@@ -84,7 +88,7 @@ class CatalogSourceSeederTest extends TestCase
 
         $source->refresh();
 
-        $this->assertSame(1000, $source->settings['page_size'], 'New profile defaults must still reach existing sources.');
+        $this->assertSame($profileDefault, $source->settings['page_size'], 'New profile defaults must still reach existing sources.');
         $this->assertSame(600, $source->settings['timeout_seconds'], 'Operator overrides must survive re-seeding.');
     }
 }

@@ -125,7 +125,10 @@ class DemoSupplierSeederTest extends TestCase
         $this->assertNotNull($product->short_description);
         $this->assertSame(24, $product->warranty_months);
         $this->assertEqualsWithDelta(48.0, (float) $product->weight_kg, 0.001);
-        $this->assertSame(['length' => 186.0, 'width' => 62.0, 'height' => 44.0], array_map('floatval', $product->dimensions_cm));
+        // assertEquals, not assertSame: Postgres stores jsonb with its keys reordered
+        // (shortest first), so the same three dimensions come back as width, height,
+        // length. What matters is each value under its name, not the order.
+        $this->assertEquals(['length' => 186.0, 'width' => 62.0, 'height' => 44.0], array_map('floatval', $product->dimensions_cm));
         $this->assertGreaterThan(0, $product->categories->count());
         $this->assertGreaterThan(0, $product->attributeValues->count());
         $this->assertGreaterThan(0, $product->fitments->count());

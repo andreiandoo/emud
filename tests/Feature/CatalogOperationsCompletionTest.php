@@ -23,7 +23,7 @@ class CatalogOperationsCompletionTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/catalog-schema')
             ->assertOk()
-            ->assertSee('Database schema explorer')
+            ->assertSee('Explorator de schemă')
             ->assertSee('catalog_parts');
     }
 

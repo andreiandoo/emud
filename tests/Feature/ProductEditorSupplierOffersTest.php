@@ -75,9 +75,15 @@ class ProductEditorSupplierOffersTest extends TestCase
             ->supplierOffers;
     }
 
+    /**
+     * Re-read after creating: status, is_universal and is_featured get their values from
+     * column defaults, which never reach the instance create() returns. The editor is
+     * handed this instance directly, whereas a real request binds the row from the
+     * database with every default in place.
+     */
     private function product(): Product
     {
-        return Product::query()->create(['name' => 'Bară față', 'slug' => 'bara-fata-'.uniqid()]);
+        return Product::query()->create(['name' => 'Bară față', 'slug' => 'bara-fata-'.uniqid()])->fresh();
     }
 
     /** @param array<string, mixed> $offer */
