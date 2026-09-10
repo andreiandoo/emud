@@ -11,6 +11,7 @@ use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
 use App\Storefront\CatalogMetrics;
+use Database\Seeders\VehicleCollectionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -107,24 +108,43 @@ class CollectionsIndexTest extends TestCase
         $metrics = app(CatalogMetrics::class)->snapshot();
 
         $this->assertSame(1, $metrics['collections']['value']);
+        $this->assertSame(1, $metrics['makes']['value']);
         $this->assertSame(1, $metrics['models']['value']);
+        $this->assertSame(1, $metrics['configurations']['value']);
         $this->assertSame(1, $metrics['products']['value']);
     }
 
     /**
-     * A metric that counts nothing is dropped rather than shown as a zero: "0 repere în catalogul
-     * tehnic" advertises an empty shop, which on a fresh install is exactly what it would say.
+     * The arithmetic has to be checkable on screen. The seeder writes one collection per make and
+     * one per model, so a page showing more collections than models is correct but looks wrong
+     * unless the makes are on show too.
      */
-    public function test_a_metric_that_counts_nothing_is_not_shown(): void
+    public function test_the_collection_count_is_the_makes_plus_the_models(): void
+    {
+        $this->realVehicle();
+        $this->seed(VehicleCollectionSeeder::class);
+
+        CatalogMetrics::forget();
+        $metrics = app(CatalogMetrics::class)->snapshot();
+
+        $this->assertSame(
+            $metrics['makes']['value'] + $metrics['models']['value'],
+            $metrics['collections']['value'],
+        );
+    }
+
+    /**
+     * EEA, vPIC and lifeofcapo are vehicle catalogues — they carry no part numbers at all — so
+     * this number stays at zero until a parts catalogue is connected, and a zero is not shown.
+     */
+    public function test_the_parts_metric_is_absent_while_no_parts_catalogue_is_connected(): void
     {
         $this->collection('Dacia Duster', 'dacia-duster');
 
         CatalogMetrics::forget();
 
-        $metrics = Livewire::test(CollectionsIndex::class)->viewData('metrics');
-
-        $this->assertArrayHasKey('collections', $metrics);
-        $this->assertArrayNotHasKey('parts', $metrics);
+        $this->assertSame(0, app(CatalogMetrics::class)->snapshot()['parts']['value']);
+        $this->assertArrayNotHasKey('parts', Livewire::test(CollectionsIndex::class)->viewData('metrics'));
     }
 
     public function test_a_hidden_collection_never_reaches_the_wall(): void

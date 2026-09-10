@@ -59,14 +59,14 @@
                  number of cells is not known when the classes are written and a grid would leave
                  a hole where the missing one was. --}}
             @if($metrics !== [])
-                <dl class="mx-auto mt-12 flex max-w-4xl flex-wrap justify-center gap-y-8">
+                <dl class="mx-auto mt-12 flex max-w-5xl flex-wrap justify-center gap-y-8">
                     @foreach($metrics as $metric)
                         {{-- flex-col-reverse rather than reordering the markup: a <dl> wants its
                              <dt> before its <dd>, and the number belongs on top. --}}
-                        <div class="flex w-1/2 flex-col-reverse px-3 text-center sm:w-auto sm:px-8
+                        <div class="flex w-1/2 flex-col-reverse px-3 text-center sm:w-auto sm:px-6
                                     sm:border-l sm:border-white/10 sm:first:border-l-0">
                             <dt class="mt-1.5 text-[11px] uppercase tracking-wider text-stone-400">{{ $metric['label'] }}</dt>
-                            <dd class="text-3xl font-black tabular-nums sm:text-4xl">
+                            <dd class="text-2xl font-black tabular-nums sm:text-3xl">
                                 {{ number_format($metric['value'], 0, ',', '.') }}
                             </dd>
                         </div>
