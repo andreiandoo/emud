@@ -469,7 +469,8 @@ function terrain() {
                 ScrollTrigger.create({
                     trigger: trail,
                     start: 'top top',
-                    end: () => `+=${Math.round(window.innerHeight * 3)}`,
+                    // Longer than a straight drive would need: the car holds at every checkpoint.
+                    end: () => `+=${Math.round(window.innerHeight * 4.5)}`,
                     pin: trail.querySelector('[data-st-trail-stage]'),
                     scrub: true,
                     anticipatePin: 1,
