@@ -3,32 +3,39 @@
 namespace App\Livewire\Storefront;
 
 use App\Livewire\Concerns\DecodesVin;
+use App\Models\Category;
 use App\Models\VehicleCollection;
 use App\Models\VehicleConfiguration;
 use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
+use App\Storefront\CategoryIcons;
 use App\Storefront\SelectedVehicle;
 use App\Storefront\VehicleContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 /**
- * The three ways into a collection: pick the car, decode a VIN, or choose a derivative.
+ * The three ways into a listing: pick the car, decode a VIN, or go one level narrower — a
+ * collection's derivatives, or a category's subcategories.
  *
  * One component rather than three because they answer the same question and the customer should
- * be able to give up on one and try the next without the page moving underneath them. The
- * make is taken from the collection being viewed, so someone already looking at Dacia is not
- * asked which manufacturer they meant.
+ * be able to give up on one and try the next without the page moving underneath them. On a
+ * collection the make is taken from the collection being viewed, so someone already looking at
+ * Dacia is not asked which manufacturer they meant.
  */
 class VehicleFinder extends Component
 {
     use DecodesVin;
 
-    public int $collectionId;
+    public ?int $collectionId = null;
+
+    public ?int $categoryId = null;
 
     /** Which panel is open, mirrored from Alpine so a server round trip does not close it. */
     public string $panel = '';
@@ -43,11 +50,16 @@ class VehicleFinder extends Component
 
     public string $applied = '';
 
-    public function mount(VehicleCollection $collection): void
+    /**
+     * Either one, never both. A parameter left out can still arrive as an empty model, because
+     * the container builds any class a method asks for, so both are read by their id.
+     */
+    public function mount(?VehicleCollection $collection = null, ?Category $category = null): void
     {
-        $this->collectionId = (int) $collection->id;
-        $this->pickMakeId = (string) ($collection->make_id ?? '');
-        $this->pickModelId = (string) ($collection->model_id ?? '');
+        $this->collectionId = $collection?->id;
+        $this->categoryId = $collection?->id === null ? $category?->id : null;
+        $this->pickMakeId = (string) ($collection?->make_id ?? '');
+        $this->pickModelId = (string) ($collection?->model_id ?? '');
     }
 
     public function updatedPickMakeId(): void
@@ -108,15 +120,20 @@ class VehicleFinder extends Component
         ));
     }
 
-    public function render()
+    public function render(VehicleContext $context)
     {
+        $collection = $this->collectionId === null ? null : VehicleCollection::query()->find($this->collectionId);
+        $category = $this->categoryId === null ? null : Category::query()->find($this->categoryId);
+
         return view('livewire.storefront.vehicle-finder', [
-            'collection' => VehicleCollection::query()->findOrFail($this->collectionId),
+            'collection' => $collection,
+            'category' => $category,
+            'current' => $context->current(),
             'makes' => $this->makes(),
             'years' => $this->years(),
             'models' => $this->models(),
             'generations' => $this->generations(),
-            'children' => $this->children(),
+            'choices' => $this->choices($collection, $category),
         ]);
     }
 
@@ -208,18 +225,46 @@ class VehicleFinder extends Component
     }
 
     /**
-     * The derivatives under this collection. Empty on a derivative's own page, where the third
-     * button has nothing to offer and is not drawn.
+     * One level narrower than the page: a collection's derivatives, or a category's
+     * subcategories. Empty on a derivative's own page or a leaf category, where the third button
+     * has nothing to offer and is not drawn.
      *
-     * @return EloquentCollection<int, VehicleCollection>
+     * Real links, rendered server side, so they stay crawlable and work without JavaScript.
+     *
+     * @return Collection<int, array{name: string, url: string, image: ?string, icon: string, meta: ?string}>
      */
-    private function children(): EloquentCollection
+    private function choices(?VehicleCollection $collection, ?Category $category): Collection
     {
+        if ($category !== null) {
+            return $category->children()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'full_path', 'icon', 'image_path'])
+                ->map(fn (Category $child): array => [
+                    'name' => (string) $child->name,
+                    'url' => route('storefront.category', $child),
+                    'image' => $child->image_path ? Storage::disk('public')->url($child->image_path) : null,
+                    'icon' => CategoryIcons::resolve($child->icon),
+                    'meta' => null,
+                ]);
+        }
+
+        if ($collection === null) {
+            return collect();
+        }
+
         return VehicleCollection::query()
-            ->where('parent_id', $this->collectionId)
+            ->where('parent_id', $collection->id)
             ->where('is_active', true)
             ->orderBy('position')
             ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'square_image_path', 'year_from', 'year_to']);
+            ->get(['id', 'name', 'slug', 'square_image_path', 'year_from', 'year_to'])
+            ->map(fn (VehicleCollection $child): array => [
+                'name' => (string) $child->name,
+                'url' => $child->url(),
+                'image' => $child->squareImageUrl(),
+                'icon' => 'car',
+                'meta' => $child->yearRange(),
+            ]);
     }
 }

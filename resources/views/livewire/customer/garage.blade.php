@@ -46,7 +46,7 @@
 
                 <div class="flex flex-wrap items-center justify-between gap-3 p-4">
                     <div class="flex flex-wrap items-center gap-2">
-                        <a href="{{ route('customer.garage.vehicle', $vehicle->id) }}" class="st-btn st-btn--ink st-btn--sm">Detalii</a>
+                        <a href="{{ route('customer.garage.vehicle', $vehicle->routeSlug()) }}" class="st-btn st-btn--ink st-btn--sm">Detalii</a>
                         @if($vehicle->collection)
                             <a href="{{ $vehicle->collection->url() }}" class="st-btn st-btn--outline st-btn--sm">Piese pentru ea</a>
                         @endif

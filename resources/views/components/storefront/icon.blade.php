@@ -72,6 +72,9 @@
     'trash' => 'M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
     'minus' => 'M5 12h14',
     'box' => 'M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10',
+    'sliders' => 'M4 6h9M17 6h3M15 4v4M4 12h3M11 12h9M9 10v4M4 18h11M19 18h1M17 16v4',
+    'expand' => 'M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7',
+    'building' => 'M4 20V6l8-3v17M12 9h8v11M8 8h.01M8 12h.01M8 16h.01M16 13h.01M16 17h.01M3 20h18',
 ])
 
 {{-- Size comes from presentation attributes rather than a default class: a `class="h-4 w-4"`

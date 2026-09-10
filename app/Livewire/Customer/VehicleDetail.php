@@ -30,19 +30,22 @@ class VehicleDetail extends Component
     public string $status = '';
 
     /**
-     * Scoped to the signed-in customer, so a vehicle id from someone else's garage is a 404
-     * rather than a readable page of their plate number and service history.
+     * Looked up by its readable address (dacia-duster-2018) inside the signed-in customer's own
+     * garage, so the same address in someone else's garage is a 404 rather than a page of their
+     * plate number and service history. The slug is only unique per customer, which is why the
+     * scoping is part of the lookup rather than a check after it.
      *
      * The route parameter is deliberately not called "vehicle": matching the typed
-     * CustomerVehicle property makes implicit binding resolve it by primary key before mount
-     * runs, which would hand over any customer's car and skip this scoping entirely.
+     * CustomerVehicle property makes implicit binding resolve it before mount runs, which would
+     * skip this scoping entirely.
      */
-    public function mount(int $vehicleId): void
+    public function mount(string $slug): void
     {
         $this->vehicle = CustomerVehicle::query()
             ->where('user_id', auth()->id())
+            ->where('slug', $slug)
             ->with(['make', 'model', 'generation', 'configuration.engine'])
-            ->findOrFail($vehicleId);
+            ->firstOrFail();
 
         $this->mileage_km = $this->vehicle->mileage_km;
     }

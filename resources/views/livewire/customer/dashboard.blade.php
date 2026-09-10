@@ -38,7 +38,7 @@
                     @endif
 
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('customer.garage.vehicle', $primary->id) }}" class="st-btn st-btn--ink st-btn--sm">Detalii și scadențe</a>
+                        <a href="{{ route('customer.garage.vehicle', $primary->routeSlug()) }}" class="st-btn st-btn--ink st-btn--sm">Detalii și scadențe</a>
                         @if($primary->collection)
                             <a href="{{ $primary->collection->url() }}" class="st-btn st-btn--outline st-btn--sm">Piese pentru ea</a>
                         @endif
@@ -50,7 +50,7 @@
                             @foreach($vehicles->where('id', '!=', $primary->id) as $garageVehicle)
                                 <li class="flex items-center justify-between gap-3">
                                     <span><span class="font-medium">{{ $garageVehicle->make?->name }} {{ $garageVehicle->model?->name }}</span> <span class="text-ink2">{{ $garageVehicle->year }}</span></span>
-                                    <a href="{{ route('customer.garage.vehicle', $garageVehicle->id) }}" class="text-ink2 underline underline-offset-2 hover:text-ink">Detalii</a>
+                                    <a href="{{ route('customer.garage.vehicle', $garageVehicle->routeSlug()) }}" class="text-ink2 underline underline-offset-2 hover:text-ink">Detalii</a>
                                 </li>
                             @endforeach
                         </ul>

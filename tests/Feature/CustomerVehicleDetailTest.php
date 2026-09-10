@@ -36,25 +36,59 @@ class CustomerVehicleDetailTest extends TestCase
 
     public function test_a_customer_can_open_their_own_vehicle(): void
     {
-        $this->get(route('customer.garage.vehicle', $this->vehicle->id))
+        $this->get(route('customer.garage.vehicle', $this->vehicle->slug))
             ->assertOk()
             ->assertSee('Toyota Hilux');
     }
 
     /**
-     * The page shows a plate number and a service history, so an id from someone else's garage
-     * must not resolve.
+     * The page shows a plate number and a service history, so an address from someone else's
+     * garage must not resolve — neither the readable one nor the old number.
      */
     public function test_another_customers_vehicle_is_not_reachable(): void
     {
         $stranger = $this->garageVehicle(User::factory()->create());
+        $stranger->update(['year' => 2012]);
 
-        $this->get(route('customer.garage.vehicle', $stranger->id))->assertNotFound();
+        $this->get(route('customer.garage.vehicle', $stranger->slug))->assertNotFound();
+        $this->get('/cont/garaj/'.$stranger->id)->assertNotFound();
+    }
+
+    public function test_the_address_names_the_car_rather_than_a_number(): void
+    {
+        $this->assertSame('toyota-hilux-2020', $this->vehicle->slug);
+        $this->assertStringEndsWith('/cont/garaj/toyota-hilux-2020', route('customer.garage.vehicle', $this->vehicle->slug));
+    }
+
+    public function test_two_identical_cars_in_one_garage_get_their_own_addresses(): void
+    {
+        $twin = CustomerVehicle::create([
+            'user_id' => $this->user->id,
+            'make_id' => $this->vehicle->make_id,
+            'model_id' => $this->vehicle->model_id,
+            'year' => 2020,
+            'is_primary' => false,
+        ]);
+
+        $this->assertSame('toyota-hilux-2020-2', $twin->slug);
+    }
+
+    public function test_editing_the_car_moves_its_address(): void
+    {
+        $this->vehicle->update(['year' => 2016]);
+
+        $this->assertSame('toyota-hilux-2016', $this->vehicle->slug);
+    }
+
+    public function test_an_old_numbered_link_still_reaches_the_car(): void
+    {
+        $this->get('/cont/garaj/'.$this->vehicle->id)
+            ->assertRedirect(route('customer.garage.vehicle', $this->vehicle->slug));
     }
 
     public function test_mileage_is_recorded_with_the_date_it_was_read(): void
     {
-        Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
+        Livewire::test(VehicleDetail::class, ['slug' => $this->vehicle->slug])
             ->set('mileage_km', 128000)
             ->call('saveMileage')
             ->assertHasNoErrors();
@@ -67,7 +101,7 @@ class CustomerVehicleDetailTest extends TestCase
 
     public function test_a_reminder_can_be_added(): void
     {
-        Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
+        Livewire::test(VehicleDetail::class, ['slug' => $this->vehicle->slug])
             ->set('reminderType', ServiceReminderType::Itp->value)
             ->set('reminderDueOn', now()->addMonths(3)->toDateString())
             ->call('addReminder')
@@ -85,7 +119,7 @@ class CustomerVehicleDetailTest extends TestCase
      */
     public function test_adding_the_same_kind_twice_updates_rather_than_duplicates(): void
     {
-        $component = Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id]);
+        $component = Livewire::test(VehicleDetail::class, ['slug' => $this->vehicle->slug]);
 
         $component->set('reminderType', ServiceReminderType::Itp->value)
             ->set('reminderDueOn', now()->addMonth()->toDateString())
@@ -164,7 +198,7 @@ class CustomerVehicleDetailTest extends TestCase
     {
         $reminder = $this->reminder(ServiceReminderType::Itp, dueOn: now()->addMonth());
 
-        Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
+        Livewire::test(VehicleDetail::class, ['slug' => $this->vehicle->slug])
             ->call('removeReminder', $reminder->id);
 
         $this->assertDatabaseCount('vehicle_service_reminders', 0);
@@ -176,7 +210,7 @@ class CustomerVehicleDetailTest extends TestCase
         $foreign = VehicleServiceReminder::create(['customer_vehicle_id' => $stranger->id, 'type' => 'itp']);
 
         try {
-            Livewire::test(VehicleDetail::class, ['vehicleId' => $this->vehicle->id])
+            Livewire::test(VehicleDetail::class, ['slug' => $this->vehicle->slug])
                 ->call('removeReminder', $foreign->id);
             $this->fail('A reminder on another vehicle must not be reachable.');
         } catch (ModelNotFoundException) {
@@ -200,7 +234,7 @@ class CustomerVehicleDetailTest extends TestCase
         $order->items()->create(['name' => 'Filtru ulei Hilux', 'quantity' => 1, 'unit_price' => 50, 'line_total' => 50, 'customer_vehicle_id' => $this->vehicle->id]);
         $order->items()->create(['name' => 'Piesa altei masini', 'quantity' => 1, 'unit_price' => 50, 'line_total' => 50]);
 
-        $this->get(route('customer.garage.vehicle', $this->vehicle->id))
+        $this->get(route('customer.garage.vehicle', $this->vehicle->slug))
             ->assertSee('Filtru ulei Hilux')
             ->assertDontSee('Piesa altei masini');
     }

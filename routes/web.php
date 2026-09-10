@@ -77,6 +77,7 @@ use App\Livewire\Storefront\ServiceShopPage as StorefrontService;
 use App\Livewire\Storefront\ServiceTypePage as StorefrontServiceType;
 use App\Livewire\Storefront\ServiceTypes as StorefrontServiceTypes;
 use App\Livewire\Storefront\StaticPage as StorefrontPage;
+use App\Models\CustomerVehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -146,7 +147,15 @@ Route::prefix('cont')->name('customer.')->group(function (): void {
     Route::middleware('auth')->group(function (): void {
         Route::get('/', CustomerDashboard::class)->name('dashboard');
         Route::get('/garaj', CustomerGarage::class)->name('garage');
-        Route::get('/garaj/{vehicleId}', CustomerVehicleDetail::class)->whereNumber('vehicleId')->name('garage.vehicle');
+        // Garage pages were first addressed by number. Old links and bookmarks still reach the
+        // car, scoped to the signed-in customer exactly like the page itself. Registered first:
+        // the readable address below would otherwise take the digits as a name.
+        Route::get('/garaj/{vehicleId}', function (int $vehicleId) {
+            $vehicle = CustomerVehicle::query()->where('user_id', auth()->id())->findOrFail($vehicleId);
+
+            return redirect()->route('customer.garage.vehicle', $vehicle->routeSlug(), 301);
+        })->whereNumber('vehicleId');
+        Route::get('/garaj/{slug}', CustomerVehicleDetail::class)->where('slug', '[a-z0-9-]+')->name('garage.vehicle');
         Route::get('/favorite', CustomerFavourites::class)->name('favourites');
         Route::get('/comenzi', CustomerOrders::class)->name('orders');
         Route::get('/programari', CustomerAppointments::class)->name('appointments');

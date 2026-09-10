@@ -50,45 +50,38 @@
                         <span class="grid h-7 w-7 place-items-center rounded-full bg-ink font-mono text-xs text-light">2</span> Date de livrare
                     </h2>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <label class="block">
-                            <span class="field-label">Nume</span>
-                            <input type="text" wire:model="last_name" autocomplete="family-name">
-                            @error('last_name') <span class="field-error">{{ $message }}</span> @enderror
-                        </label>
-                        <label class="block">
-                            <span class="field-label">Prenume</span>
-                            <input type="text" wire:model="first_name" autocomplete="given-name">
-                            @error('first_name') <span class="field-error">{{ $message }}</span> @enderror
-                        </label>
+                    <x-storefront.address-fields />
+                </section>
+
+                {{-- Who the invoice is made out to. Most people are invoiced where the parcel goes,
+                     so that is the default and costs no extra typing; a firm needs its own name,
+                     tax code and registered office. --}}
+                <section class="grid gap-5 rounded-[3px] bg-white p-6 sm:p-8">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <h2 class="flex items-center gap-3 font-display text-xl font-semibold">
+                            <span class="grid h-7 w-7 place-items-center rounded-full bg-ink font-mono text-xs text-light">3</span> Date de facturare
+                        </h2>
+                        <x-storefront.billing-switch />
                     </div>
 
-                    <label class="block">
-                        <span class="field-label">Adresă</span>
-                        <input type="text" wire:model="line_1" autocomplete="street-address">
-                        @error('line_1') <span class="field-error">{{ $message }}</span> @enderror
-                    </label>
+                    @if($billingType === 'company')
+                        <x-storefront.address-fields prefix="billing" :company="true" />
+                        <p class="text-xs text-ink2">Factura se emite pe firmă; persoana de contact este cea de la livrare.</p>
+                    @else
+                        <label class="flex cursor-pointer items-center gap-2.5 text-sm">
+                            <input type="checkbox" wire:model.live="billingSame">
+                            <span>Factura pe aceleași date ca livrarea</span>
+                        </label>
 
-                    <div class="grid gap-4 sm:grid-cols-3">
-                        <label class="block">
-                            <span class="field-label">Localitate</span>
-                            <input type="text" wire:model="city" autocomplete="address-level2">
-                            @error('city') <span class="field-error">{{ $message }}</span> @enderror
-                        </label>
-                        <label class="block">
-                            <span class="field-label">Județ</span>
-                            <input type="text" wire:model="county" autocomplete="address-level1">
-                        </label>
-                        <label class="block">
-                            <span class="field-label">Cod poștal</span>
-                            <input type="text" wire:model="postal_code" autocomplete="postal-code" inputmode="numeric">
-                        </label>
-                    </div>
+                        @unless($billingSame)
+                            <x-storefront.address-fields prefix="billing" />
+                        @endunless
+                    @endif
                 </section>
 
                 <section class="grid gap-5 rounded-[3px] bg-white p-6 sm:p-8">
                     <h2 class="flex items-center gap-3 font-display text-xl font-semibold">
-                        <span class="grid h-7 w-7 place-items-center rounded-full bg-ink font-mono text-xs text-light">3</span> Livrare
+                        <span class="grid h-7 w-7 place-items-center rounded-full bg-ink font-mono text-xs text-light">4</span> Livrare
                     </h2>
 
                     @if($methods->isEmpty())
@@ -114,6 +107,13 @@
                 </section>
 
                 <div class="grid gap-3">
+                    @auth
+                        <label class="flex cursor-pointer items-center gap-2.5 text-sm text-ink2">
+                            <input type="checkbox" wire:model="saveDetails">
+                            <span>Păstrează adresa și datele de facturare în contul meu, pentru comenzile următoare</span>
+                        </label>
+                    @endauth
+
                     <button type="submit" @disabled($methods->isEmpty() || $providers->isEmpty()) class="st-btn st-btn--block">
                         <span wire:loading.remove wire:target="place">Trimite comanda</span>
                         <span wire:loading wire:target="place">Se trimite comanda…</span>

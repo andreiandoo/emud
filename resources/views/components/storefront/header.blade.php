@@ -95,8 +95,9 @@
             </div>
         </div>
 
-        {{-- 2. The bar itself, and the panels it anchors. --}}
-        <div class="relative">
+        {{-- 2. The bar itself, and the panels it anchors. data-st-header-main marks where the bar
+                starts once scrolled: everything above it slides out of view (index.js). --}}
+        <div class="relative" data-st-header-main>
             <div class="shell flex h-[4.75rem] items-center gap-1">
                 <a href="{{ route('storefront.home') }}" class="mr-3 flex shrink-0 items-center gap-2.5 lg:mr-5" aria-label="{{ $siteTitle }}, prima pagină">
                     @if($logoPath !== '')

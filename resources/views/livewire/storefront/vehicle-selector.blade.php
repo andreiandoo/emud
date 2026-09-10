@@ -1,11 +1,23 @@
 {{-- Alpine holds only the open/closed state and the tab, so a Livewire re-render (choosing a
      make, applying a vehicle) leaves the panel exactly where the customer left it. The search
-     panel and the home page open it through the open-vehicle-selector event. --}}
-<div x-data="{ open: false, tab: 'car' }" class="relative"
+     panel, the home page and any "choose your car" button open it through the
+     open-vehicle-selector event.
+
+     `opening` exists because of that event: it is fired from a click, and the same click then
+     reaches the document, where click.outside would close the panel it had just opened. It is
+     cleared once that click has finished travelling. data-picking on the bar makes a bar hidden
+     by scrolling come back, since the panel hangs from it. --}}
+<div x-data="{ open: false, tab: 'car', opening: false }" class="relative"
+     x-effect="$el.closest('[data-st-header]')?.toggleAttribute('data-picking', open)"
      @keydown.escape.window="open = false"
-     @open-vehicle-selector.window="open = true; tab = $event.detail?.tab ?? 'car'"
+     @open-vehicle-selector.window="
+         open = true;
+         tab = $event.detail?.tab ?? 'car';
+         opening = true;
+         setTimeout(() => opening = false);
+         if (tab === 'vin') setTimeout(() => $refs.vin?.focus({ preventScroll: true }), 250)"
      @vehicle-changed.window="open = false"
-     @click.outside="open = false">
+     @click.outside="if (! opening) open = false">
     <button type="button" @click="open = ! open" :aria-expanded="open ? 'true' : 'false'" aria-haspopup="dialog"
             class="flex h-[2.875rem] items-center gap-2.5 rounded-[3px] border border-white/15 px-3 text-left text-bone transition hover:border-bone">
         <x-storefront.icon name="car" class="h-5 w-5 shrink-0" />
@@ -142,7 +154,7 @@
             <form wire:submit="decodeVin" class="grid gap-3">
                 <label class="block">
                     <span class="mb-2 block text-xs text-mute">17 caractere, în talon la rubrica E.</span>
-                    <input type="text" wire:model="vin" maxlength="17" autocomplete="off" spellcheck="false" placeholder="VF1RFB00X12345678"
+                    <input x-ref="vin" type="text" wire:model="vin" maxlength="17" autocomplete="off" spellcheck="false" placeholder="VF1RFB00X12345678"
                            class="border-gl2 bg-g0 text-center font-mono text-base uppercase tracking-[.18em] text-bone placeholder:text-mute2 focus:border-bone focus:ring-bone">
                 </label>
 
