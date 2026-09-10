@@ -6,6 +6,7 @@ use App\Models\CatalogPart;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 
 /**
  * Every switch that stops a supplier from producing canonical parts fails silently: promotion
@@ -95,7 +96,7 @@ class CheckSupplierOnboarding extends Command
      * Sorted by how close each supplier is to working, because the question this answers for a
      * prospect list is "which one can I onboard next", not "how is every one of them broken".
      *
-     * @param  \Illuminate\Support\Collection<int, array{supplier: Supplier, findings: list<array{0:string,1:string,2:string}>}>  $reports
+     * @param  Collection<int, array{supplier: Supplier, findings: list<array{0:string,1:string,2:string}>}>  $reports
      */
     private function renderSummary($reports): void
     {
@@ -134,7 +135,7 @@ class CheckSupplierOnboarding extends Command
         ));
     }
 
-    /** @return \Illuminate\Support\Collection<int, Supplier> */
+    /** @return Collection<int, Supplier> */
     private function suppliers()
     {
         $code = $this->argument('supplier');

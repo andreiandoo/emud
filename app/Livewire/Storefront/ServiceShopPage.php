@@ -8,6 +8,7 @@ use App\Directory\ShopStructuredData;
 use App\Enums\AppointmentSlot;
 use App\Enums\ServiceLeadEventType;
 use App\Models\Order;
+use App\Models\Service;
 use App\Models\ServiceShop;
 use App\Storefront\Garage;
 use App\Storefront\VehicleContext;
@@ -195,7 +196,7 @@ class ServiceShopPage extends Component
     /**
      * The price list, grouped the way a workshop would read it out.
      *
-     * @return Collection<string, Collection<int, \App\Models\Service>>
+     * @return Collection<string, Collection<int, Service>>
      */
     private function servicesByCategory(): Collection
     {

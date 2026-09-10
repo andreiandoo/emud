@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Catalog\CollectionMatcher;
 use App\Enums\ProductStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -65,7 +66,7 @@ class Product extends Model
         return $this->hasMany(ProductMedia::class)->orderBy('position');
     }
 
-    /** @see \App\Catalog\CollectionMatcher */
+    /** @see CollectionMatcher */
     public function collections(): BelongsToMany
     {
         return $this->belongsToMany(VehicleCollection::class, 'product_vehicle_collection')

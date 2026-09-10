@@ -6,6 +6,7 @@ use App\Models\VehicleCollection;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -235,7 +236,7 @@ class VehicleCollectionSeeder extends Seeder
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, int>  $taken
+     * @param  Collection<string, int>  $taken
      */
     private function uniqueSlug(string $name, $taken): string
     {

@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
  * and simply skipped when the category has not been seeded, so running this before or after the
  * catalogue both work. Rows are matched on slug, so re-running only updates.
  *
- * @see \Database\Seeders\CategorySeeder for the parts paths referenced below
+ * @see CategorySeeder for the parts paths referenced below
  */
 class ServiceCatalogSeeder extends Seeder
 {

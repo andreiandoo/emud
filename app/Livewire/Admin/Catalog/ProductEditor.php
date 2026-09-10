@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
 use App\Models\VehicleGeneration;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -179,7 +180,7 @@ class ProductEditor extends Component
      * The pills under the field, in the order they were picked — the first one is the primary
      * category on save, so the order is information, not decoration.
      *
-     * @return \Illuminate\Support\Collection<int, Category>
+     * @return Collection<int, Category>
      */
     public function getSelectedCategoriesProperty(): Collection
     {
@@ -386,7 +387,7 @@ class ProductEditor extends Component
      * Candidates to add, never the whole tree by default. What is already on the product lives
      * in the pills underneath, so it is deliberately excluded here rather than shown twice.
      *
-     * @return \Illuminate\Support\Collection<int, Category>
+     * @return Collection<int, Category>
      */
     private function categoryOptions(): Collection
     {
@@ -416,7 +417,7 @@ class ProductEditor extends Component
      * Built as a plain query rather than Eloquent — these rows are option labels, and hydrating
      * three models each to print one line of text is the expensive part.
      *
-     * @return \Illuminate\Support\Collection<int, object>
+     * @return Collection<int, object>
      */
     private function generationOptions(): Collection
     {
@@ -440,7 +441,7 @@ class ProductEditor extends Component
      * Labels for the generations already on the product, so a compatibility row can print what
      * it refers to without a select holding every generation in the catalogue.
      *
-     * @return \Illuminate\Support\Collection<int, string>
+     * @return Collection<int, string>
      */
     public function getFitmentLabelsProperty(): Collection
     {
@@ -466,7 +467,7 @@ class ProductEditor extends Component
      * free. So the sort is on landed cost, and an offer that cannot be landed — no rate, no
      * cost — says so rather than sorting as if it were free.
      *
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     public function getSupplierOffersProperty(): Collection
     {
@@ -522,7 +523,7 @@ class ProductEditor extends Component
      * Built as a plain query rather than Eloquent: these rows are option labels, and hydrating
      * three models each to print one line of text was most of what made this page unusable.
      */
-    private function generationQuery(): \Illuminate\Database\Query\Builder
+    private function generationQuery(): Builder
     {
         return DB::table('vehicle_generations as vg')
             ->join('vehicle_models as vm', 'vm.id', '=', 'vg.model_id')

@@ -3,8 +3,8 @@
 namespace App\Storefront;
 
 use App\Models\CustomerVehicle;
-use App\Models\VehicleCollection;
 use App\Models\User;
+use App\Models\VehicleCollection;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 

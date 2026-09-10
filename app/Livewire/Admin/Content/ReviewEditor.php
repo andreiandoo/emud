@@ -9,6 +9,7 @@ use App\Models\VehicleMake;
 use App\Models\VehicleModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -230,7 +231,7 @@ class ReviewEditor extends Component
      * Both pickers search a `name` column and return at most eight rows, so one helper serves
      * products and collections alike.
      *
-     * @return EloquentCollection<int, \Illuminate\Database\Eloquent\Model>
+     * @return EloquentCollection<int, Model>
      */
     private function search(Builder $query, string $term): EloquentCollection
     {

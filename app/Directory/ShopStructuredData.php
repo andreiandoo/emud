@@ -3,6 +3,7 @@
 namespace App\Directory;
 
 use App\Models\ServiceShop;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * The schema.org description of a workshop.
@@ -71,7 +72,7 @@ final class ShopStructuredData
     {
         $medium = $shop->relationLoaded('media') ? $shop->media->first() : $shop->media()->first();
 
-        return $medium === null ? null : \Illuminate\Support\Facades\Storage::disk($medium->disk)->url($medium->path);
+        return $medium === null ? null : Storage::disk($medium->disk)->url($medium->path);
     }
 
     /**

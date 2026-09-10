@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Catalog\CollectionMatcher;
+use Database\Seeders\VehicleCollectionSeeder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,8 +14,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * One car, presented.
  *
- * @see \Database\Seeders\VehicleCollectionSeeder for how the initial set is built
- * @see \App\Catalog\CollectionMatcher for how products end up attached
+ * @see VehicleCollectionSeeder for how the initial set is built
+ * @see CollectionMatcher for how products end up attached
  */
 class VehicleCollection extends Model
 {

@@ -10,6 +10,7 @@ use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -64,7 +65,7 @@ class ProductEditorSupplierOffersTest extends TestCase
         $this->assertSame('5 zile', $rows['TERMEN']['dispatch']);
     }
 
-    /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */
+    /** @return Collection<int, array<string, mixed>> */
     private function offersFor(Product $product)
     {
         $admin = User::factory()->create(['role' => 'admin']);

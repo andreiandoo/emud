@@ -9,6 +9,8 @@ use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\SupplierOffer;
 use App\Models\SupplierProduct;
+use App\Suppliers\Data\SupplierRecord;
+use App\Suppliers\SupplierCatalogImporter;
 use Database\Seeders\AttributeSeeder;
 use Database\Seeders\CategorySeeder;
 use Database\Seeders\DemoSupplierSeeder;
@@ -141,9 +143,9 @@ class DemoSupplierSeederTest extends TestCase
         Storage::fake('local');
         $this->seed(DemoSupplierSeeder::class);
 
-        $importer = app(\App\Suppliers\SupplierCatalogImporter::class);
+        $importer = app(SupplierCatalogImporter::class);
         $supplier = Supplier::query()->where('code', DemoSupplierSeeder::CODE)->firstOrFail();
-        $importer->import($supplier, new \App\Suppliers\Data\SupplierRecord(
+        $importer->import($supplier, new SupplierRecord(
             externalId: 'NO-FIT-1',
             name: 'Trusă de scule universală',
             brand: 'Kestrel 4x4',

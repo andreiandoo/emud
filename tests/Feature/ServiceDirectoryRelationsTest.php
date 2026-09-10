@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Service;
-use App\Models\ServiceAppointment;
 use App\Models\ServiceCategory;
 use App\Models\ServiceShop;
 use App\Models\User;
