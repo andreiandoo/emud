@@ -24,7 +24,7 @@ use Livewire\WithPagination;
  * leaving those bookmarks to 404, a segment that matches no city is looked up as a workshop
  * slug and sent to its current address with a permanent redirect.
  */
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class ServiceCityPage extends Component
 {
     use WithPagination;

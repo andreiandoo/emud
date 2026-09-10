@@ -7,15 +7,16 @@
 {{-- One card shape for the directory, the city page and the service page, so a workshop reads
      the same wherever it is listed. --}}
 <article @class([
-    'rounded-xl border bg-white p-5 transition',
-    'border-stone-900' => $tier->isPaid(),
-    'border-stone-200 hover:border-stone-400' => ! $tier->isPaid(),
+    'group grid gap-4 rounded-[3px] border bg-white p-5 transition sm:p-6',
+    'border-ink' => $tier->isPaid(),
+    'border-line hover:border-line2' => ! $tier->isPaid(),
 ])>
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
-            <a href="{{ $shop->url() }}" class="text-lg font-semibold text-stone-900 hover:underline">{{ $shop->name }}</a>
+            <a href="{{ $shop->url() }}" class="font-display text-xl font-semibold leading-tight tracking-[-.01em] text-ink hover:underline">{{ $shop->name }}</a>
 
-            <p class="mt-0.5 text-sm text-stone-600">
+            <p class="mt-1 flex items-start gap-1.5 text-sm text-ink2">
+                <x-storefront.icon name="pin" class="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 {{ collect([$shop->address, $shop->city, $shop->county])->filter()->implode(', ') }}
             </p>
         </div>
@@ -27,33 +28,37 @@
         @endif
     </div>
 
-    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
         @unless($schedule->isEmpty())
             @if($schedule->isOpenAt())
-                <span class="font-semibold text-emerald-700">Deschis acum</span>
+                <span class="inline-flex items-center gap-2 font-semibold text-fit"><span class="h-2 w-2 rounded-full bg-fit-bright"></span> Deschis acum</span>
             @else
-                <span class="text-stone-500">Închis acum</span>
+                <span class="inline-flex items-center gap-2 text-ink2"><span class="h-2 w-2 rounded-full bg-line2"></span> Închis acum</span>
             @endif
         @endunless
 
         @if($cheapest !== null)
-            <span class="text-stone-600">Lucrări de la {{ \App\Support\Money::of($cheapest, config('emud.catalog.default_currency', 'RON'))->format() }}</span>
+            <span class="text-ink2">Lucrări de la <span class="font-semibold text-ink">{{ \App\Support\Money::of($cheapest, config('emud.catalog.default_currency', 'RON'))->format() }}</span></span>
         @endif
 
         @if($shop->fits_parts_bought_here)
-            <span class="font-semibold text-stone-900">montează piesele noastre</span>
-        @endif
-
-        @if($shop->accepts_appointments)
-            <a href="{{ $shop->url() }}#programare" class="ml-auto font-semibold text-stone-900 underline underline-offset-4">Cere o programare</a>
+            <span class="inline-flex items-center gap-1.5 font-semibold text-ink"><x-storefront.icon name="wrench" class="h-4 w-4 text-signal" /> montează piesele noastre</span>
         @endif
     </div>
 
     @if($shop->specialityList())
-        <div class="mt-3 flex flex-wrap gap-1.5">
+        <div class="flex flex-wrap gap-1.5">
             @foreach(array_slice($shop->specialityList(), 0, 6) as $speciality)
-                <span class="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-600">{{ $speciality }}</span>
+                <span class="rounded-full bg-light px-2.5 py-1 text-xs text-ink2">{{ $speciality }}</span>
             @endforeach
         </div>
     @endif
+
+    <div class="flex flex-wrap items-center gap-3 border-t border-line pt-4">
+        <a href="{{ $shop->url() }}" class="st-link">Vezi service-ul <x-storefront.icon name="arrow-right" /></a>
+
+        @if($shop->accepts_appointments)
+            <a href="{{ $shop->url() }}#programare" class="st-btn st-btn--ink st-btn--sm ml-auto">Cere o programare</a>
+        @endif
+    </div>
 </article>

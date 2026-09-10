@@ -6,7 +6,7 @@ use App\Models\ServiceCategory;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class ServiceTypes extends Component
 {
     public function render()

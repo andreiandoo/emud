@@ -20,7 +20,7 @@ use Livewire\WithPagination;
  * This is the page that makes the service taxonomy earn its keep: someone searching for what a
  * timing belt change costs arrives here, and leaves with either a workshop or the parts.
  */
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class ServiceTypePage extends Component
 {
     use WithPagination;

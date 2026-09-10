@@ -22,7 +22,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use RuntimeException;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class ServiceShopPage extends Component
 {
     public ServiceShop $shop;
