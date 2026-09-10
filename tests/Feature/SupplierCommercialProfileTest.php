@@ -143,24 +143,31 @@ class SupplierCommercialProfileTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
+        // is_active is set explicitly on both: the column defaults to true, so a
+        // supplier created without it is an active feed and belongs with the
+        // configured ones regardless of its commercial status.
         Supplier::query()->create([
-            'name' => 'Approved Feed', 'code' => 'APPROVED', 'protocol' => 'xml',
+            'name' => 'Approved Feed', 'code' => 'APPROVED', 'protocol' => 'xml', 'is_active' => false,
             'onboarding_status' => SupplierOnboardingStatus::Approved, 'country_code' => 'RO',
         ]);
         Supplier::query()->create([
-            'name' => 'Cold Prospect', 'code' => 'PROSPECT', 'protocol' => 'manual',
+            'name' => 'Cold Prospect', 'code' => 'PROSPECT', 'protocol' => 'manual', 'is_active' => false,
             'onboarding_status' => SupplierOnboardingStatus::NotStarted, 'country_code' => 'PL',
         ]);
 
+        // values(): filter() and reject() keep the original keys, so a bare
+        // pluck('code')->all() would compare [1 => 'PROSPECT'] with [0 => 'PROSPECT'].
+        $codes = fn ($suppliers): array => $suppliers->pluck('code')->values()->all();
+
         Livewire::actingAs($admin)->test(SuppliersIndex::class)
-            ->assertViewHas('configured', fn ($configured): bool => $configured->pluck('code')->all() === ['APPROVED'])
-            ->assertViewHas('prospects', fn ($prospects): bool => $prospects->pluck('code')->all() === ['PROSPECT'])
+            ->assertViewHas('configured', fn ($configured): bool => $codes($configured) === ['APPROVED'])
+            ->assertViewHas('prospects', fn ($prospects): bool => $codes($prospects) === ['PROSPECT'])
             ->set('country', 'PL')
             ->assertViewHas('configured', fn ($configured): bool => $configured->isEmpty())
-            ->assertViewHas('prospects', fn ($prospects): bool => $prospects->pluck('code')->all() === ['PROSPECT'])
+            ->assertViewHas('prospects', fn ($prospects): bool => $codes($prospects) === ['PROSPECT'])
             ->set('country', '')
             ->set('search', 'approved')
-            ->assertViewHas('configured', fn ($configured): bool => $configured->pluck('code')->all() === ['APPROVED'])
+            ->assertViewHas('configured', fn ($configured): bool => $codes($configured) === ['APPROVED'])
             ->assertViewHas('prospects', fn ($prospects): bool => $prospects->isEmpty());
     }
 }
