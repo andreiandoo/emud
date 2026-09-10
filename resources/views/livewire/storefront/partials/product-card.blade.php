@@ -2,6 +2,9 @@
 
 @php($image = $product->media->first())
 @php($price = $product->variants->firstWhere('is_active', true)?->retail_price)
+{{-- fits() is true for "unknown" too; with no fitment data nothing may look like a yes. --}}
+@php($unknown = $verdict === \App\Storefront\Compatibility\CompatibilityVerdict::Unknown)
+@php($fitsForSure = $verdict !== null && in_array($verdict, [\App\Storefront\Compatibility\CompatibilityVerdict::Confirmed, \App\Storefront\Compatibility\CompatibilityVerdict::Conditional], true))
 
 {{-- One link for the whole card: the target is large, and a card with several small targets
      inside it is a worse thing to tap on a phone. The fit verdict is written out, not only
@@ -20,7 +23,7 @@
             <span class="sr-only">Fără imagine</span>
         @endif
 
-        @if($verdict && $verdict->fits())
+        @if($verdict && $verdict->fits() && ! $unknown)
             <span @class([
                 'absolute left-3 top-3 rounded-[2px] px-2 py-1 text-[10px] font-semibold uppercase tracking-[.1em]',
                 'bg-fit text-white' => $verdict->isCertain(),
@@ -40,10 +43,10 @@
             <span @class([
                 'mt-0.5 inline-flex items-center gap-1.5 text-[13px] font-medium',
                 'text-fit' => $verdict->isCertain(),
-                'text-amber-700' => ! $verdict->isCertain() && $verdict->fits(),
-                'text-ink2' => ! $verdict->fits(),
+                'text-amber-700' => ! $verdict->isCertain() && $verdict->fits() && ! $unknown,
+                'text-ink2' => ! $verdict->fits() || $unknown,
             ])>
-                <x-storefront.icon :name="$verdict->fits() ? 'check' : 'close'" class="h-3.5 w-3.5 shrink-0" />
+                <x-storefront.icon :name="$fitsForSure ? 'check' : ($verdict->fits() ? 'car' : 'close')" class="h-3.5 w-3.5 shrink-0" />
                 {{ $verdict->label() }}
             </span>
         @endif
