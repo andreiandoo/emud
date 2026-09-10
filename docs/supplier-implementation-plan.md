@@ -227,7 +227,26 @@ Servicii noi:
 
 ---
 
-### Etapa 3 — Scara de matching completă ← **următoarea**
+### Etapa 3 — Scara de matching completă — **LIVRATĂ**
+
+Ce există acum:
+
+- `supplier_product_identifiers`: fiecare identificator din feed (GTIN, MPN, OE, IAM, referințe încrucișate cu brandul lor, înlocuiri, TecDoc, SKU), scris în tranzacția per rând și doar când rândul s-a schimbat. Înlocuit, nu cumulat: un număr OE scos de furnizor din feed încetează să mai potrivească;
+- `GtinValidator`: cifra de control e verificată și placeholderele (`0000000000000`, cifră repetată) sunt refuzate înainte de orice potrivire. EAN-13, UPC-A și GTIN-14 ale aceleiași cutii se compară în forma de 14 cifre;
+- `BrandResolver`: brandul furnizorului se rezolvă pe slug, apoi prin aliasuri confirmate, stocate în `catalog_mapping_rules` (`entity_type = brand`) ca să le poată folosi și canonicalizatorul, nu un al doilea mecanism;
+- scara nouă din `SupplierCatalogPartMatcher` — TecDoc / GTIN unic 100, brand+MPN 98, același brand cu referință OE comună 90, MPN fără brand cunoscut 86, supersession 85, GTIN comun mai multor piese 70, MPN de alt producător 55;
+- statusul `conflict`: două piese revendicate cu încredere maximă înseamnă că un identificator al furnizorului e greșit, deci decide un om;
+- respingerile rămân respinse la re-potrivire; maparea manuală nu e atinsă niciodată;
+- prefixe de MPN configurabile per furnizor (`settings.mpn_strip_prefixes`), niciodată ghicite;
+- job-ul de matching scrie rezultatul pe rularea de sincronizare: câte articole pe fiecare status și motiv, câte EAN-uri invalide;
+- în coada de admin: toți identificatorii articolului, avertisment pentru EAN invalid și pentru conflict, și butonul „„FEBI” = febi bilstein” care creează aliasul și re-potrivește imediat toate articolele furnizorului scrise la fel.
+
+**Decizia de domeniu care contează:** o referință încrucișată nu e o identitate. Un filtru Filtron care listează „echivalent MANN W 712/75” rămâne un filtru Filtron; maparea lui pe piesa MANN ar vinde produsul unui producător sub numele altuia. Matcher-ul vechi făcea exact asta — căuta MPN-ul furnizorului și în numerele IAM ale altor branduri și îi dădea 86. Acum referințele contează doar când brandul coincide, și nu mapează niciodată automat.
+
+**Limită cunoscută:** nivelul TecDoc e implementat dar inert — catalogul canonic nu conține azi niciun număr de articol TecDoc. Se activează singur când o sursă le aduce.
+
+<details>
+<summary>Specificația inițială a etapei</summary>
 
 Migrare `create_supplier_product_identifiers`:
 
@@ -254,11 +273,13 @@ supplier_product_identifiers:
 - Metrici de calitate per rulare (spec §15): matched_by_ean / mpn / tecdoc / oem, identificatori în conflict, prețuri invalide, lipsă imagini, lipsă fitment.
 - `SupplierMatchingIndex` primit: comparație lângă lângă a înregistrării furnizorului cu candidații, filtrare pe furnizor/motiv/scor, acțiune în masă.
 
-**Definition of done:** import repetat de două ori pe același feed → zero produse canonice duplicate, aceleași mapări, coada manuală nu crește.
+**Definition of done:** import repetat de două ori pe același feed → zero produse canonice duplicate, aceleași mapări, coada manuală nu crește. ✔
+
+</details>
 
 ---
 
-### Etapa 4 — Routing, preț public și checkout
+### Etapa 4 — Routing, preț public și checkout ← **următoarea**
 
 Aici se leagă subsistemul de magazin. Azi legătura nu există.
 
@@ -444,7 +465,7 @@ Estimare de efort, orientativă:
 | 0 — profil comercial + seeder prospecți + admin | **livrată** |
 | 1 — erori, gardă, sănătate, alerte | **livrată** |
 | 2 — ofertă completă, FX, landed cost | **livrată** |
-| 3 — scara de matching + identificatori | medie |
+| 3 — scara de matching + identificatori | **livrată** |
 | 4 — routing, prețuri, checkout | medie-mare |
 | 5 — fulfilment multi-furnizor | mare |
 | 6 — per adaptor | mică fiecare, după ce 0–3 sunt gata |
@@ -473,7 +494,7 @@ Cu zero conturi deschise, asta e tot ce rămâne pe masă — și e mult:
 - ~~Etapa 0~~ — livrată în `19bc117`.
 - ~~Etapa 1~~ — livrată.
 - ~~Etapa 2~~ — livrată.
-- Etapa 3 integral, testat pe adaptorul mock cu fixtures.
+- ~~Etapa 3~~ — livrată.
 - Etapa 4 integral, cu oferte generate de mock — routingul și revalidarea la checkout nu au nevoie de furnizor real ca să fie corecte.
 - Etapa 5 în modul manual (PO generat, plasat de operator) — funcționează chiar și fără niciun API de furnizor.
 - Etapa 7, partea de schemă: câmpuri de conformitate + set de atribute 4×4 + mapare categorii/atribute furnizor.
