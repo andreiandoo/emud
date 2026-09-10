@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Catalog;
 
+use App\Catalog\CollectionMatcher;
 use App\Commerce\LandedCostCalculator;
 use App\Models\Attribute;
 use App\Models\Brand;
@@ -337,6 +338,11 @@ class ProductEditor extends Component
             }
             $this->product = $product;
         });
+
+        // Fitments are the only input collection membership has, so editing them here has to
+        // re-derive it the same way an import would. After the transaction: the matcher writes
+        // its own rows and should not extend the lock on the product being saved.
+        app(CollectionMatcher::class)->syncForProduct($this->product->load('fitments'));
 
         session()->flash('success', 'Produsul a fost salvat complet.');
         $this->redirectRoute('admin.products.edit', $this->product, navigate: true);
