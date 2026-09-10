@@ -21,7 +21,11 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use RuntimeException;
 
-#[Layout('layouts::storefront')]
+/**
+ * Laid out full width so the "goes with this" shelf can run edge to edge on its own ground;
+ * every other section wraps itself in .shell.
+ */
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class ProductPage extends Component
 {
     public Product $product;

@@ -71,7 +71,7 @@
                                     <x-storefront.icon name="car" class="h-10 w-10" />
                                 </span>
                             @endif
-                            <span class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-stone-950/70 to-transparent"></span>
+                            <span class="absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-stone-950/70 to-transparent"></span>
                             <span class="absolute inset-x-0 bottom-0 p-3 text-sm font-bold uppercase tracking-wide text-white">
                                 {{ $collection->name }}
                             </span>

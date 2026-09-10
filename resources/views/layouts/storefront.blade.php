@@ -20,7 +20,11 @@
 <body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
 <x-storefront.header />
 
-<main class="shell py-8">{{ $slot }}</main>
+{{-- Pages that carry a full-bleed band — a collection hero, a strip with its own ground —
+     opt out of the page gutter with #[Layout('layouts::storefront', ['fullWidth' => true])] and
+     wrap their own sections in .shell. Breaking out with 100vw margins instead would overflow
+     by the width of the scrollbar, and the usual overflow-x:hidden cure kills position:sticky. --}}
+<main class="{{ ($fullWidth ?? false) ? 'pb-8' : 'shell py-8' }}">{{ $slot }}</main>
 
 <x-storefront.footer />
 @livewireScripts

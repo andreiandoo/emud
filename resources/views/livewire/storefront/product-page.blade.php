@@ -7,11 +7,15 @@
         ? \App\Support\Money::of($variant->compare_at_price, $currency)->format() : null)
 @php($primaryCategory = $product->categories->first())
 
-<div class="space-y-14">
+<div class="space-y-14 pt-8">
     @unless($published)
-        <p class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-            Previzualizare: produsul nu este publicat, deci clienții nu îl pot vedea încă.
-        </p>
+        {{-- The gutter lives on a wrapper, not on this element: .shell sits in the components
+             layer and any padding utility written alongside it would win and cancel it. --}}
+        <div class="shell">
+            <p class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                Previzualizare: produsul nu este publicat, deci clienții nu îl pot vedea încă.
+            </p>
+        </div>
     @endunless
 
     <x-seo :title="$product->name"
@@ -24,7 +28,7 @@
         <script type="application/ld+json">{!! $productJsonLd !!}</script>
     @endpush
 
-    <nav class="text-xs text-stone-500">
+    <nav class="shell text-xs text-stone-500">
         <a href="{{ route('storefront.home') }}" class="hover:underline">Acasă</a>
         @if($primaryCategory)
             <span class="mx-1">/</span>
@@ -34,7 +38,10 @@
         <span class="text-stone-900">{{ $product->name }}</span>
     </nav>
 
-    <div class="grid gap-10 lg:grid-cols-[1fr_24rem] xl:grid-cols-[1fr_28rem]">
+    {{-- The photograph is deliberately the smaller half. On a part like a snorkel or a lift kit
+         the picture settles almost nothing; the price, the stock and above all whether it fits
+         are what the visitor came for, so those get the room. --}}
+    <div class="shell grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]">
         {{-- Gallery. Entirely in Alpine: swapping a photo is a local decision and does not need a
              round trip to the server to be correct. --}}
         <div x-data="{ active: 0, count: {{ max(1, $gallery->count()) }} }" class="space-y-3">
@@ -84,7 +91,7 @@
 
         {{-- Buy box. Sticky on desktop so the price and the button stay reachable while the
              customer reads a specification list that can run to forty rows. --}}
-        <div class="space-y-5 lg:sticky lg:top-6 lg:self-start">
+        <div class="space-y-5 lg:sticky lg:top-6 lg:max-w-2xl lg:self-start">
             @if($product->brand)
                 <a href="{{ route('storefront.search', ['q' => $product->brand->name]) }}"
                    class="text-sm font-semibold uppercase tracking-wide text-stone-500 hover:text-stone-900">
@@ -192,19 +199,28 @@
     </div>
 
     @if($addOns->isNotEmpty())
-        <section>
-            <h2 class="mb-1 text-xl font-bold">Se montează cu</h2>
-            <p class="mb-4 text-sm text-stone-600">Alte piese care merg pe aceleași mașini, din alte categorii.</p>
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach($addOns as $addOn)
-                    @include('livewire.storefront.partials.product-card', ['product' => $addOn, 'verdict' => null])
-                @endforeach
+        {{-- Its own ground, edge to edge, one row. A grid here competed with the product grid
+             further down the page and read as "more results" rather than "you will need these
+             too"; a single rail cannot be mistaken for a listing. --}}
+        <section class="border-y border-stone-200 bg-white py-10">
+            <div class="shell">
+                <h2 class="text-xl font-bold">Se montează cu</h2>
+                <p class="mt-1 text-sm text-stone-600">Alte piese care merg pe aceleași mașini, din alte categorii.</p>
+
+                <ul class="-mx-4 mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0
+                           [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    @foreach($addOns as $addOn)
+                        <li class="w-56 shrink-0 snap-start sm:w-64">
+                            @include('livewire.storefront.partials.product-card', ['product' => $addOn, 'verdict' => null])
+                        </li>
+                    @endforeach
+                </ul>
             </div>
         </section>
     @endif
 
     @if($product->short_description || $product->description || $highlights !== [])
-        <section class="grid gap-8 lg:grid-cols-[1fr_20rem]">
+        <section class="shell grid gap-8 lg:grid-cols-[1fr_20rem]">
             <div>
                 <h2 class="mb-3 text-xl font-bold">Descriere</h2>
                 @if($product->short_description)
@@ -234,7 +250,7 @@
     @endif
 
     @if($specifications->isNotEmpty())
-        <section>
+        <section class="shell">
             <h2 class="mb-4 text-xl font-bold">Specificații</h2>
             <div class="overflow-x-auto rounded-2xl border border-stone-200 bg-white">
                 <table class="w-full text-sm">
@@ -268,7 +284,7 @@
         </section>
     @endif
 
-    <section>
+    <section class="shell">
         <h2 class="mb-1 text-xl font-bold">Compatibilitate</h2>
 
         @if($product->is_universal)
@@ -312,7 +328,7 @@
     </section>
 
     @if($downloads->isNotEmpty())
-        <section>
+        <section class="shell">
             <h2 class="mb-4 text-xl font-bold">Documente</h2>
             <ul class="space-y-2">
                 @foreach($downloads as $download)
@@ -329,7 +345,7 @@
     @endif
 
     @if($reviews->isNotEmpty())
-        <section>
+        <section class="shell">
             <h2 class="mb-1 text-xl font-bold">Ce spun clienții</h2>
             {{-- Said plainly because the rules on review transparency require it: these are not
                  anonymous submissions, and the page has to say where they came from. --}}
@@ -345,7 +361,7 @@
     @endif
 
     @if($related->isNotEmpty())
-        <section>
+        <section class="shell">
             <h2 class="mb-4 text-xl font-bold">Ai putea avea nevoie și de</h2>
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach($related as $relatedProduct)
