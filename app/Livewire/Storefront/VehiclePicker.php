@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Storefront;
 
+use App\Livewire\Concerns\DecodesVin;
 use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
@@ -14,6 +15,8 @@ use Livewire\Component;
 
 class VehiclePicker extends Component
 {
+    use DecodesVin;
+
     public ?int $makeId = null;
 
     public ?int $modelId = null;
@@ -75,6 +78,19 @@ class VehiclePicker extends Component
             generationId: $generation?->id,
             generationName: $generation?->name,
         ));
+
+        $this->dispatch('vehicle-changed');
+    }
+
+    /** A decoded VIN fills the three steps with the car it found, then applies it. */
+    protected function selectVehicle(VehicleContext $context, SelectedVehicle $vehicle): void
+    {
+        $context->select($vehicle);
+
+        $this->makeId = $vehicle->makeId;
+        $this->modelId = $vehicle->modelId;
+        $this->generationId = $vehicle->generationId;
+        $this->vin = '';
 
         $this->dispatch('vehicle-changed');
     }

@@ -1,0 +1,862 @@
+/*
+ * The shop's own look: graphite, sand and a single signal orange, Chakra Petch for display type.
+ *
+ * Everything in here is either scoped to html.storefront or carries an st- prefix, because the
+ * back office loads this same bundle and has its own quieter vocabulary (.btn-primary, .card,
+ * the monochrome tables). Colours and fonts come from the @theme tokens in app.css, so a utility
+ * like bg-g0 or font-display means exactly the same thing as the rules below.
+ *
+ * Layout is mostly Tailwind utilities in the Blade files. What lives here is what utilities do
+ * badly: states driven by scripts, multi-part animations, and pseudo-elements.
+ */
+
+:root {
+    /* One gutter for the whole shop. Rails that bleed to the right edge use the same number to
+       know how far to reach. */
+    --st-pad: clamp(1rem, 4vw, 3.5rem);
+    --st-bleed: calc(var(--st-pad) + max(0px, (100vw - 90rem) / 2));
+    --st-header-h: 7.25rem;
+}
+
+html.storefront body {
+    overflow-x: clip;
+}
+
+/* The phone menu is open: the page underneath holds still. */
+html.st-locked {
+    overflow: hidden;
+}
+
+html.lenis,
+html.lenis body {
+    height: auto;
+}
+
+.lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+    overflow: clip;
+}
+
+@layer components {
+    /* ---------- type ---------- */
+
+    .st-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        font: 500 0.75rem/1 var(--font-mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .st-kicker::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        flex: none;
+        border-radius: 1px;
+        background: var(--color-signal);
+    }
+
+    .st-display {
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 0.95;
+        text-wrap: balance;
+    }
+
+    /* ---------- buttons and links ---------- */
+
+    .st-btn {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        min-height: 3.25rem;
+        padding: 0 1.6rem;
+        border: 1px solid transparent;
+        border-radius: 3px;
+        background: var(--color-signal);
+        color: var(--color-ink);
+        font: 600 0.8125rem/1 var(--font-sans);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: color 0.3s, border-color 0.3s;
+    }
+
+    /* The fill rises from the bottom rather than cross-fading: it reads as the button being
+       pressed into, which a colour swap does not. */
+    .st-btn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--color-signal2);
+        transform: scaleY(0);
+        transform-origin: bottom;
+        transition: transform 0.5s var(--ease-premium);
+    }
+
+    .st-btn:hover::before {
+        transform: scaleY(1);
+    }
+
+    .st-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+
+    .st-btn:disabled::before {
+        display: none;
+    }
+
+    .st-btn svg {
+        width: 1.1rem;
+        height: 1.1rem;
+        flex: none;
+        transition: transform 0.5s var(--ease-premium);
+    }
+
+    .st-btn:hover .st-arrow {
+        transform: translateX(4px);
+    }
+
+    /* Ghost on a dark ground: bone outline, fills bone, text turns graphite. */
+    .st-btn--ghost {
+        background: transparent;
+        color: var(--color-bone);
+        border-color: rgb(241 238 230 / 0.28);
+    }
+
+    .st-btn--ghost::before {
+        background: var(--color-bone);
+    }
+
+    .st-btn--ghost:hover {
+        color: var(--color-ink);
+        border-color: var(--color-bone);
+    }
+
+    /* Ghost on a light ground: the same move in ink. */
+    .st-btn--outline {
+        background: transparent;
+        color: var(--color-ink);
+        border-color: rgb(16 17 20 / 0.25);
+    }
+
+    .st-btn--outline::before {
+        background: var(--color-ink);
+    }
+
+    .st-btn--outline:hover {
+        color: var(--color-light);
+        border-color: var(--color-ink);
+    }
+
+    .st-btn--ink {
+        background: var(--color-ink);
+        color: var(--color-light);
+    }
+
+    .st-btn--ink::before {
+        background: #2a2c31;
+    }
+
+    .st-btn--sm {
+        min-height: 2.75rem;
+        padding: 0 1.1rem;
+        font-size: 0.75rem;
+    }
+
+    .st-btn--block {
+        width: 100%;
+    }
+
+    .st-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.5rem 0;
+        background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+        font: 600 0.75rem/1 var(--font-sans);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        transition: background-size 0.5s var(--ease-premium);
+    }
+
+    .st-link:hover {
+        background-size: 100% 1px;
+    }
+
+    .st-link svg {
+        width: 1rem;
+        height: 1rem;
+        transition: transform 0.5s var(--ease-premium);
+    }
+
+    .st-link:hover svg {
+        transform: translateX(4px);
+    }
+
+    .st-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        height: 2.25rem;
+        padding: 0 0.9rem;
+        border: 1px solid currentColor;
+        border-color: color-mix(in srgb, currentColor 28%, transparent);
+        border-radius: 999px;
+        font-size: 0.84rem;
+        white-space: nowrap;
+        transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    }
+
+    .st-chip:hover,
+    .st-chip[aria-pressed="true"] {
+        border-color: currentColor;
+    }
+
+    .st-round {
+        display: grid;
+        place-items: center;
+        width: 3.25rem;
+        height: 3.25rem;
+        border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+        border-radius: 999px;
+        transition: background-color 0.3s, border-color 0.3s, color 0.3s, opacity 0.3s;
+    }
+
+    .st-round:hover {
+        border-color: currentColor;
+    }
+
+    .st-round:disabled {
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    /* ---------- header ---------- */
+
+    .st-header {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--color-g0);
+        color: var(--color-bone);
+        border-bottom: 1px solid rgb(255 255 255 / 0.07);
+        transition: transform 0.6s var(--ease-premium), background-color 0.4s, border-color 0.4s;
+    }
+
+    /* The home page lets its hero run underneath the bar; the bar only takes on a ground once
+       the page moves. */
+    .st-header.is-overlay {
+        position: fixed;
+        inset-inline: 0;
+        background: transparent;
+        border-color: transparent;
+    }
+
+    .st-header.is-solid,
+    .st-header.is-overlay.is-solid,
+    .st-header.is-overlay[data-open="1"] {
+        background: rgb(14 15 17 / 0.88);
+        border-color: rgb(255 255 255 / 0.07);
+        backdrop-filter: blur(16px) saturate(1.3);
+        -webkit-backdrop-filter: blur(16px) saturate(1.3);
+    }
+
+    .st-header.is-hidden {
+        transform: translateY(-100%);
+    }
+
+    .st-nav-link {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        height: 100%;
+        padding: 0 0.85rem;
+        color: #d4d3ce;
+        font: 500 0.875rem/1 var(--font-sans);
+        white-space: nowrap;
+        transition: color 0.3s;
+    }
+
+    .st-nav-link::after {
+        content: "";
+        position: absolute;
+        left: 0.85rem;
+        right: 0.85rem;
+        bottom: 1.4rem;
+        height: 1px;
+        background: var(--color-signal);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.5s var(--ease-premium);
+    }
+
+    .st-nav-link:hover,
+    .st-nav-link[aria-expanded="true"],
+    .st-nav-link[aria-current="page"] {
+        color: var(--color-bone);
+    }
+
+    .st-nav-link:hover::after,
+    .st-nav-link[aria-expanded="true"]::after,
+    .st-nav-link[aria-current="page"]::after {
+        transform: scaleX(1);
+    }
+
+    .st-icon-btn {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 2.875rem;
+        height: 2.875rem;
+        border-radius: 999px;
+        transition: background-color 0.3s;
+    }
+
+    .st-icon-btn:hover {
+        background: rgb(255 255 255 / 0.08);
+    }
+
+    .st-badge {
+        position: absolute;
+        top: 0.3rem;
+        right: 0.2rem;
+        min-width: 1.15rem;
+        height: 1.15rem;
+        padding: 0 0.25rem;
+        border-radius: 999px;
+        background: var(--color-signal);
+        color: var(--color-ink);
+        font: 700 0.66rem/1.15rem var(--font-sans);
+        text-align: center;
+    }
+
+    .st-badge.is-bumped {
+        animation: st-bump 0.6s var(--ease-premium);
+    }
+
+    /* Panels that drop from the bar. Clip-path rather than height so the content never reflows
+       while it opens. */
+    .st-drop {
+        position: absolute;
+        inset-inline: 0;
+        top: 100%;
+        background: rgb(14 15 17 / 0.97);
+        border-bottom: 1px solid rgb(255 255 255 / 0.07);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        clip-path: inset(0 0 100% 0);
+        visibility: hidden;
+        transition: clip-path 0.7s var(--ease-premium), visibility 0s 0.7s;
+    }
+
+    .st-drop.is-open {
+        clip-path: inset(0 0 0 0);
+        visibility: visible;
+        transition: clip-path 0.7s var(--ease-premium), visibility 0s;
+    }
+
+    .st-mega-rail a[aria-current="true"] {
+        background: rgb(255 255 255 / 0.06);
+        color: var(--color-bone);
+    }
+
+    .st-mega-rail a[aria-current="true"] .st-mega-dot {
+        background: var(--color-signal);
+    }
+
+    /* The phone menu opens as a circle from the burger, so the eye follows it from the button. */
+    .st-drawer {
+        position: fixed;
+        inset: 0;
+        z-index: 38;
+        padding-top: var(--st-header-h);
+        background: var(--color-g0);
+        color: var(--color-bone);
+        clip-path: circle(0 at calc(100% - 2.5rem) 3.5rem);
+        visibility: hidden;
+        transition: clip-path 0.8s var(--ease-premium), visibility 0s 0.8s;
+    }
+
+    .st-drawer.is-open {
+        clip-path: circle(150% at calc(100% - 2.5rem) 3.5rem);
+        visibility: visible;
+        transition: clip-path 0.8s var(--ease-premium), visibility 0s;
+    }
+
+    .st-sheet {
+        transition: transform 0.6s var(--ease-premium), opacity 0.4s;
+    }
+
+    /* ---------- rails (carousels) ---------- */
+
+    .st-rail {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        margin-right: calc(var(--st-bleed) * -1);
+        padding-right: var(--st-bleed);
+        padding-bottom: 0.25rem;
+    }
+
+    .st-rail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .st-rail > * {
+        flex: none;
+        scroll-snap-align: start;
+    }
+
+    .is-grabbing .st-rail {
+        cursor: grabbing;
+        scroll-snap-type: none;
+        user-select: none;
+    }
+
+    .st-progress {
+        position: relative;
+        flex: 1;
+        height: 1px;
+        overflow: hidden;
+        background: color-mix(in srgb, currentColor 18%, transparent);
+    }
+
+    .st-progress > i {
+        position: absolute;
+        inset: 0;
+        background: var(--color-signal);
+        transform: scaleX(0.08);
+        transform-origin: left;
+        transition: transform 0.2s linear;
+    }
+
+    .st-cursor {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 60;
+        pointer-events: none;
+    }
+
+    .st-cursor > span {
+        display: grid;
+        place-items: center;
+        width: 5.5rem;
+        height: 5.5rem;
+        margin: -2.75rem 0 0 -2.75rem;
+        border-radius: 999px;
+        background: var(--color-signal);
+        color: var(--color-ink);
+        font: 600 0.68rem var(--font-mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        transform: scale(0);
+        transition: transform 0.45s var(--ease-premium);
+    }
+
+    .st-cursor.is-on > span {
+        transform: scale(1);
+    }
+
+    .st-cursor.is-down > span {
+        transform: scale(0.82);
+    }
+
+    /* ---------- cards ---------- */
+
+    .st-tile {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        border-radius: 3px;
+    }
+
+    .st-tile > .st-media {
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 1.4s var(--ease-premium);
+    }
+
+    .st-tile:hover > .st-media {
+        transform: scale(1.06);
+    }
+
+    .st-tile > .st-shade {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: linear-gradient(180deg, rgb(0 0 0 / 0.35), transparent 30%, transparent 50%, rgb(0 0 0 / 0.82));
+    }
+
+    .st-underline {
+        position: relative;
+    }
+
+    .st-underline::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: -1px;
+        width: 100%;
+        height: 1px;
+        background: var(--color-signal);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.8s var(--ease-premium);
+    }
+
+    .group:hover .st-underline::before {
+        transform: scaleX(1);
+    }
+
+    .st-lift {
+        transition: border-color 0.4s, box-shadow 0.6s var(--ease-premium), transform 0.6s var(--ease-premium);
+    }
+
+    .st-lift:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 30px 60px -34px rgb(16 17 20 / 0.45);
+    }
+
+    /* ---------- ticker ---------- */
+
+    .st-ticker {
+        overflow: hidden;
+        border-block: 1px solid var(--color-gl);
+    }
+
+    .st-ticker__track {
+        display: flex;
+        width: max-content;
+        will-change: transform;
+    }
+
+    .st-ticker__track > span {
+        display: flex;
+        align-items: center;
+        gap: 1.75rem;
+        padding: 1.1rem 1.75rem 1.1rem 0;
+        color: #d8d6cf;
+        font: 500 0.875rem var(--font-display);
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+    }
+
+    .st-ticker__track > span::after {
+        content: "";
+        width: 6px;
+        height: 6px;
+        background: var(--color-signal);
+        transform: rotate(45deg);
+    }
+
+    /* Until the motion script takes over (or if it never loads), the band still drifts. */
+    html:not(.st-motion) .st-ticker__track {
+        animation: st-tick 40s linear infinite;
+    }
+
+    /* ---------- shop by surface ---------- */
+
+    .st-surface {
+        display: flex;
+        gap: 0.625rem;
+        height: clamp(34rem, 70vh, 45rem);
+    }
+
+    .st-surface__panel {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        flex: 1 1 0;
+        min-width: 0;
+        border-radius: 3px;
+        background: var(--color-g2);
+        color: var(--color-bone);
+        cursor: pointer;
+        transition: flex-grow 1s var(--ease-premium);
+    }
+
+    .st-surface__panel.is-open {
+        flex-grow: 3.3;
+        cursor: default;
+    }
+
+    .st-surface__panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: linear-gradient(180deg, rgb(0 0 0 / 0.45), transparent 30%, transparent 45%, rgb(0 0 0 / 0.86));
+    }
+
+    .st-surface__label {
+        position: absolute;
+        left: 1.1rem;
+        bottom: 1.6rem;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        font: 600 2.1rem/1 var(--font-display);
+        letter-spacing: -0.02em;
+        transition: opacity 0.4s;
+    }
+
+    .st-surface__panel.is-open .st-surface__label {
+        opacity: 0;
+    }
+
+    .st-surface__body {
+        position: absolute;
+        inset: auto 2rem 2rem 2rem;
+        display: grid;
+        gap: 1.1rem;
+        opacity: 0;
+        transform: translateY(1.5rem);
+        pointer-events: none;
+        transition: opacity 0.5s, transform 0.8s var(--ease-premium);
+    }
+
+    .st-surface__panel.is-open .st-surface__body {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+        transition-delay: 0.2s;
+    }
+
+    .st-surface__meta {
+        opacity: 0;
+        transition: opacity 0.5s;
+    }
+
+    .st-surface__panel.is-open .st-surface__meta {
+        opacity: 1;
+    }
+
+    /* ---------- the trail ---------- */
+
+    .st-trail__stage {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        height: 100svh;
+        min-height: 38rem;
+        background: radial-gradient(70% 50% at 60% 30%, #26211d, #121214 70%);
+    }
+
+    .st-trail__stage::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            linear-gradient(90deg, rgb(14 15 17 / 0.9) 0%, rgb(14 15 17 / 0.5) 34%, transparent 60%),
+            linear-gradient(180deg, rgb(14 15 17 / 0.55), transparent 20%, transparent 80%, rgb(14 15 17 / 0.7));
+    }
+
+    .st-trail__label {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        transition: opacity 0.4s;
+    }
+
+    .st-trail__label.is-on {
+        opacity: 1;
+    }
+
+    .st-trail__label > span {
+        position: absolute;
+        transform: translate(-50%, -100%);
+        white-space: nowrap;
+        padding: 0.35rem 0.55rem;
+        border: 1px solid var(--color-gl2);
+        border-radius: 2px;
+        background: rgb(14 15 17 / 0.85);
+        color: var(--color-bone);
+        font: 500 0.68rem var(--font-mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .st-trail__label.is-passed > span {
+        border-color: var(--color-signal);
+        color: var(--color-signal);
+    }
+
+    .st-trail__stop {
+        color: var(--color-mute);
+        transition: color 0.4s;
+    }
+
+    .st-trail__stop > p {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: max-height 0.6s var(--ease-premium), opacity 0.4s;
+    }
+
+    .st-trail__stop.is-on {
+        color: var(--color-bone);
+    }
+
+    .st-trail__stop.is-on b {
+        color: var(--color-signal);
+    }
+
+    .st-trail__stop.is-on > p {
+        max-height: 5rem;
+        opacity: 1;
+    }
+
+    /* ---------- footer ---------- */
+
+    .st-giant {
+        margin: 0 0 -2vw;
+        color: transparent;
+        font: 700 clamp(7.5rem, 27vw, 27.5rem)/0.78 var(--font-display);
+        letter-spacing: -0.06em;
+        text-align: center;
+        white-space: nowrap;
+        -webkit-text-stroke: 1px rgb(241 238 230 / 0.16);
+        user-select: none;
+    }
+
+    /* ---------- odds and ends ---------- */
+
+    .st-media-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font: 500 0.66rem/1 var(--font-mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .st-media-tag::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #e5484d;
+        animation: st-rec 1.6s infinite;
+    }
+
+    .st-cue > i {
+        position: relative;
+        display: block;
+        width: 1px;
+        height: 2.9rem;
+        overflow: hidden;
+        background: linear-gradient(var(--color-bone), transparent);
+    }
+
+    .st-cue > i::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: -40%;
+        width: 1px;
+        height: 40%;
+        background: var(--color-signal);
+        animation: st-cue 2.2s var(--ease-premium) infinite;
+    }
+
+    .st-line-mask {
+        overflow: clip;
+        padding-bottom: 0.06em;
+        margin-bottom: -0.06em;
+    }
+}
+
+@keyframes st-bump {
+    30% {
+        transform: scale(1.5);
+    }
+}
+
+@keyframes st-tick {
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes st-rec {
+    50% {
+        opacity: 0.25;
+    }
+}
+
+@keyframes st-cue {
+    to {
+        top: 100%;
+    }
+}
+
+@media (max-width: 63.99rem) {
+    .st-surface {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .st-surface__panel {
+        flex: none;
+        height: 5.75rem;
+        transition: height 1s var(--ease-premium);
+    }
+
+    .st-surface__panel.is-open {
+        height: 31rem;
+    }
+
+    .st-surface__label {
+        writing-mode: horizontal-tb;
+        transform: none;
+        top: 2.6rem;
+        bottom: auto;
+        left: 1.5rem;
+        font-size: 1.75rem;
+    }
+
+    .st-trail__stage::after {
+        background: linear-gradient(180deg, rgb(14 15 17 / 0.2), rgb(14 15 17 / 0.2) 40%, rgb(14 15 17 / 0.95) 72%);
+    }
+}
+
+/* Someone who asked their system for less motion gets the finished state of every animation. */
+@media (prefers-reduced-motion: reduce) {
+    html.storefront *,
+    html.storefront *::before,
+    html.storefront *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Storefront;
 
+use App\Livewire\Concerns\DecodesVin;
 use App\Models\CustomerVehicle;
 use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
@@ -31,6 +32,8 @@ use Livewire\Component;
  */
 class VehicleSelector extends Component
 {
+    use DecodesVin;
+
     public ?int $makeId = null;
 
     public ?int $modelId = null;
@@ -122,6 +125,16 @@ class VehicleSelector extends Component
 
         $context->select(SelectedVehicle::fromCustomerVehicle($vehicle));
         $this->syncFromContext();
+
+        $this->dispatch('vehicle-changed');
+    }
+
+    /** A VIN decoded here selects the car exactly as the dropdowns would, then clears the form. */
+    protected function selectVehicle(VehicleContext $context, SelectedVehicle $vehicle): void
+    {
+        $context->select($vehicle);
+        $this->syncFromContext();
+        $this->vin = '';
 
         $this->dispatch('vehicle-changed');
     }
