@@ -4,6 +4,7 @@ namespace Tests\Feature\Workshops;
 
 use App\Enums\WorkshopMatchStatus;
 use App\Models\Workshop;
+use App\Models\WorkshopCompany;
 use App\Models\WorkshopContact;
 use App\Models\WorkshopMatchCandidate;
 use App\Workshops\Matching\WorkshopDeduplicator;
@@ -72,6 +73,25 @@ class DeduplicationTest extends TestCase
 
         $this->assertSame(0, $counts['auto_merged']);
         $this->assertSame(0, $counts['candidates']);
+        $this->assertSame(2, Workshop::query()->canonical()->count());
+    }
+
+    public function test_two_companies_at_one_address_wait_for_a_person(): void
+    {
+        // An owner's service firm and ITP firm at one gate, or two tenants of one yard: the data
+        // cannot tell which, so neither is folded into the other automatically.
+        $service = WorkshopCompany::query()->create(['legal_name' => 'OEN SERVICE SRL', 'normalized_name' => 'oen service', 'cui' => '50686496']);
+        $itp = WorkshopCompany::query()->create(['legal_name' => 'OEN ITP SRL', 'normalized_name' => 'oen itp', 'cui' => '50828019']);
+        $this->workshop('OEN SERVICE SRL', 'Bulevardul Muncii nr. 74, Brașov', 45.66252, 25.5713, '+40744705739', ['company_id' => $service->id]);
+        $this->workshop('OEN ITP SRL', 'B-dul Muncii 74, Brașov', 45.66252, 25.5713, '+40744705739', ['company_id' => $itp->id]);
+
+        $counts = app(WorkshopDeduplicator::class)->run('BV');
+
+        $this->assertSame(0, $counts['auto_merged']);
+        $this->assertSame(1, $counts['candidates']);
+        $pair = WorkshopMatchCandidate::query()->firstOrFail();
+        $this->assertSame(WorkshopMatchStatus::Pending, $pair->status);
+        $this->assertTrue($pair->evidence['different_companies']);
         $this->assertSame(2, Workshop::query()->canonical()->count());
     }
 

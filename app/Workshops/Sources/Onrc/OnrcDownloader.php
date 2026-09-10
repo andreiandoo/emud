@@ -11,7 +11,9 @@ use RuntimeException;
  * announces is reused, so an interrupted import does not fetch 1.2 GB again.
  *
  * data.gov.ro ignores Range requests, so a partial download cannot be continued; it is written
- * to a .part file and only renamed when complete.
+ * to a .part file and only renamed when complete. Files an operator fetched some other way can be
+ * read from their own directory instead ($from); those are checked against the announced size and
+ * never deleted.
  */
 class OnrcDownloader
 {
@@ -21,16 +23,22 @@ class OnrcDownloader
      * @param  list<string>|null  $names
      * @return array<string, array{path: string, sha256: string, size: int, resource_id: string|null, url: string}>
      */
-    public function download(OnrcRelease $release, ?array $names = null, ?callable $progress = null): array
+    public function download(OnrcRelease $release, ?array $names = null, ?callable $progress = null, ?string $from = null): array
     {
         $names ??= [...OnrcDatasetLocator::REQUIRED, ...array_filter(OnrcDatasetLocator::NOMENCLATURE, fn (string $name): bool => $release->resource($name) !== null)];
         $files = [];
 
         foreach ($names as $name) {
             $resource = $release->resource($name) ?? throw new RuntimeException("{$release->key} has no {$name}.");
-            $path = $this->path($release, $name);
+            $path = $from !== null ? $this->local($from, $name) : $this->path($release, $name);
 
-            if (! $this->isComplete($path, $resource['size'])) {
+            if ($from !== null) {
+                if (! $this->isComplete($path, $resource['size'])) {
+                    throw new RuntimeException("{$name} is missing from {$from}, or is not the ".number_format((int) $resource['size'])." bytes {$release->key} announces.");
+                }
+
+                $progress && $progress("{$name} read from {$from}");
+            } elseif (! $this->isComplete($path, $resource['size'])) {
                 $progress && $progress("downloading {$name}".($resource['size'] ? ' ('.number_format($resource['size'] / 1_048_576, 0).' MB)' : ''));
                 $this->fetch($resource['url'], $path);
             } else {
@@ -66,6 +74,14 @@ class OnrcDownloader
     private function path(OnrcRelease $release, string $name): string
     {
         return $this->directory($release).'/'.strtolower($name);
+    }
+
+    /** A file named as data.gov.ro names it (OD_FIRME.CSV) or in lower case. */
+    private function local(string $directory, string $name): string
+    {
+        $directory = rtrim($directory, '/\\');
+
+        return is_file($directory.'/'.$name) ? $directory.'/'.$name : $directory.'/'.strtolower($name);
     }
 
     private function isComplete(string $path, ?int $expectedSize): bool

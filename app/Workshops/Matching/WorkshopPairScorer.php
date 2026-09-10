@@ -14,6 +14,10 @@ use App\Workshops\Support\Geo;
  * Same company is not same workshop. A chain answers every branch on one phone line and gives them
  * all the same name, so for two workshops of one company, or two that each hold their own RAR
  * authorisation, only the same address can make them one place. Nearness alone never merges.
+ *
+ * Nor are two companies made one workshop without a person. An owner's service firm and ITP firm
+ * at one gate, and two tenants of one yard sharing the landlord's number, look alike in the data;
+ * such a pair waits in the review queue with its score.
  */
 class WorkshopPairScorer
 {
@@ -71,6 +75,11 @@ class WorkshopPairScorer
         $score += $sameCompany ? 10 : 0;
         $evidence['same_company'] = $sameCompany;
 
+        $differentCompanies = $a->company_id !== null && $b->company_id !== null && ! $sameCompany;
+        if ($differentCompanies) {
+            $evidence['different_companies'] = true;
+        }
+
         $bothAuthorised = $this->hasCurrentAuthorization($a) && $this->hasCurrentAuthorization($b);
         $evidence['both_rar_authorised'] = $bothAuthorised;
 
@@ -87,7 +96,7 @@ class WorkshopPairScorer
 
         return [
             'score' => max(0, min(100, $score)),
-            'auto' => $identity && $samePlace && ! $distinctByDefinition,
+            'auto' => $identity && $samePlace && ! $distinctByDefinition && ! $differentCompanies,
             'evidence' => $evidence,
         ];
     }

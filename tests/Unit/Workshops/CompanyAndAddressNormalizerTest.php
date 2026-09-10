@@ -58,6 +58,23 @@ class CompanyAndAddressNormalizerTest extends TestCase
         $this->assertSame(0.0, AddressNormalizer::similarity('', 'Str. Pacea nr. 9', 'BT'));
     }
 
+    public function test_roads_house_letters_postal_codes_and_building_words_are_written_one_way(): void
+    {
+        $this->assertSame('sat geamana comuna bradu dn65 nr 2', AddressNormalizer::normalize('SAT GEAMANA, COMUNA BRADU, DN 65, NR.2'));
+        $this->assertSame(1.0, AddressNormalizer::similarity('SAT GEAMANA, COMUNA BRADU, DN65, NR 2, JUDEȚUL ARGEȘ', 'SAT GEAMANA, COMUNA BRADU, DN 65, NR.2, JUDETUL ARGES', 'AG'));
+        $this->assertSame(1.0, AddressNormalizer::similarity('CENTURA DE NORD DN7 KM541+100, ARAD', 'DN 7, KM. 541+100, CENTURA NORD, ARAD, JUDEȚUL ARAD', 'AR'));
+        $this->assertSame(1.0, AddressNormalizer::similarity('Str. Spineni nr. 18A, sector 4', 'STR. SPINENI NR. 18 A, SECTORUL 4', 'B'));
+        $this->assertGreaterThanOrEqual(0.9, AddressNormalizer::similarity('Bulevardul Basarabia 167 bis, București 030351', 'Sector 3, B-dul Basarabia, nr. 167 bis, București', 'B'));
+        $this->assertSame(1.0, AddressNormalizer::similarity('Prelungirea Ghencea nr. 17, construcție C1, sector 6', 'PRELUNGIREA GHENCEA NR. 17, CLĂDIREA NR. C1, SECTOR 6', 'B'));
+    }
+
+    public function test_a_sector_or_a_floor_area_is_not_a_house_number(): void
+    {
+        $this->assertSame(0.0, AddressNormalizer::similarity('Str. Răcari nr. 5, sector 3', 'Str. Răcari nr. 7, sector 3', 'B'));
+        $this->assertSame(0.0, AddressNormalizer::similarity('Calea Giulești nr. 121D, sector 6', 'Calea Giulești nr. 121 B, sector 6', 'B'));
+        $this->assertGreaterThanOrEqual(0.9, AddressNormalizer::similarity('Șos. Olteniței nr. 103, spațiu în suprafață de 110 mp', 'Șos. Olteniței nr. 103', 'B'));
+    }
+
     public function test_fiscal_codes_are_compared_as_digits_and_checked(): void
     {
         $this->assertSame('15428073', Identifiers::cui('RO 15428073'));

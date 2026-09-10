@@ -29,7 +29,7 @@ class ProcessOnrcRelease implements ShouldQueue
 
     public int $tries = 1;
 
-    public function __construct(public readonly ?string $releaseKey = null, public readonly bool $keepFiles = false, public readonly ?int $limit = null, public readonly bool $force = false)
+    public function __construct(public readonly ?string $releaseKey = null, public readonly bool $keepFiles = false, public readonly ?int $limit = null, public readonly bool $force = false, public readonly ?string $from = null)
     {
         $this->onQueue('workshops');
     }
@@ -41,14 +41,15 @@ class ProcessOnrcRelease implements ShouldQueue
 
     public function handle(OnrcDatasetLocator $locator, OnrcDownloader $downloader, OnrcImporter $importer): void
     {
-        self::run($locator, $downloader, $importer, $this->releaseKey, $this->keepFiles, $this->limit, force: $this->force);
+        self::run($locator, $downloader, $importer, $this->releaseKey, $this->keepFiles, $this->limit, force: $this->force, from: $this->from);
     }
 
     /**
      * Shared by the job and the command's --sync mode. Returns null when the newest release was
-     * already imported: the monthly schedule then costs one API call, not 1.2 GB.
+     * already imported: the monthly schedule then costs one API call, not 1.2 GB. With $from the
+     * files are read from that directory and left where they are.
      */
-    public static function run(OnrcDatasetLocator $locator, OnrcDownloader $downloader, OnrcImporter $importer, ?string $releaseKey, bool $keepFiles, ?int $limit, ?callable $progress = null, bool $force = false): ?WorkshopImportRun
+    public static function run(OnrcDatasetLocator $locator, OnrcDownloader $downloader, OnrcImporter $importer, ?string $releaseKey, bool $keepFiles, ?int $limit, ?callable $progress = null, bool $force = false, ?string $from = null): ?WorkshopImportRun
     {
         $source = WorkshopDataSource::forKey(DataSourceCatalog::ONRC);
         $release = $locator->latest($releaseKey);
@@ -62,7 +63,7 @@ class ProcessOnrcRelease implements ShouldQueue
         $run = WorkshopImportRun::start($source, ['release' => $release->key, 'limit' => $limit]);
 
         try {
-            $files = $downloader->download($release, progress: $progress);
+            $files = $downloader->download($release, progress: $progress, from: $from);
             $run->updateMetadata(fn (array $metadata): array => $metadata + [
                 'release' => $release->toArray(),
                 'files' => collect($files)->map(fn (array $file): array => ['sha256' => $file['sha256'], 'size' => $file['size'], 'resource_id' => $file['resource_id'], 'url' => $file['url']])->all(),
@@ -74,7 +75,7 @@ class ProcessOnrcRelease implements ShouldQueue
             $source->putState('release', ['key' => $release->key, 'title' => $release->title, 'imported_at' => now()->toIso8601String(), 'files' => $run->fresh()->metadata['files'] ?? []]);
             $run->finish();
 
-            if (! ($keepFiles || config('workshops.onrc.keep_files'))) {
+            if ($from === null && ! ($keepFiles || config('workshops.onrc.keep_files'))) {
                 $downloader->forget($release);
             }
         } catch (Throwable $exception) {

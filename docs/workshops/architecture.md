@@ -88,7 +88,15 @@ word in one locality, an address fingerprint or a 200 m cell. `WorkshopPairScore
 website, name, address, locality, distance and company. It **auto-merges** (score ≥ 85) only with
 an identity signal and a compatible place, and never two workshops that each hold a RAR
 authorisation, or belong to one company, at different addresses; such pairs are not even queued.
+Nor does it ever merge two **different companies**, even at one address with one phone: an owner's
+service firm and ITP firm at one gate, and two tenants of one yard sharing the landlord's number,
+look the same in the data. Those pairs wait for a person with `different_companies` in their evidence.
 A likely pair (≥ 55) waits in the review queue; a decision a person took is never reopened.
+
+Addresses are compared by `AddressNormalizer::similarity`: abbreviations expanded, roads and
+house-number letters written one way ("DN 65" = "DN65", "18 A" = "18A"), postal codes, floor areas
+("150 mp") and building words ("clădirea", "corp", "hala") left out. House numbers must agree when
+both give one, and a sector, floor or flat number is not a house number ("sector 3" is `sector3`).
 `WorkshopMerger` moves links, authorisations, contacts, services and website candidates to the
 survivor, keeps the duplicate (inactive, `merged_into_id`), and records the decision.
 

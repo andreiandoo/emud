@@ -106,6 +106,30 @@ class OnrcImportTest extends TestCase
         $this->assertSame($companies, WorkshopCompany::query()->count());
     }
 
+    public function test_files_fetched_by_hand_are_read_from_their_directory_and_left_there(): void
+    {
+        $directory = dirname($this->fixture('onrc/od_firme.csv'));
+        Http::fake(['data.gov.ro/api/*' => Http::response(['result' => ['results' => [
+            ['name' => 'nomenclatoare-02-09-2026', 'metadata_created' => '2026-09-03T09:42:46', 'resources' => [
+                ['name' => 'N_STARE_FIRMA.CSV', 'url' => 'https://data.gov.ro/n_stare.csv', 'id' => 'n1'],
+                ['name' => 'N_CAEN.CSV', 'url' => 'https://data.gov.ro/n_caen.csv', 'id' => 'n2'],
+            ]],
+            ['name' => 'firme-02-09-2026', 'title' => 'Firme 02.09.2026', 'metadata_created' => '2026-09-03T09:45:53', 'resources' => [
+                ['name' => 'OD_FIRME.CSV', 'url' => 'https://data.gov.ro/od_firme.csv', 'id' => 'f1', 'size' => filesize($directory.'/od_firme.csv')],
+                ['name' => 'OD_CAEN_AUTORIZAT.CSV', 'url' => 'https://data.gov.ro/od_caen.csv', 'id' => 'c1'],
+                ['name' => 'OD_STARE_FIRMA.CSV', 'url' => 'https://data.gov.ro/od_stare.csv', 'id' => 's1'],
+            ]],
+        ]]])]);
+
+        $this->artisan('workshops:onrc:import', ['--sync' => true, '--from' => $directory])->assertSuccessful();
+
+        $this->assertTrue(WorkshopCompany::query()->where('cui', '15428073')->exists());
+        $this->assertSame('firme-02-09-2026', WorkshopDataSource::forKey(DataSourceCatalog::ONRC)->stateValue('release.key'));
+        Http::assertNotSent(fn ($request): bool => str_ends_with($request->url(), '.csv'));
+        $this->assertFileExists($directory.'/od_firme.csv');
+        $this->artisan('workshops:onrc:import', ['--sync' => true, '--from' => $directory.'/missing'])->assertFailed();
+    }
+
     public function test_the_newest_release_is_found_through_the_open_data_api(): void
     {
         Http::fake(['data.gov.ro/*' => Http::response(['result' => ['results' => [

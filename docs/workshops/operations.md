@@ -29,7 +29,9 @@ php artisan workshops:rar:probe                         # is the live registry s
 `workshops:rar:probe` is the only thing that checks the live registry on purpose: the test suite
 never calls it. Run it after RAR changes its portal, or when an import suddenly fails everywhere.
 
-A national SERVICE pass is ~55 requests two seconds apart plus parsing: minutes, not hours.
+A national import of all five sections is about 240 requests two seconds apart. Measured locally on
+2026-09-10 (SQLite): 32 minutes the first time, with 17 319 records to read, and 17 minutes when
+nothing had changed.
 
 ## ONRC
 
@@ -38,8 +40,13 @@ php artisan workshops:onrc:download         # newest release, ~1.2 GB into stora
 php artisan workshops:onrc:import           # queued; downloads if needed, skips a release already imported
 php artisan workshops:onrc:import --sync --keep-files
 php artisan workshops:onrc:import --force   # the same release again
+php artisan workshops:onrc:import --sync --from=/path/to/files   # files fetched by hand; left in place
 php artisan workshops:onrc:match            # re-match unmatched / ambiguous companies (no download)
 ```
+
+data.gov.ro cannot resume a download. If the connection keeps breaking, fetch `OD_FIRME.CSV`,
+`OD_CAEN_AUTORIZAT.CSV`, `OD_STARE_FIRMA.CSV` and the `N_*.CSV` nomenclatures with a tool that
+retries and import them with `--from`; each must be the size the release announces.
 
 ## OpenStreetMap
 

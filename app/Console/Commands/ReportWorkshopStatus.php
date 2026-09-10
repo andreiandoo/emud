@@ -37,7 +37,7 @@ class ReportWorkshopStatus extends Command
             ['ITP stations able to inspect permanent 4x4', $o['itp_4x4']],
             ['Pending website enrichment', $o['pending_website']],
             ['Pending geocoding', $o['pending_geocode']],
-            ['Ambiguous matches to review', $o['ambiguous_matches']],
+            ['Matches waiting for review', $o['matches_to_review']],
             ['Failed source records', $o['failed_records']],
             ['Pending source records', $o['pending_records']],
         ]);

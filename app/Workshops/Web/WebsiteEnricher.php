@@ -39,6 +39,7 @@ class WebsiteEnricher
         }
 
         $counts = ['pages' => count($pages), 'emails' => 0, 'phones' => 0, 'services' => 0];
+        $emails = $phones = [];
         $home = $pages[0]->record;
         $this->contacts->link($workshop, 'website', $site->url, $home, max(70, (int) $site->confidence), 'Site oficial', $site->url);
 
@@ -48,13 +49,13 @@ class WebsiteEnricher
             foreach ($facts['emails'] as $email => $how) {
                 if ($how['confidence'] > 0) {
                     $this->contacts->email($workshop, $email, $page->record, $how['confidence'], 'Site: '.$how['how'], $page->url);
-                    $counts['emails']++;
+                    $emails[$email] = true;
                 }
             }
 
             foreach ($facts['phones'] as $phone) {
                 $this->contacts->phone($workshop, $phone, $page->record, 75, 'Site oficial', $page->url);
-                $counts['phones']++;
+                $phones[$phone->e164] = true;
             }
 
             foreach ($facts['whatsapp'] as $phone) {
@@ -70,6 +71,9 @@ class WebsiteEnricher
             }
         }
 
+        // A footer repeats the same address on every page: count addresses, not sightings.
+        $counts['emails'] = count($emails);
+        $counts['phones'] = count($phones);
         $counts['services'] = $this->classify($workshop);
         $workshop->forceFill(['website_status' => 'found', 'website_checked_at' => now()])->save();
         $this->state->refresh($workshop);

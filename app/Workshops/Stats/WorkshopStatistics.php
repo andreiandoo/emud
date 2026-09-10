@@ -63,7 +63,8 @@ class WorkshopStatistics
             'itp_4x4' => WorkshopCapability::query()->where('capability', 'itp_4x4')->where('value', true)->count(),
             'pending_website' => $this->workshops()->where('is_active', true)->where('website_status', 'pending')->count(),
             'pending_geocode' => $this->workshops()->where('geocode_status', 'pending')->count(),
-            'ambiguous_matches' => WorkshopRecordMatch::query()->where('status', WorkshopRecordMatchStatus::Ambiguous)->count()
+            // What the review queue shows: ONRC and OSM matches nobody has decided, and pending pairs.
+            'matches_to_review' => WorkshopRecordMatch::query()->whereNull('reviewed_by')->whereIn('status', [WorkshopRecordMatchStatus::Ambiguous, WorkshopRecordMatchStatus::Probable])->count()
                 + WorkshopMatchCandidate::query()->where('status', WorkshopMatchStatus::Pending)->count(),
             'failed_records' => (clone $records)->where('parse_status', WorkshopSourceRecord::STATUS_FAILED)->count(),
             'pending_records' => (clone $records)->where('parse_status', WorkshopSourceRecord::STATUS_PENDING)->whereIn('record_type', ['authorization', 'company', 'poi'])->count(),

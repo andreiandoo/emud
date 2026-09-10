@@ -16,6 +16,7 @@ class ImportOnrcCompanies extends Command
         {--keep-files : Keep the downloaded files after the import}
         {--limit= : Store at most this many companies (trial runs; nothing is retired)}
         {--force : Import the release even if it was already imported}
+        {--from= : Read the files from this directory instead of downloading them (OD_FIRME.CSV, OD_CAEN_AUTORIZAT.CSV, OD_STARE_FIRMA.CSV, N_*.CSV as data.gov.ro names them)}
         {--sync : Run here instead of on the queue}';
 
     protected $description = 'Import legal identity, status and CAEN activities from the newest ONRC release.';
@@ -23,16 +24,23 @@ class ImportOnrcCompanies extends Command
     public function handle(OnrcDatasetLocator $locator, OnrcDownloader $downloader, OnrcImporter $importer): int
     {
         $limit = $this->option('limit') !== null ? max(1, (int) $this->option('limit')) : null;
+        $from = $this->option('from');
+
+        if ($from !== null && ! is_dir($from)) {
+            $this->error("No such directory: {$from}");
+
+            return self::FAILURE;
+        }
 
         if (! $this->option('sync')) {
-            ProcessOnrcRelease::dispatch($this->option('release'), (bool) $this->option('keep-files'), $limit, (bool) $this->option('force'));
+            ProcessOnrcRelease::dispatch($this->option('release'), (bool) $this->option('keep-files'), $limit, (bool) $this->option('force'), $from);
             $this->info('Queued the ONRC import on the "workshops" queue. Follow it with: php artisan workshops:status');
 
             return self::SUCCESS;
         }
 
         try {
-            $run = ProcessOnrcRelease::run($locator, $downloader, $importer, $this->option('release'), (bool) $this->option('keep-files'), $limit, fn (string $message) => $this->line('  '.$message), (bool) $this->option('force'));
+            $run = ProcessOnrcRelease::run($locator, $downloader, $importer, $this->option('release'), (bool) $this->option('keep-files'), $limit, fn (string $message) => $this->line('  '.$message), (bool) $this->option('force'), $from);
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
 

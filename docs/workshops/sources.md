@@ -68,7 +68,8 @@ number, registration date, EUID, legal form, registered address, WEB), `OD_CAEN_
 (~430 MB: registration number, CAEN code, CAEN version — every authorised activity, not only the
 main one), `OD_STARE_FIRMA.CSV` (~90 MB: registration number, status code), `N_STARE_FIRMA.CSV`,
 `N_CAEN.CSV`. data.gov.ro ignores HTTP Range, so a download cannot be resumed; files are written to
-a `.part` file and kept only until the import ends (`ONRC_KEEP_FILES`).
+a `.part` file and kept only until the import ends (`ONRC_KEEP_FILES`). Files fetched some other way
+are imported with `--from=<directory>`, checked against the sizes CKAN announces and never deleted.
 
 **What is kept.** Vehicle repair is `4520` in CAEN Rev. 2 and `9531` in Rev. 3 (2025): 105 010
 companies are authorised for one of them (67 246 + 38 323), 78 258 of which are operating (status

@@ -5,6 +5,7 @@ namespace App\Workshops\Search;
 use App\Models\Workshop;
 use App\Models\WorkshopDataSource;
 use App\Workshops\Classification\ServiceTaxonomy;
+use App\Workshops\Support\AddressNormalizer;
 use App\Workshops\Support\Geo;
 use App\Workshops\Support\Identifiers;
 use App\Workshops\Support\RomanianCounties;
@@ -29,10 +30,12 @@ class WorkshopSearch
         if ($filters->text !== null && ($folded = TextNormalizer::fold($filters->text)) !== '') {
             $digits = preg_replace('/\D+/', '', $filters->text) ?? '';
             $cui = Identifiers::cui($filters->text);
+            // Addresses are stored in normalize()'s spelling ("dn65", "strada"), so the query is too.
+            $address = AddressNormalizer::normalize($filters->text);
 
-            $query->where(function (Builder $q) use ($folded, $digits, $cui, $pgsql, $filters): void {
+            $query->where(function (Builder $q) use ($folded, $address, $digits, $cui, $pgsql, $filters): void {
                 $q->where('normalized_name', 'like', "%{$folded}%")
-                    ->orWhere('normalized_address', 'like', "%{$folded}%")
+                    ->orWhere('normalized_address', 'like', "%{$address}%")
                     ->orWhereHas('company', fn (Builder $company) => $company->where('normalized_name', 'like', "%{$folded}%")
                         ->when($cui !== null && strlen($digits) === strlen((string) $cui), fn (Builder $c) => $c->orWhere('cui', $cui))
                         ->orWhere('registration_number', strtoupper(preg_replace('/\s+/', '', $filters->text) ?? '')));

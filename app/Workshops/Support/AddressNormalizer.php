@@ -6,8 +6,9 @@ namespace App\Workshops\Support;
  * Romanian addresses as typed by thousands of different clerks, made comparable.
  *
  * normalize() expands abbreviations to one spelling ("Șos." and "SOSEAUA" both become
- * "soseaua") for search and display-independent storage. fingerprint() goes further and keeps
- * only what locates the building (street name, numbers, locality), which is how
+ * "soseaua") and writes roads and house-number letters one way ("DN 65" and "DN65" are "dn65",
+ * "18 A" is "18a") for search and display-independent storage. fingerprint() goes further and
+ * keeps only what locates the building (street name, numbers, locality), which is how
  * "Botoşani, Str. Pacea nr. 90, jud. BOTOŞANI" and "STRADA PACEA NR. 90, BOTOSANI" are seen to
  * be the same place.
  */
@@ -30,6 +31,7 @@ class AddressNormalizer
         'bl' => 'bloc', 'bloc' => 'bloc', 'sc' => 'scara', 'scara' => 'scara',
         'et' => 'etaj', 'etaj' => 'etaj', 'ap' => 'ap', 'apartament' => 'ap',
         'cam' => 'camera', 'camera' => 'camera',
+        'cartier' => 'cartier', 'cartierul' => 'cartier',
     ];
 
     /** Words that describe the kind of thing, not which one. */
@@ -37,8 +39,16 @@ class AddressNormalizer
         'strada', 'bulevardul', 'soseaua', 'calea', 'aleea', 'intrarea', 'piata', 'splaiul',
         'nr', 'judet', 'comuna', 'sat', 'municipiul', 'oras', 'localitatea', 'sector', 'bloc',
         'scara', 'etaj', 'ap', 'camera', 'romania', 'hala', 'pct', 'punct', 'punctul', 'lucru',
-        'de', 'la', 'din', 'cu', 'fn', 'f', 'n', 'cf', 'cod', 'postal', 'zona', 'parter',
+        'de', 'la', 'din', 'cu', 'in', 'fn', 'f', 'n', 'cf', 'cod', 'postal', 'zona', 'parter',
+        'cartier', 'corp', 'corpul', 'cladire', 'cladirea', 'constructie', 'constructia', 'incinta',
+        'incapere', 'incaperea', 'spatiu', 'spatiul', 'suprafata', 'supraf', 'unitatea', 'mp',
     ];
+
+    /**
+     * Words whose number says which part of the address it is, not which building: "sector 3" is
+     * not house number 3. Their number is kept joined to the word ("sector3").
+     */
+    private const QUALIFIED = ['sector', 'etaj', 'ap', 'camera', 'bloc', 'scara', 'hala', 'lot', 'parcela'];
 
     public static function normalize(mixed $address): string
     {
@@ -48,8 +58,18 @@ class AddressNormalizer
             return '';
         }
 
-        // "B-dul" folds to two words.
-        $folded = preg_replace('/\bb dul\b/', 'bulevardul', $folded) ?? $folded;
+        $folded = preg_replace(
+            [
+                // "B-dul" folds to two words.
+                '/\bb dul\b/',
+                // A road and its kilometre are one word however they are spaced: "DN 65", "DN65".
+                '/\b(dn|dj|dc|km) (?=\d)/',
+                // A letter after a house number belongs to it: "18 A" is "18a".
+                '/\b(\d+) ([a-z])\b/',
+            ],
+            ['bulevardul', '$1', '$1$2'],
+            $folded,
+        ) ?? $folded;
 
         $tokens = array_map(
             fn (string $token): string => self::CANONICAL[$token] ?? $token,
@@ -61,7 +81,8 @@ class AddressNormalizer
 
     /**
      * The words that locate the building, deduplicated and sorted. The county's own name is
-     * dropped because one clerk writes it and the next does not.
+     * dropped because one clerk writes it and the next does not, and so are postal codes and
+     * floor areas ("150 mp"), which one clerk adds and the next leaves out.
      */
     public static function fingerprint(mixed $address, ?string $countyCode = null): string
     {
@@ -69,13 +90,28 @@ class AddressNormalizer
             ? explode(' ', TextNormalizer::fold($name))
             : [];
 
-        $tokens = array_filter(
-            explode(' ', self::normalize($address)),
-            fn (string $token): bool => $token !== ''
-                && ! in_array($token, self::NOISE, true)
-                && ! in_array($token, $countyWords, true)
-                && (strlen($token) > 1 || ctype_digit($token)),
-        );
+        $words = explode(' ', preg_replace('/\b\d+ ?mp\b/', ' ', self::normalize($address)) ?? '');
+        $tokens = [];
+
+        for ($i = 0, $count = count($words); $i < $count; $i++) {
+            $word = $words[$i];
+
+            if (in_array($word, self::QUALIFIED, true) && preg_match('/^[a-z]?\d+[a-z]?$|^[a-z]$/', $words[$i + 1] ?? '') === 1) {
+                $tokens[] = $word.$words[++$i];
+
+                continue;
+            }
+
+            if ($word === ''
+                || in_array($word, self::NOISE, true)
+                || in_array($word, $countyWords, true)
+                || (strlen($word) < 2 && ! ctype_digit($word))
+                || preg_match('/^\d{6}$/', $word) === 1) {
+                continue;
+            }
+
+            $tokens[] = $word;
+        }
 
         $tokens = array_values(array_unique($tokens));
         sort($tokens);
@@ -113,9 +149,9 @@ class AddressNormalizer
         return max($jaccard, $contained);
     }
 
-    /** @return list<string> */
+    /** @return list<string> house numbers ("12", "12a"), not "sector3" or "dn65" */
     private static function numbers(string $fingerprint): array
     {
-        return array_values(array_filter(explode(' ', $fingerprint), fn (string $token): bool => preg_match('/\d/', $token) === 1));
+        return array_values(array_filter(explode(' ', $fingerprint), fn (string $token): bool => ctype_digit($token[0] ?? '')));
     }
 }
