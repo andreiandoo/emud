@@ -3,60 +3,86 @@
 namespace App\Livewire\Storefront;
 
 use App\Models\VehicleCollection;
+use App\Storefront\CatalogMetrics;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Every car the shop has a page for, grouped under its make.
+ * Every car the shop has a page for, as a wall of pictures.
  *
- * A flat alphabetical list of several hundred entries is a wall; grouped by make it is a table
- * of contents, and the make row is itself a collection worth clicking.
+ * Deliberately not a directory. An alphabetical list of several hundred model names is a thing
+ * nobody reads: a visitor arrives knowing exactly what they drive, so the page gives them one
+ * box to type it into and otherwise shows them cars. What is not on screen is reachable through
+ * the search, not through more rows of text.
  */
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class CollectionsIndex extends Component
 {
-    #[Url(except: '')]
+    /** How many tiles a screenful is. Chosen to fill the widest grid exactly. */
+    private const PER_PAGE = 30;
+
+    #[Url(as: 'q', except: '')]
     public string $search = '';
+
+    public int $perPage = self::PER_PAGE;
+
+    /** Typing a new term starts the wall again from the top. */
+    public function updatedSearch(): void
+    {
+        $this->perPage = self::PER_PAGE;
+    }
+
+    public function clearSearch(): void
+    {
+        $this->search = '';
+        $this->perPage = self::PER_PAGE;
+    }
+
+    public function loadMore(): void
+    {
+        $this->perPage += self::PER_PAGE;
+    }
 
     public function render()
     {
+        $total = $this->query()->count();
+
         return view('livewire.storefront.collections-index', [
-            'groups' => $this->groups(),
-            'featured' => app(\App\Storefront\CollectionShowcase::class)->featured(12),
+            'tiles' => $this->tiles(),
+            'total' => $total,
+            'hasMore' => $total > $this->perPage,
+            // A zero is worse than a silence: "0 repere în catalogul tehnic" advertises an
+            // empty shop, and on a fresh install that is exactly what it would say.
+            'metrics' => array_filter(
+                app(CatalogMetrics::class)->snapshot(),
+                static fn (array $metric): bool => $metric['value'] > 0,
+            ),
         ]);
     }
 
-    /**
-     * @return Collection<int, array{make: ?VehicleCollection, name: string, models: Collection<int, VehicleCollection>}>
-     */
-    private function groups(): Collection
+    /** @return Collection<int, VehicleCollection> */
+    private function tiles(): Collection
     {
-        $collections = VehicleCollection::query()
-            ->active()
-            ->with('make:id,name')
-            ->when($this->search !== '', function (Builder $query): void {
-                $query->whereRaw('lower(name) like ?', ['%'.mb_strtolower($this->search).'%']);
-            })
+        return $this->query()
+            // A collection with a photograph earns its place on the wall ahead of one without,
+            // whatever else is true of it: this page is the pictures.
+            ->orderByRaw('case when square_image_path is null then 1 else 0 end')
+            ->orderByDesc('is_featured')
+            ->orderBy('position')
             ->orderBy('name')
-            ->get();
+            ->limit($this->perPage)
+            ->get(['id', 'name', 'slug', 'square_image_path', 'subtitle', 'year_from', 'year_to']);
+    }
 
-        return $collections
-            // Grouped on the make id and not on the name: two makes can share a name in the
-            // reference data, and merging them would file a Jimny under the wrong company.
-            ->groupBy(fn (VehicleCollection $collection): string => (string) ($collection->make_id ?? 'x'))
-            ->map(function (Collection $rows): array {
-                $makeLevel = $rows->firstWhere('model_id', null);
-
-                return [
-                    'make' => $makeLevel,
-                    'name' => $makeLevel?->name ?? $rows->first()->make?->name ?? $rows->first()->name,
-                    'models' => $rows->filter(fn (VehicleCollection $row): bool => $row->model_id !== null)->values(),
-                ];
-            })
-            ->sortBy('name')
-            ->values();
+    private function query(): Builder
+    {
+        return VehicleCollection::query()
+            ->active()
+            ->when($this->search !== '', function (Builder $query): void {
+                $query->whereRaw('lower(name) like ?', ['%'.mb_strtolower(trim($this->search)).'%']);
+            });
     }
 }

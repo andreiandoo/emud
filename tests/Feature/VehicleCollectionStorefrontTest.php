@@ -85,7 +85,7 @@ class VehicleCollectionStorefrontTest extends TestCase
         $this->assertSame(['Dacia Duster'], app(CollectionShowcase::class)->featured(12)->pluck('name')->all());
     }
 
-    public function test_the_index_groups_models_under_their_make(): void
+    public function test_the_index_shows_collections_as_tiles(): void
     {
         $make = VehicleMake::create(['name' => 'Suzuki', 'slug' => 'suzuki', 'is_active' => true]);
         $model = VehicleModel::create(['make_id' => $make->id, 'name' => 'Jimny', 'slug' => 'jimny', 'is_active' => true]);
