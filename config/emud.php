@@ -20,6 +20,19 @@ return [
         'default_markup_percent' => (float) env('DEFAULT_MARKUP_PERCENT', 25),
         'price_ending' => (float) env('PRICE_ENDING', 0.99),
 
+        // Automatic shelf pricing: the shop's policy applied to the landed cost of the offer
+        // routing would actually fulfil from. These are the fallbacks behind the default
+        // pricing rule, which an operator edits in the back office.
+        'default_target_margin_percent' => (float) env('PRICING_DEFAULT_MARGIN', 25),
+        // Floor on contribution after payment fee and return and warranty reserves. Low
+        // enough not to block tyres, whose margin is thin by nature; high enough to catch a
+        // bulky part whose freight quietly ate the margin.
+        'minimum_contribution_percent' => (float) env('PRICING_MIN_CONTRIBUTION', 8),
+        // A bigger automatic move than this waits for an operator instead of going live.
+        'max_auto_change_percent' => (float) env('PRICING_MAX_AUTO_CHANGE', 15),
+        // Where the shelf price assumes the parcel goes, for routing and freight.
+        'reference_destination' => env('PRICING_REFERENCE_COUNTRY', 'RO'),
+
         // National Bank of Romania reference rates. RON-denominated, which suits a
         // RON base currency; verify the document shape before trusting an import.
         // The National Bank of Romania withdrew nbrfxrates.xml — every known path now redirects

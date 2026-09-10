@@ -38,6 +38,9 @@ class ProductEditor extends Component
 
     public string $status = 'draft';
 
+    /** Automatic follows the landed cost of the winning supplier offer; manual is left alone. */
+    public string $pricingMode = 'auto';
+
     public string $shortDescription = '';
 
     public string $description = '';
@@ -89,6 +92,7 @@ class ProductEditor extends Component
             $this->manufacturerPartNumber = $product->manufacturer_part_number ?? '';
             $this->brandId = $product->brand_id;
             $this->status = $product->status->value;
+            $this->pricingMode = $product->pricing_mode?->value ?? 'auto';
             $this->shortDescription = $product->short_description ?? '';
             $this->description = $product->description ?? '';
             $this->isUniversal = $product->is_universal;
@@ -208,6 +212,7 @@ class ProductEditor extends Component
             'manufacturerPartNumber' => ['nullable', 'string', 'max:255'],
             'brandId' => ['nullable', 'exists:brands,id'],
             'status' => ['required', 'in:draft,review,active,archived'],
+            'pricingMode' => ['required', 'in:auto,manual'],
             'categoryIds' => ['array', 'min:1'],
             'categoryIds.*' => ['exists:categories,id'],
             'variants' => ['array', 'min:1'],
@@ -231,6 +236,7 @@ class ProductEditor extends Component
                 'manufacturer_part_number' => $validated['manufacturerPartNumber'] ?: null,
                 'brand_id' => $validated['brandId'],
                 'status' => $validated['status'],
+                'pricing_mode' => $validated['pricingMode'],
                 'short_description' => $this->shortDescription ?: null,
                 'description' => $this->description ?: null,
                 'is_universal' => $this->isUniversal,

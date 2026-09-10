@@ -6,6 +6,7 @@ use App\Catalog\CollectionMatcher;
 use App\Commerce\CurrencyConverter;
 use App\Enums\ProductStatus;
 use App\Jobs\EvaluateProductAlerts;
+use App\Jobs\RepriceProduct;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
@@ -120,6 +121,9 @@ class SupplierCatalogImporter
 
         if ($result['product_id'] && $result['offer_changed']) {
             EvaluateProductAlerts::dispatch($result['product_id'])->afterCommit();
+            // The cost or stock under the shelf price just moved, so the price may have to
+            // follow, or another supplier's offer may now be the one it should follow.
+            RepriceProduct::dispatch($result['product_id'])->afterCommit();
         }
 
         return ['created' => $result['created'], 'updated' => $result['updated']];

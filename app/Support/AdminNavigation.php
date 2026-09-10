@@ -36,6 +36,8 @@ class AdminNavigation
                     ['route' => 'admin.collections.index', 'label' => 'Colecții', 'icon' => 'layers'],
                     ['route' => 'admin.attributes.index', 'label' => 'Filtre & atribute', 'icon' => 'sliders'],
                     ['route' => 'admin.brands.index', 'label' => 'Branduri', 'icon' => 'tag'],
+                    ['route' => 'admin.pricing.rules', 'label' => 'Reguli de preț', 'icon' => 'calculator'],
+                    ['route' => 'admin.pricing.changes', 'label' => 'Prețuri de aprobat', 'icon' => 'alert'],
                     ['route' => 'admin.media.index', 'label' => 'Bibliotecă media', 'icon' => 'image'],
                 ],
             ],

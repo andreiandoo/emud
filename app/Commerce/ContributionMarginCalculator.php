@@ -84,6 +84,28 @@ class ContributionMarginCalculator
         ];
     }
 
+    /**
+     * The lowest customer price, VAT included, at which this offer still contributes the
+     * given share of net revenue.
+     *
+     * Solved rather than searched for. Everything but the payment fee is independent of the
+     * price, so contribution is linear in it: at a price of zero it is minus those fixed
+     * costs, and each leu of price adds the part left after VAT and the processor's cut.
+     * Null when no price can reach the share, which only happens when the fee and the share
+     * together swallow the whole net amount.
+     */
+    public function minimumGrossPrice(SupplierOffer $offer, float $minimumContributionPercent, int $quantity = 1): ?float
+    {
+        $quantity = max(1, $quantity);
+        $fixedCosts = -$this->for($offer, 0.0, $quantity)['contribution'];
+
+        $vatRate = (float) ($offer->vat_rate ?? config('emud.catalog.default_vat_rate'));
+        $feeShare = (float) config('emud.pricing.margins.payment_fee_percent') / 100;
+        $headroom = (1 - $minimumContributionPercent / 100) / (1 + $vatRate / 100) - $feeShare;
+
+        return $headroom <= 0 ? null : round($fixedCosts / $headroom / $quantity, 4);
+    }
+
     /** @param array<string, mixed> $margins */
     private function reverseFreightMultiplier(SupplierOffer $offer, array $margins): float
     {

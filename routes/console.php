@@ -25,3 +25,7 @@ Schedule::command('suppliers:health-check --notify')->hourly()->withoutOverlappi
 // Before the morning catalogue sync, so foreign supplier costs convert against the
 // day's published rate rather than yesterday's.
 Schedule::command('exchange-rates:fetch')->dailyAt('01:30')->withoutOverlapping(20);
+
+// After the nightly catalogue sync. Cost changes reprice as they arrive; this pass catches
+// what nothing triggered: an edited pricing rule, a rate that moved, a lapsed offer.
+Schedule::command('pricing:reprice --all')->dailyAt('03:10')->withoutOverlapping(60);

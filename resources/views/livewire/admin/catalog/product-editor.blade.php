@@ -213,6 +213,17 @@
                 <button type="button" wire:click="addVariant" class="btn-secondary">+ Variantă</button>
             </div>
 
+            {{-- Without this switch, automatic repricing would silently overwrite any price an
+                 operator set by hand the next time a supplier's cost moved. --}}
+            <label class="block max-w-xl">
+                <span class="field-label">Mod de preț</span>
+                <select wire:model="pricingMode">
+                    <option value="auto">Automat — urmează costul furnizorului, după regulile de preț</option>
+                    <option value="manual">Manual — prețul de mai jos nu se schimbă automat</option>
+                </select>
+                <span class="mt-1 block text-xs text-stone-500">În modul automat prețul se recalculează la fiecare schimbare de cost; o mișcare mai mare decât limita regulii așteaptă în „Prețuri de aprobat”.</span>
+            </label>
+
             @foreach($variants as $index => $variant)
                 <div wire:key="variant-{{ $index }}" class="grid gap-4 rounded-xl bg-stone-50 p-4 md:grid-cols-4">
                     <label class="block">

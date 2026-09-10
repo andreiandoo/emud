@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             CatalogSourceSeeder::class,
             SupplierProfileSeeder::class,
             SupplierProspectSeeder::class,
+            // After CategorySeeder: the rules are attached to categories by path.
+            PricingRuleSeeder::class,
             PageSeeder::class,
             // Last, and a no-op until the vehicle graph is imported: it reads makes and models
             // rather than writing them.

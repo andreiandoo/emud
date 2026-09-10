@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Catalog\CollectionMatcher;
+use App\Enums\PricingMode;
 use App\Enums\ProductStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,7 @@ class Product extends Model
     {
         return [
             'status' => ProductStatus::class,
+            'pricing_mode' => PricingMode::class,
             'is_universal' => 'boolean',
             'is_featured' => 'boolean',
             'dimensions_cm' => 'array',
