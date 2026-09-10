@@ -3,6 +3,7 @@
 namespace App\Livewire\Storefront;
 
 use App\Enums\ProductStatus;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\Review;
@@ -15,6 +16,7 @@ use App\Storefront\Wishlist;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -144,8 +146,29 @@ class ProductPage extends Component
             'addOns' => $this->addOns(),
             'related' => $this->related(),
             'reviews' => $reviews,
+            'trail' => $this->trail(),
             'productJsonLd' => $this->productJsonLd($variant, $availability, $reviews),
         ]);
+    }
+
+    /**
+     * The deepest category the product is filed under and every category above it: the path a
+     * customer would have walked down to get here, for the breadcrumb.
+     *
+     * @return Collection<int, Category>
+     */
+    private function trail(): Collection
+    {
+        $trail = collect();
+        $current = $this->product->categories->sortByDesc('depth')->first();
+
+        // Bounded, so a cycle an import once wrote cannot hold the page.
+        while ($current !== null && $trail->count() < 8) {
+            $trail->prepend($current);
+            $current = $current->parent_id ? Category::query()->find($current->parent_id) : null;
+        }
+
+        return $trail;
     }
 
     /**
