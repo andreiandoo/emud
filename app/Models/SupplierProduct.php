@@ -58,4 +58,9 @@ class SupplierProduct extends Model
     {
         return $this->hasMany(SupplierProductMatchCandidate::class);
     }
+
+    public function identifiers(): HasMany
+    {
+        return $this->hasMany(SupplierProductIdentifier::class);
+    }
 }

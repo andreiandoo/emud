@@ -28,6 +28,7 @@ class SupplierCatalogImporter
     public function __construct(
         private readonly CurrencyConverter $converter,
         private readonly CollectionMatcher $collections,
+        private readonly SupplierIdentifierSync $identifiers,
     ) {}
 
     /** @return array{created: bool, updated: bool} */
@@ -72,6 +73,12 @@ class SupplierCatalogImporter
             }
 
             $supplierProduct->fill($productPayload)->save();
+
+            // Only when the row changed: a stock feed every fifteen minutes carries the
+            // same identity each time, and rewriting it would be pure write load.
+            if ($changed) {
+                $this->identifiers->sync($supplier, $supplierProduct, $record);
+            }
 
             $offer = SupplierOffer::query()->firstOrNew(['supplier_product_id' => $supplierProduct->id]);
             $old = $offer->only(['cost_price', 'recommended_retail_price', 'stock_quantity', 'stock_status']);

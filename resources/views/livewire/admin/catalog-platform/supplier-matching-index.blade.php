@@ -1,6 +1,10 @@
 <div>
     <x-admin.page-header title="Potrivire furnizor → piesă canonică"
-                         subtitle="Mapează SKU-urile comerciale la piesa tehnică canonică. EAN și brand+MPN au prioritate." />
+                         subtitle="GTIN și brand+MPN mapează automat. Referințele OE contează doar când brandul coincide — un echivalent de alt producător nu e același articol." />
+
+    @if(session('status'))
+        <div class="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{{ session('status') }}</div>
+    @endif
 
     <div class="mb-6 grid gap-4 md:grid-cols-3">
         <label class="block">
@@ -14,8 +18,8 @@
         <label class="block">
             <span class="field-label">Status de mapare</span>
             <select wire:model.live="status">
-                @foreach(['candidate', 'unmatched', 'unmapped', 'mapped_auto', 'mapped_manual'] as $value)
-                    <option value="{{ $value }}">{{ $value }}</option>
+                @foreach($statuses as $value => $label)
+                    <option value="{{ $value }}">{{ $label }}</option>
                 @endforeach
             </select>
         </label>
@@ -29,11 +33,12 @@
 
     <div class="space-y-4">
         @forelse($products as $product)
+            @php($reason = $product->catalog_mapping_reason ?? [])
             <div class="card-padded" wire:key="supplier-product-{{ $product->id }}">
                 <div class="grid gap-6 xl:grid-cols-[1.2fr_2fr]">
                     <div>
                         <div class="text-xs uppercase tracking-wider text-stone-500">
-                            {{ $product->supplier?->code }} · {{ $product->catalog_mapping_status }}
+                            {{ $product->supplier?->code }} · {{ $statuses[$product->catalog_mapping_status] ?? $product->catalog_mapping_status }}
                         </div>
                         <div class="mt-1 font-medium text-stone-900">{{ $product->name }}</div>
 
@@ -43,6 +48,32 @@
                             'Brand' => $product->raw_brand,
                             'MPN' => $product->manufacturer_part_number,
                         ]" />
+
+                        {{-- Every identifier the feed carried, not just the two with columns:
+                             an operator deciding on an OE-based candidate needs to see the OE. --}}
+                        @php($extraIdentifiers = $product->identifiers->reject(fn ($identifier) => in_array($identifier->type->value, ['GTIN', 'MPN', 'SUPPLIER_SKU'], true)))
+                        @if($extraIdentifiers->isNotEmpty())
+                            <div class="mt-3 flex flex-wrap gap-1.5">
+                                @foreach($extraIdentifiers as $identifier)
+                                    <span class="rounded border border-stone-200 bg-stone-50 px-2 py-0.5 font-mono text-[11px] text-stone-700" title="{{ $identifier->type->label() }}">
+                                        <span class="text-stone-400">{{ $identifier->type->label() }}</span>
+                                        {{ $identifier->brand ? $identifier->brand.' ' : '' }}{{ $identifier->value }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if(filled($reason['invalid_gtin'] ?? null))
+                            <p class="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                                EAN-ul <strong class="font-mono">{{ $reason['invalid_gtin'] }}</strong> nu e un cod de bare valid (placeholder sau cifră de control greșită), așa că nu a fost folosit la potrivire.
+                            </p>
+                        @endif
+
+                        @if($product->catalog_mapping_status === 'conflict')
+                            <p class="mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-900">
+                                Două piese sunt revendicate cu încredere maximă — de obicei EAN-ul arată spre una și brand+MPN spre alta. Unul dintre identificatorii furnizorului e greșit; confirmă manual piesa corectă.
+                            </p>
+                        @endif
 
                         @if($product->catalogPart)
                             <p class="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
@@ -57,11 +88,13 @@
 
                         <div class="space-y-2">
                             @forelse($product->catalogCandidates as $candidate)
+                                @php($candidateBrand = $candidate->catalogPart?->brand)
+                                @php($canAlias = filled($product->raw_brand) && $candidateBrand && \Illuminate\Support\Str::slug($product->raw_brand) !== $candidateBrand->slug)
                                 <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-stone-50 p-3"
                                      wire:key="candidate-{{ $candidate->id }}">
                                     <div class="min-w-0">
                                         <a href="{{ route('admin.catalog-platform.parts.show', $candidate->catalogPart) }}" class="font-medium text-stone-900 hover:underline">
-                                            {{ $candidate->catalogPart?->brand?->name }} {{ $candidate->catalogPart?->mpn_raw }}
+                                            {{ $candidateBrand?->name }} {{ $candidate->catalogPart?->mpn_raw }}
                                         </a>
                                         {{-- The reasons are shown, not just the score: an operator
                                              confirming a match needs to know what matched. --}}
@@ -70,8 +103,14 @@
                                         </div>
                                     </div>
 
-                                    <div class="flex shrink-0 gap-2">
+                                    <div class="flex shrink-0 flex-wrap gap-2">
                                         <button type="button" wire:click="confirm({{ $product->id }}, {{ $candidate->catalog_part_id }})" class="btn-primary">Confirmă</button>
+                                        @if($canAlias)
+                                            <button type="button" wire:click="aliasBrand({{ $candidate->id }})" class="btn-ghost"
+                                                    title="Toate articolele acestui furnizor scrise „{{ $product->raw_brand }}” vor fi tratate ca {{ $candidateBrand->name }}.">
+                                                „{{ $product->raw_brand }}” = {{ $candidateBrand->name }}
+                                            </button>
+                                        @endif
                                         <button type="button" wire:click="reject({{ $candidate->id }})" class="btn-ghost">Respinge</button>
                                     </div>
                                 </div>

@@ -63,11 +63,9 @@ class SupplierSyncObservabilityTest extends TestCase
         $supplier = $this->supplier();
         FakeObservabilityConnector::$records = [$this->record('A1'), $this->record('BOOM'), $this->record('A3')];
 
-        $this->runSync($supplier, new ThrowingImporter(
-            'BOOM',
-            app(\App\Commerce\CurrencyConverter::class),
-            app(\App\Catalog\CollectionMatcher::class),
-        ));
+        $importer = app(ThrowingImporter::class);
+        $importer->failOn = 'BOOM';
+        $this->runSync($supplier, $importer);
 
         $run = SupplierSyncRun::query()->sole();
         $this->assertSame(3, (int) $run->received_count);
@@ -291,15 +289,14 @@ class FakeObservabilityConnector implements ReportsFeedIssues, SupplierConnector
 }
 
 /** Fails on one known identifier so the per-row error path can be exercised. */
+/**
+ * Resolved from the container and configured afterwards, rather than given its own
+ * constructor: the importer's dependencies grow with the pipeline, and a subclass
+ * restating them breaks every time one is added.
+ */
 class ThrowingImporter extends SupplierCatalogImporter
 {
-    public function __construct(
-        private readonly string $failOn,
-        \App\Commerce\CurrencyConverter $converter,
-        \App\Catalog\CollectionMatcher $collections,
-    ) {
-        parent::__construct($converter, $collections);
-    }
+    public string $failOn = '';
 
     public function import(Supplier $supplier, SupplierRecord $record, string $mode, ?SupplierSyncRun $run = null): array
     {

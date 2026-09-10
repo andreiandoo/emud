@@ -54,5 +54,9 @@ readonly class SupplierRecord
         public ?string $sellerRef = null,
         public ?string $sellerName = null,
         public ?string $sourceUpdatedAt = null,
+        // Identity beyond EAN and MPN. A UPC is kept apart from the EAN only because
+        // some feeds carry both columns; the matcher treats them as one number system.
+        public ?string $tecdocArticleId = null,
+        public ?string $upc = null,
     ) {}
 }

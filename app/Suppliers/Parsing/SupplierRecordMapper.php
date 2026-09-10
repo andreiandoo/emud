@@ -67,6 +67,8 @@ class SupplierRecordMapper
             sellerRef: $this->nullableString($this->value($row, $mapping, 'seller_ref')),
             sellerName: $this->nullableString($this->value($row, $mapping, 'seller_name')),
             sourceUpdatedAt: $this->nullableString($this->value($row, $mapping, 'source_updated_at')),
+            tecdocArticleId: $this->nullableString($this->value($row, $mapping, 'tecdoc_article_id')),
+            upc: $this->nullableString($this->value($row, $mapping, 'upc')),
         );
     }
 
