@@ -28,10 +28,10 @@ class WorkshopDeduplicator
 
     public function __construct(private WorkshopPairScorer $scorer, private WorkshopMerger $merger) {}
 
-    /** @return array{compared: int, auto_merged: int, candidates: int} */
+    /** @return array{compared: int, auto_merged: int, candidates: int, withdrawn: int} */
     public function run(?string $countyCode = null, bool $dryRun = false, ?callable $progress = null): array
     {
-        $counts = ['compared' => 0, 'auto_merged' => 0, 'candidates' => 0];
+        $counts = ['compared' => 0, 'auto_merged' => 0, 'candidates' => 0, 'withdrawn' => 0];
         $counties = $countyCode !== null
             ? [$countyCode]
             : Workshop::query()->canonical()->whereNotNull('county_code')->distinct()->orderBy('county_code')->pluck('county_code')->all();
@@ -49,6 +49,13 @@ class WorkshopDeduplicator
                 ->where('status', '!=', WorkshopMatchStatus::Pending)
                 ->get(['workshop_a_id', 'workshop_b_id'])
                 ->mapWithKeys(fn (WorkshopMatchCandidate $pair): array => [$pair->workshop_a_id.'-'.$pair->workshop_b_id => true])
+                ->all();
+
+            $waiting = WorkshopMatchCandidate::query()
+                ->whereIn('workshop_a_id', $workshops->keys()->all())
+                ->where('status', WorkshopMatchStatus::Pending)
+                ->get(['id', 'workshop_a_id', 'workshop_b_id'])
+                ->mapWithKeys(fn (WorkshopMatchCandidate $pair): array => [$pair->workshop_a_id.'-'.$pair->workshop_b_id => $pair->id])
                 ->all();
 
             foreach ($this->pairs($workshops) as [$aId, $bId]) {
@@ -78,6 +85,13 @@ class WorkshopDeduplicator
                             ['workshop_a_id' => $aId, 'workshop_b_id' => $bId],
                             ['score' => $result['score'], 'evidence' => $result['evidence'], 'status' => WorkshopMatchStatus::Pending],
                         );
+                    }
+                } elseif (isset($waiting["{$aId}-{$bId}"])) {
+                    // Nobody decided it and it no longer looks likely, so it leaves the queue.
+                    $counts['withdrawn']++;
+
+                    if (! $dryRun) {
+                        WorkshopMatchCandidate::query()->whereKey($waiting["{$aId}-{$bId}"])->delete();
                     }
                 }
             }

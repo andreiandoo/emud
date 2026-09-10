@@ -88,8 +88,12 @@ class WorkshopPairScorer
         $distinctByDefinition = ($bothAuthorised || $sameCompany) && $address < 0.9;
 
         // A company's branches in different streets are different places; they do not belong in
-        // the review queue either, unless the points put them in the same yard.
-        if ($distinctByDefinition && $address < 0.7 && ($distance === null || $distance > 100)) {
+        // the review queue either, unless the points put them in the same yard. The very same point
+        // at two plainly different addresses does not: it is one point, usually the office's,
+        // copied to every branch.
+        $copiedPoint = $distance !== null && $distance < 1 && $address < 0.5;
+
+        if ($distinctByDefinition && $address < 0.7 && ($distance === null || $distance > 100 || $copiedPoint)) {
             $score = min($score, 40);
             $evidence['kept_apart'] = 'same company or both RAR-authorised, at different addresses';
         }

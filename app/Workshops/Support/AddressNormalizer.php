@@ -66,8 +66,10 @@ class AddressNormalizer
                 '/\b(dn|dj|dc|km) (?=\d)/',
                 // A letter after a house number belongs to it: "18 A" is "18a".
                 '/\b(\d+) ([a-z])\b/',
+                // "SECTORUL4" is "sectorul 4".
+                '/\b(sectorul|sector|sect)(?=\d)/',
             ],
-            ['bulevardul', '$1', '$1$2'],
+            ['bulevardul', '$1', '$1$2', '$1 '],
             $folded,
         ) ?? $folded;
 
@@ -96,8 +98,12 @@ class AddressNormalizer
         for ($i = 0, $count = count($words); $i < $count; $i++) {
             $word = $words[$i];
 
-            if (in_array($word, self::QUALIFIED, true) && preg_match('/^[a-z]?\d+[a-z]?$|^[a-z]$/', $words[$i + 1] ?? '') === 1) {
-                $tokens[] = $word.$words[++$i];
+            // "hala 1" and "hala nr. 1" are the same hall.
+            $next = ($words[$i + 1] ?? '') === 'nr' ? $i + 2 : $i + 1;
+
+            if (in_array($word, self::QUALIFIED, true) && preg_match('/^[a-z]?\d+[a-z]?$|^[a-z]$/', $words[$next] ?? '') === 1) {
+                $tokens[] = $word.$words[$next];
+                $i = $next;
 
                 continue;
             }

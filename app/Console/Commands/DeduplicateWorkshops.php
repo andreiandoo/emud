@@ -25,9 +25,9 @@ class DeduplicateWorkshops extends Command
         $counts = $deduplicator->run($county, (bool) $this->option('dry-run'), fn (string $message) => $this->line('  '.$message));
 
         $this->info(sprintf(
-            '%s%d pairs compared, %d merged automatically, %d waiting for review.',
+            '%s%d pairs compared, %d merged automatically, %d waiting for review, %d no longer likely and withdrawn from the queue.',
             $this->option('dry-run') ? '[dry run] ' : '',
-            $counts['compared'], $counts['auto_merged'], $counts['candidates'],
+            $counts['compared'], $counts['auto_merged'], $counts['candidates'], $counts['withdrawn'],
         ));
 
         return self::SUCCESS;

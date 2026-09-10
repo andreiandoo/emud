@@ -66,6 +66,8 @@ class CompanyAndAddressNormalizerTest extends TestCase
         $this->assertSame(1.0, AddressNormalizer::similarity('Str. Spineni nr. 18A, sector 4', 'STR. SPINENI NR. 18 A, SECTORUL 4', 'B'));
         $this->assertGreaterThanOrEqual(0.9, AddressNormalizer::similarity('Bulevardul Basarabia 167 bis, București 030351', 'Sector 3, B-dul Basarabia, nr. 167 bis, București', 'B'));
         $this->assertSame(1.0, AddressNormalizer::similarity('Prelungirea Ghencea nr. 17, construcție C1, sector 6', 'PRELUNGIREA GHENCEA NR. 17, CLĂDIREA NR. C1, SECTOR 6', 'B'));
+        $this->assertSame(1.0, AddressNormalizer::similarity('STR.MOȘOAIA NR.31,PARTER, SECTORUL4, BUCUREȘTI', 'STR. MOȘOAIA, NR. 31, SECTOR 4, BUCUREȘTI', 'B'));
+        $this->assertSame(1.0, AddressNormalizer::similarity('BD. MĂRĂȘTI, NR. 59, HALA NR. 1, SECTORUL 1', 'B-DUL MĂRĂȘTI NR. 59, HALA 1, SECTOR 1', 'B'));
     }
 
     public function test_a_sector_or_a_floor_area_is_not_a_house_number(): void

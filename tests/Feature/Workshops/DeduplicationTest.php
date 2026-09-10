@@ -95,6 +95,31 @@ class DeduplicationTest extends TestCase
         $this->assertSame(2, Workshop::query()->canonical()->count());
     }
 
+    public function test_branches_at_different_addresses_under_one_copied_point_are_not_queued(): void
+    {
+        // RAR often gives every branch of a company the office's point.
+        $company = WorkshopCompany::query()->create(['legal_name' => 'TIRES AND PARTS SRL', 'normalized_name' => 'tires and parts', 'cui' => '35056829']);
+        $this->workshop('TIRES AND PARTS SRL', 'Str. Lungă 10, Brașov', 45.66252, 25.5713, '+40752145615', ['company_id' => $company->id]);
+        $this->workshop('TIRES AND PARTS SRL', 'Calea București 181, Brașov', 45.66252, 25.5713, '+40752145615', ['company_id' => $company->id]);
+
+        $counts = app(WorkshopDeduplicator::class)->run('BV');
+
+        $this->assertSame(0, $counts['auto_merged']);
+        $this->assertSame(0, $counts['candidates']);
+    }
+
+    public function test_a_waiting_pair_that_no_longer_looks_likely_leaves_the_queue(): void
+    {
+        $a = $this->workshop('Vulcanizare Nord', 'Str. Lungă 10, Brașov', 45.66252, 25.5713, '+40268999999');
+        $b = $this->workshop('Auto Tehnic Șerban', 'Str. Lungă 12, Brașov', 45.66260, 25.5714, '+40722000101');
+        WorkshopMatchCandidate::query()->create(['workshop_a_id' => min($a->id, $b->id), 'workshop_b_id' => max($a->id, $b->id), 'score' => 70, 'status' => WorkshopMatchStatus::Pending]);
+
+        $counts = app(WorkshopDeduplicator::class)->run('BV');
+
+        $this->assertSame(1, $counts['withdrawn']);
+        $this->assertSame(0, WorkshopMatchCandidate::query()->count());
+    }
+
     public function test_neighbours_are_not_merged_for_being_close(): void
     {
         $this->workshop('Vulcanizare Nord', 'Str. Lungă 10, Brașov', 45.66252, 25.5713, '+40268999999');
