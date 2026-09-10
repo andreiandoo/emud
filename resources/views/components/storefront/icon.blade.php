@@ -58,6 +58,20 @@
     'twitter' => 'M5 4l14 16M19 4L5 20',
     'mail' => 'M3 6h18v12H3zM3 7l9 6 9-6',
     'arrow-right' => 'M4 12h16M14 6l6 6-6 6',
+    'arrow-left' => 'M20 12H4M10 6l-6 6 6 6',
+    'play' => 'M7 5l12 7-12 7z',
+    'download' => 'M12 4v11M7 10l5 5 5-5M5 20h14',
+    'calendar' => 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+    'star' => 'M12 3l2.7 5.6 6.1.8-4.4 4.2 1.1 6.1L12 16.8l-5.5 2.9 1.1-6.1-4.4-4.2 6.1-.8z',
+    'grid' => 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+    'vin' => 'M3 6h18v12H3zM7 10v4M10 10l1.5 4 1.5-4M16 10v4M16 10l2 4v-4',
+    'gauge' => 'M4 16a8 8 0 1 1 16 0M12 16l4-5M8 20h8',
+    'wrench' => 'M14.5 5.5a4 4 0 0 0-5.3 5L4 15.7a1.8 1.8 0 0 0 2.5 2.5l5.2-5.2a4 4 0 0 0 5-5.3l-2.4 2.4-2.3-.4-.4-2.3z',
+    'return' => 'M4 9h11a5 5 0 0 1 0 10H9M8 5 4 9l4 4',
+    'shield' => 'M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6zM9 12l2 2 4-4',
+    'trash' => 'M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+    'minus' => 'M5 12h14',
+    'box' => 'M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10',
 ])
 
 {{-- Size comes from presentation attributes rather than a default class: a `class="h-4 w-4"`
