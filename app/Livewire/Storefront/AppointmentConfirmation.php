@@ -12,7 +12,7 @@ use Livewire\Component;
  * Reached by the request's own token so a visitor with no account can come back to it, and so
  * knowing an id is never enough to read someone else's name and phone number.
  */
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class AppointmentConfirmation extends Component
 {
     public ServiceAppointment $appointment;

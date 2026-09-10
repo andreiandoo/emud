@@ -1,107 +1,115 @@
-<div class="space-y-8">
+<div>
     <x-seo title="Service auto în România"
            description="Ateliere și service-uri auto din România, filtrate după oraș, lucrare și specializare. Program, prețuri orientative și cerere de programare." />
 
-    <header class="space-y-2">
-        <h1 class="text-3xl font-bold tracking-tight">Service auto în România</h1>
-        <p class="text-sm text-stone-600">
-            Ateliere pe orașe și lucrări. Cere o programare direct, sau sună service-ul.
-        </p>
-    </header>
+    <section class="relative isolate overflow-hidden bg-g0 text-bone">
+        <canvas data-st-topo="rgba(241,238,230,.06)" class="pointer-events-none absolute inset-0 -z-10 h-full w-full" aria-hidden="true"></canvas>
+        <div class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(45%_60%_at_80%_10%,rgba(242,106,27,.13),transparent_70%)]"></div>
 
-    <div class="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
-        <label class="relative block">
-            <span class="sr-only">Caută un service</span>
-            <x-storefront.icon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-            <input wire:model.live.debounce.400ms="search" class="h-11 pl-9" placeholder="Nume service, oraș sau stradă">
-        </label>
+        <div class="shell pb-10 pt-16 sm:pt-24">
+            <p class="st-kicker text-mute">Service auto</p>
+            <h1 class="st-display mt-5 max-w-[16ch] text-[clamp(2.6rem,6vw,5.75rem)] leading-[.92]">Service auto în România</h1>
+            <p class="mt-5 max-w-[56ch] text-[clamp(1rem,1.2vw,1.15rem)] text-[#cfcdc6]">
+                Ateliere pe orașe și lucrări. Cere o programare direct, sau sună service-ul.
+            </p>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label class="block">
-                <span class="mb-1 block text-xs font-medium text-stone-600">Județ</span>
-                <select wire:model.live="county">
-                    <option value="">Toate</option>
-                    @foreach($counties as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach
-                </select>
-            </label>
+            {{-- The search sits in the band, as the one thing to do on arrival. --}}
+            <div class="mt-12 grid gap-4 rounded-[3px] border border-white/10 bg-white/[.03] p-5 backdrop-blur sm:p-6">
+                <label class="flex items-center gap-3 border-b border-gl2 pb-3 focus-within:border-bone">
+                    <span class="sr-only">Caută un service</span>
+                    <x-storefront.icon name="search" class="h-5 w-5 shrink-0 text-mute" />
+                    <input wire:model.live.debounce.400ms="search" placeholder="Nume service, oraș sau stradă"
+                           class="min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-lg text-bone placeholder:text-mute2 focus:border-0 focus:ring-0">
+                </label>
 
-            <label class="block">
-                <span class="mb-1 block text-xs font-medium text-stone-600">Oraș</span>
-                <select wire:model.live="city" @disabled($cities->isEmpty())>
-                    <option value="">{{ $cities->isEmpty() ? 'Alege întâi județul' : 'Toate' }}</option>
-                    @foreach($cities as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach
-                </select>
-            </label>
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach([
+                        ['county', 'Județ', $counties, 'Toate', false],
+                        ['city', 'Oraș', $cities, $cities->isEmpty() ? 'Alege întâi județul' : 'Toate', $cities->isEmpty()],
+                        ['service', 'Lucrare', $serviceOptions, 'Orice lucrare', false],
+                        ['speciality', 'Specializare', $specialities, 'Toate', false],
+                    ] as [$field, $label, $options, $placeholder, $disabled])
+                        <label class="block">
+                            <span class="mb-1.5 block font-mono text-[10.5px] uppercase tracking-[.1em] text-mute">{{ $label }}</span>
+                            <select wire:model.live="{{ $field }}" @disabled($disabled)
+                                    class="border-gl2 bg-g1 text-bone focus:border-bone focus:ring-bone disabled:bg-g2 disabled:text-mute2 [&_option]:bg-g1">
+                                <option value="">{{ $placeholder }}</option>
+                                @foreach($options as $option)
+                                    @if($field === 'service')
+                                        <option value="{{ $option->slug }}">{{ $option->name }}</option>
+                                    @else
+                                        <option value="{{ $option }}">{{ $option }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </label>
+                    @endforeach
+                </div>
 
-            <label class="block">
-                <span class="mb-1 block text-xs font-medium text-stone-600">Lucrare</span>
-                <select wire:model.live="service">
-                    <option value="">Orice lucrare</option>
-                    @foreach($serviceOptions as $option)<option value="{{ $option->slug }}">{{ $option->name }}</option>@endforeach
-                </select>
-            </label>
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[#d8d6cf]">
+                    <label class="flex items-center gap-2.5">
+                        <input type="checkbox" wire:model.live="fitsOurParts">
+                        Montează piese cumpărate de la noi
+                    </label>
 
-            <label class="block">
-                <span class="mb-1 block text-xs font-medium text-stone-600">Specializare</span>
-                <select wire:model.live="speciality">
-                    <option value="">Toate</option>
-                    @foreach($specialities as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach
-                </select>
-            </label>
+                    <label class="flex items-center gap-2.5">
+                        <input type="checkbox" wire:model.live="openNow">
+                        Deschis acum
+                    </label>
+
+                    @if($search !== '' || $county !== '' || $city !== '' || $speciality !== '' || $service !== '' || $fitsOurParts || $openNow)
+                        <button type="button" wire:click="resetFilters" class="ml-auto text-sm font-semibold text-mute underline underline-offset-2 hover:text-bone">
+                            Golește filtrele
+                        </button>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="shell pb-24 pt-10 sm:pt-14">
+        <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <p class="font-display text-2xl font-semibold">
+                {{ $shops->total() }} {{ $shops->total() === 1 ? 'service' : 'service-uri' }}
+            </p>
+
+            {{-- Said next to the list, not only on the card: the order itself is what money bought,
+                 so the reader has to be told before they read it as a ranking of quality. --}}
+            <p class="max-w-[52ch] text-xs text-ink2">
+                Ordinea implicită este influențată de listările plătite, care sunt marcate ca atare.
+                În rest, sortăm alfabetic.
+            </p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-5 text-sm">
-            <label class="flex items-center gap-2">
-                <input type="checkbox" wire:model.live="fitsOurParts">
-                Montează piese cumpărate de la noi
-            </label>
-
-            <label class="flex items-center gap-2">
-                <input type="checkbox" wire:model.live="openNow">
-                Deschis acum
-            </label>
-
-            @if($search !== '' || $county !== '' || $city !== '' || $speciality !== '' || $service !== '' || $fitsOurParts || $openNow)
-                <button type="button" wire:click="resetFilters" class="ml-auto text-sm font-semibold text-stone-500 underline hover:text-stone-900">
-                    Golește filtrele
-                </button>
-            @endif
-        </div>
-    </div>
-
-    {{-- Said next to the list, not only on the card: the order itself is what money bought, so
-         the reader has to be told before they read it as a ranking of quality. --}}
-    <p class="text-xs text-stone-500">
-        Ordinea implicită este influențată de listările plătite, care sunt marcate ca atare.
-        În rest, sortăm alfabetic.
-    </p>
-
-    @if($shops->isEmpty())
-        <p class="rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500">
-            Niciun service nu corespunde filtrelor alese.
-        </p>
-    @else
-        <div class="space-y-3">
-            @foreach($shops as $shop)
-                <x-storefront.shop-card :shop="$shop" />
-            @endforeach
-        </div>
-
-        <div>{{ $shops->links() }}</div>
-    @endif
-
-    @if($topCities->isNotEmpty())
-        <section class="space-y-3 border-t border-stone-200 pt-8">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-stone-500">Orașe cu cele mai multe service-uri</h2>
-
-            <div class="flex flex-wrap gap-2">
-                @foreach($topCities as $row)
-                    <a href="{{ route('storefront.services.city', $row->city_slug) }}"
-                       class="rounded-full border border-stone-300 px-3 py-1.5 text-sm text-stone-700 transition hover:border-stone-900 hover:text-stone-900">
-                        {{ $row->city }} <span class="text-stone-400">{{ $row->total }}</span>
-                    </a>
+        @if($shops->isEmpty())
+            <div class="grid place-items-center gap-4 rounded-[3px] border border-dashed border-line2 bg-white px-6 py-16 text-center">
+                <x-storefront.icon name="wrench" class="h-10 w-10 text-line2" />
+                <p class="font-display text-xl font-semibold">Niciun service nu corespunde filtrelor alese.</p>
+            </div>
+        @else
+            <div class="grid gap-4 lg:grid-cols-2">
+                @foreach($shops as $shop)
+                    <x-storefront.shop-card :shop="$shop" />
                 @endforeach
             </div>
-        </section>
-    @endif
+
+            <div class="mt-8">{{ $shops->links() }}</div>
+        @endif
+
+        @if($topCities->isNotEmpty())
+            <section class="mt-16 border-t border-line pt-10">
+                <h2 class="st-kicker mb-5 text-ink2">Orașe cu cele mai multe service-uri</h2>
+
+                <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach($topCities as $row)
+                        <a href="{{ route('storefront.services.city', $row->city_slug) }}"
+                           class="group flex items-center justify-between gap-3 rounded-[3px] bg-white px-4 py-3.5 transition hover:bg-ink hover:text-light">
+                            <span class="font-semibold">{{ $row->city }}</span>
+                            <span class="font-mono text-xs text-ink2 group-hover:text-light/70">{{ $row->total }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+    </div>
 </div>
