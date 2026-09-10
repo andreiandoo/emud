@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="ro">
+{{-- The class the overlay scrollbar keys on. Only the shop gets it: the back office keeps its
+     native scrollbars, where operators live in long tables and a familiar control beats a
+     prettier one. --}}
+<html lang="ro" class="storefront">
 <head>
     {{-- Inside <head> rather than above the doctype: whitespace before a doctype is enough to
          put some browsers into quirks mode. --}}

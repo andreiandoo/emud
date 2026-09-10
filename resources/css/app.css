@@ -200,3 +200,74 @@
         @apply mt-1 block text-xs text-red-600;
     }
 }
+
+
+/*
+ * The shop's overlay scrollbar.
+ *
+ * A classic scrollbar — Windows, Linux, and any Mac set to always show them — occupies layout
+ * space, so a page that grows one shifts sideways at the moment it does. Nothing in CSS gives
+ * that space back: `scrollbar-color: transparent` only paints it invisible, and
+ * `scrollbar-gutter` reserves the space permanently, which is the opposite of what is wanted.
+ * So the native bar is removed and a thumb is drawn over the content instead.
+ *
+ * The drawn one is a real control, not a decoration: scroll-indicator.js makes it draggable and
+ * gives it a proper hit target, because taking away a scrollbar from someone who uses it to
+ * navigate is otherwise a straight loss.
+ *
+ * Scoped to html.storefront. The back office keeps its native bars.
+ */
+html.storefront {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+html.storefront::-webkit-scrollbar,
+html.storefront > body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.scroll-indicator {
+    position: fixed;
+    top: 0;
+    right: 3px;
+    /* Above the header, which is z-40, and below the dialogs at z-50 — while one of those is
+       open the page behind it does not scroll, so the thumb has nothing to report. */
+    z-index: 45;
+    width: 6px;
+    border-radius: 9999px;
+    /* stone-900, translucent enough to read as an overlay rather than a border. */
+    background-color: rgb(28 25 23 / 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 250ms ease, background-color 150ms ease;
+    will-change: transform;
+}
+
+.scroll-indicator.is-off {
+    display: none;
+}
+
+.scroll-indicator.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.scroll-indicator:hover,
+.scroll-indicator.is-dragging {
+    background-color: rgb(28 25 23 / 0.75);
+}
+
+/*
+ * Fading a scrollbar in and out is motion, and someone who has asked their system for less of it
+ * is also the person most likely to be reaching for the thumb rather than flicking a wheel. They
+ * get an ordinary, permanently visible bar.
+ */
+@media (prefers-reduced-motion: reduce) {
+    .scroll-indicator {
+        transition: none;
+        opacity: 1;
+        pointer-events: auto;
+    }
+}

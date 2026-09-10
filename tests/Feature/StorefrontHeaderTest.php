@@ -23,6 +23,21 @@ class StorefrontHeaderTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * The overlay scrollbar keys on this class, and it is deliberately not on the back office:
+     * removing a native scrollbar is a real trade, worth making on a shop and not worth making
+     * where operators live in long tables all day.
+     */
+    public function test_only_the_shop_asks_for_the_overlay_scrollbar(): void
+    {
+        $this->get('/')->assertOk()->assertSee('<html lang="ro" class="storefront">', false);
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertDontSee('class="storefront"', false);
+    }
+
     public function test_the_utility_bar_shows_the_configured_message_and_link(): void
     {
         app(StoreSettings::class)->put('header', [
