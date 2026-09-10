@@ -23,7 +23,11 @@ php artisan workshops:rar:import --dry-run              # fetch and count, store
 php artisan workshops:rar:import --resume               # continue the last unfinished run
 php artisan workshops:rar:import --force                # reparse every record, changed or not
 php artisan workshops:rar:stats                         # sections, counties, activities, capabilities
+php artisan workshops:rar:probe                         # is the live registry still answering as expected? stores nothing
 ```
+
+`workshops:rar:probe` is the only thing that checks the live registry on purpose: the test suite
+never calls it. Run it after RAR changes its portal, or when an import suddenly fails everywhere.
 
 A national SERVICE pass is ~55 requests two seconds apart plus parsing: minutes, not hours.
 

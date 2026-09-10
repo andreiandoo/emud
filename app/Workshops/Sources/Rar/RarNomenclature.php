@@ -8,6 +8,7 @@ use App\Workshops\Data\SourceRecordData;
 use App\Workshops\Ingestion\DataSourceCatalog;
 use App\Workshops\Ingestion\SourceRecordStore;
 use App\Workshops\Support\TextNormalizer;
+use Illuminate\Database\QueryException;
 
 /**
  * RAR's own wording for its codes: "A1.2.1.3. în trepte, asistată cu gestiune electronică şi cu
@@ -99,11 +100,17 @@ class RarNomenclature
     private function document(): array
     {
         if ($this->document === null) {
-            $record = WorkshopSourceRecord::query()
-                ->where('record_type', self::RECORD_TYPE)
-                ->where('external_id', self::EXTERNAL_ID)
-                ->whereHas('dataSource', fn ($query) => $query->where('key', DataSourceCatalog::rarKey('SERVICE')))
-                ->first();
+            try {
+                $record = WorkshopSourceRecord::query()
+                    ->where('record_type', self::RECORD_TYPE)
+                    ->where('external_id', self::EXTERNAL_ID)
+                    ->whereHas('dataSource', fn ($query) => $query->where('key', DataSourceCatalog::rarKey('SERVICE')))
+                    ->first();
+            } catch (QueryException) {
+                // No registry tables yet (the probe can run before the first migration): the
+                // bundled wording answers instead of the stored copy.
+                $record = null;
+            }
 
             $this->document = is_array($record?->payload) ? $record->payload : [];
         }
