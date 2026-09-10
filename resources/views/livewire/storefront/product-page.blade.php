@@ -14,6 +14,10 @@
 @php($hasDimensions = is_array($product->dimensions_cm) && array_filter($product->dimensions_cm) !== [])
 @php($hasSpecs = $specifications->isNotEmpty() || $product->weight_kg || $hasDimensions)
 @php($incompatible = $verdict === \App\Storefront\Compatibility\CompatibilityVerdict::Incompatible)
+@php($unknown = $verdict === \App\Storefront\Compatibility\CompatibilityVerdict::Unknown)
+{{-- Only these two are drawn with a tick. fits() is also true for "unknown" and "needs more
+     detail", and a tick beside either would read as a promise the data cannot make. --}}
+@php($fitsForSure = in_array($verdict, [\App\Storefront\Compatibility\CompatibilityVerdict::Confirmed, \App\Storefront\Compatibility\CompatibilityVerdict::Conditional], true))
 
 {{-- `bar` is the buy bar at the bottom of the window: it slides in once the buy box has scrolled
      away above, so the button is never more than a thumb away on a long page. --}}
@@ -263,11 +267,11 @@
                         <span @class([
                             'grid h-11 w-11 shrink-0 place-items-center rounded-full',
                             'bg-fit text-white' => $verdict->isCertain(),
-                            'bg-sand text-sandink' => ! $verdict->isCertain() && $verdict->fits(),
+                            'bg-sand text-sandink' => ! $verdict->isCertain() && ! $unknown && $verdict->fits(),
                             'bg-signal/15 text-signal' => $incompatible,
-                            'bg-white/10 text-bone' => ! $verdict->fits() && ! $incompatible,
+                            'bg-white/10 text-bone' => $unknown,
                         ])>
-                            <x-storefront.icon :name="$verdict->fits() ? 'check' : ($incompatible ? 'close' : 'car')" class="h-5 w-5" />
+                            <x-storefront.icon :name="$fitsForSure ? 'check' : ($incompatible ? 'close' : 'car')" class="h-5 w-5" />
                         </span>
 
                         <div class="min-w-0 flex-1">
@@ -615,10 +619,12 @@
                 <p class="truncate text-sm font-semibold">{{ $product->name }}</p>
                 <p class="flex items-center gap-2.5 text-xs text-mute">
                     <span class="font-display text-base font-semibold tabular-nums text-bone">{{ $price ?? 'Preț la cerere' }}</span>
-                    @if($vehicle && $verdict->fits())
+                    @if($vehicle && $verdict->isCertain())
                         <span class="inline-flex items-center gap-1 text-fit-bright">
-                            <x-storefront.icon name="check" class="h-3 w-3" /> {{ $verdict->isCertain() ? 'Se potrivește' : 'Verifică potrivirea' }}
+                            <x-storefront.icon name="check" class="h-3 w-3" /> Se potrivește
                         </span>
+                    @elseif($vehicle && ! $unknown && $verdict->fits())
+                        <span class="text-sand">Verifică potrivirea</span>
                     @endif
                 </p>
             </div>
