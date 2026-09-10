@@ -85,7 +85,7 @@ The command verifies:
 During development, use separate terminals:
 
 ```bash
-php artisan queue:work --queue=notifications,catalog-search,catalog-canonicalization,catalog-matching,catalog-enrichment,catalog-imports,imports
+php artisan queue:work --queue=notifications,catalog-search,catalog-canonicalization,catalog-matching,catalog-enrichment,catalog-imports,imports,workshops
 php artisan schedule:work
 ```
 

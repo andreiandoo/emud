@@ -1,0 +1,162 @@
+{
+  "status": "ACT",
+  "no": "90001",
+  "exitNo": "OCS.BV.NI.900001",
+  "date": "2009-06-14T21:00:00.000+0000",
+  "initialAuthDate": "2009-06-14T21:00:00.000+0000",
+  "validFrom": "2025-12-24T00:00:00.000+0000",
+  "validUntil": "2026-12-31T00:00:00.000+0000",
+  "revisionNo": 3,
+  "revisionDate": "2025-12-24T00:00:00.000+0000",
+  "branch": {
+    "organisationInfo": {
+      "fiscalIndicator": "RO",
+      "taxRegisterNo": "20963285",
+      "tradeRegisterNo": "J08/346/2007",
+      "name": "AUTO TEHNIC ŞERBAN S.R.L.",
+      "address": {
+        "street": "Str. Ţesătorilor",
+        "streetNo": "12",
+        "city": "Brasov",
+        "county": "Brasov",
+        "country": "Romania",
+        "originalAddress": "STR. ŢESĂTORILOR NR. 12, BRAŞOV, JUD. BRAŞOV",
+        "gpsLocation": "45.65,25.60"
+      },
+      "telephoneNo": "0268 000 111",
+      "email": "Office@AutoTehnicSerban.ro"
+    },
+    "name": "AUTO TEHNIC ŞERBAN S.R.L., ŞOS. CRISTIANULUI NR. 6 (HALA REPARAŢII), BRAŞOV, JUDEŢUL BRAŞOV",
+    "address": {
+      "street": "ŞOS. CRISTIANULUI",
+      "streetNo": "6",
+      "postalCode": "500130",
+      "city": "BRAŞOV",
+      "county": "Brasov",
+      "country": "Romania",
+      "originalAddress": "ŞOS. CRISTIANULUI NR. 6 (HALA REPARAŢII), BRAŞOV, JUDEŢUL BRAŞOV",
+      "gpsLocation": "45.6624831,25.5712348",
+      "administrativeTerritorialUnit": "Brasov"
+    },
+    "telephoneNo": "0722 000 101 / 0268 000 102",
+    "contactPerson": {
+      "id": "00000000000000000000000000000001",
+      "person": { "idCard": {}, "telephoneNo": "0722000101", "isRomanianCitizen": true },
+      "role": "ADM"
+    }
+  },
+  "system": "SERVICE",
+  "auditFileNo": "BV9001",
+  "noOfWorkstation": 6,
+  "noOfEmployees": 7,
+  "authorizedActivities": [
+    {
+      "id": "AD_1",
+      "activity": "A1",
+      "activities": [],
+      "homologationCategories": [],
+      "class1HomologationCategories": [],
+      "class2HomologationCategories": [],
+      "class3HomologationCategories": [],
+      "limitations": ["Gmax = 5,5 t"],
+      "class1Limitations": [],
+      "class2Limitations": [],
+      "class3Limitations": []
+    },
+    {
+      "id": "AD_2",
+      "activity": "A1_1",
+      "activities": ["A1_1_1", "A1_1_1_2", "A1_1_3", "A1_1_4", "A1_1_4_3"],
+      "homologationCategories": ["M1", "N1", "N2"],
+      "class1HomologationCategories": [],
+      "class2HomologationCategories": [],
+      "class3HomologationCategories": [],
+      "limitations": ["În funcţie de aplicabilitatea tehnică*"],
+      "class1Limitations": [],
+      "class2Limitations": [],
+      "class3Limitations": []
+    },
+    {
+      "id": "AD_3",
+      "activity": "A1_2",
+      "activities": ["A1_2_1", "A1_2_1_1", "A1_2_1_3", "A1_2_2", "A1_2_2_1"],
+      "homologationCategories": ["M1", "N1"],
+      "class1HomologationCategories": [],
+      "class2HomologationCategories": ["N2"],
+      "class3HomologationCategories": [],
+      "limitations": ["În funcţie de aplicabilitatea tehnică*"],
+      "class1Limitations": [],
+      "class2Limitations": [],
+      "class3Limitations": []
+    },
+    {
+      "id": "AD_4",
+      "activity": "A1_3",
+      "activities": ["A1_3_1", "A1_3_2", "A1_3_2_1", "A1_3_3", "A1_3_3_1", "A1_3_3_1_1"],
+      "homologationCategories": ["M1", "N1"],
+      "class1HomologationCategories": [],
+      "class2HomologationCategories": [],
+      "class3HomologationCategories": [],
+      "limitations": ["Înlocuire anvelope și echilibrare roți; Djantă max = 22 țoli"],
+      "class1Limitations": [],
+      "class2Limitations": [],
+      "class3Limitations": []
+    },
+    {
+      "id": "AD_5",
+      "activity": "A1_4",
+      "activities": ["A1_4_2"],
+      "homologationCategories": ["M1", "N1"],
+      "class1HomologationCategories": [],
+      "class2HomologationCategories": [],
+      "class3HomologationCategories": [],
+      "limitations": [],
+      "class1Limitations": [],
+      "class2Limitations": [],
+      "class3Limitations": []
+    },
+    {
+      "id": "AD_6",
+      "activity": "A3",
+      "activities": ["A3_1"],
+      "homologationCategories": ["M1", "N1"],
+      "class1HomologationCategories": [],
+      "class2HomologationCategories": [],
+      "class3HomologationCategories": [],
+      "limitations": [],
+      "class1Limitations": [],
+      "class2Limitations": [],
+      "class3Limitations": [],
+      "remarks": "Geometrie doar pentru M1, N1"
+    }
+  ],
+  "legalFrameworks": ["OG_82", "RNTR_9"],
+  "isMobileWorkshop": false,
+  "serviceTypes": [
+    { "id": "ST_1", "activity": "A1", "serviceType": ["CLASS_2"] },
+    { "id": "ST_2", "activity": "A3", "serviceType": ["CLASS_2", "CLASS_3"] }
+  ],
+  "serviceAuthorizations": [
+    { "id": "SA_1", "vehicleOrComponentBrand": true, "vehicleBrand": "DACIA" },
+    { "id": "SA_2", "vehicleOrComponentBrand": true, "vehicleBrand": "RENAULT" }
+  ],
+  "hasConstructiveChanges": false,
+  "authorizationSuspensionInfo": [
+    {
+      "id": "SUS_1",
+      "no": "OCS.BV.SA.000001",
+      "date": "2020-01-01T00:00:00.000+0000",
+      "suspendedActivities": ["A3_1"],
+      "suspensionStartDate": "2020-01-01T00:00:00.000+0000",
+      "suspensionEndDate": "2099-12-31T00:00:00.000+0000"
+    },
+    {
+      "id": "SUS_2",
+      "no": "OCS.BV.SA.000002",
+      "date": "2024-10-30T00:00:00.000+0000",
+      "suspendedActivities": ["A2"],
+      "suspensionStartDate": "2024-10-30T00:00:00.000+0000",
+      "suspensionEndDate": "2024-10-31T00:00:00.000+0000"
+    }
+  ]
+}

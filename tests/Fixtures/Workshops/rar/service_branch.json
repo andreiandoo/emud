@@ -1,0 +1,64 @@
+{
+  "status": "ACT",
+  "no": "90002",
+  "exitNo": "OCS.BV.NI.900002",
+  "date": "2020-03-01T00:00:00.000+0000",
+  "initialAuthDate": "2020-03-01T00:00:00.000+0000",
+  "validFrom": "2026-03-01T00:00:00.000+0000",
+  "validUntil": "2027-02-28T00:00:00.000+0000",
+  "revisionNo": 1,
+  "branch": {
+    "organisationInfo": {
+      "fiscalIndicator": "RO",
+      "taxRegisterNo": "20963285",
+      "tradeRegisterNo": "J08/346/2007",
+      "name": "AUTO TEHNIC ŞERBAN S.R.L.",
+      "address": {
+        "street": "Str. Ţesătorilor",
+        "streetNo": "12",
+        "city": "Brasov",
+        "county": "Brasov",
+        "country": "Romania",
+        "originalAddress": "STR. ŢESĂTORILOR NR. 12, BRAŞOV, JUD. BRAŞOV",
+        "gpsLocation": "45.65,25.60"
+      }
+    },
+    "name": "AUTO TEHNIC ŞERBAN S.R.L., SAT SÂNPETRU, DN1 KM 170, JUD. BRAŞOV",
+    "address": {
+      "street": "DN1 KM 170",
+      "city": "Sanpetru",
+      "county": "Brasov",
+      "country": "Romania",
+      "originalAddress": "SAT SÂNPETRU, COMUNA SÂNPETRU, DN1 KM 170, JUD. BRAŞOV",
+      "gpsLocation": "45.72,25.63",
+      "administrativeTerritorialUnit": "Sanpetru"
+    },
+    "telephoneNo": "0722 000 101",
+    "contactPerson": {
+      "id": "00000000000000000000000000000002",
+      "person": { "idCard": {}, "telephoneNo": "0722000101", "isRomanianCitizen": true },
+      "role": "DEL"
+    }
+  },
+  "system": "SERVICE",
+  "auditFileNo": "BV9002",
+  "noOfWorkstation": 2,
+  "authorizedActivities": [
+    {
+      "id": "AD_10",
+      "activity": "A2",
+      "activities": ["A2_1", "A2_2"],
+      "homologationCategories": ["M1", "N1"],
+      "class1HomologationCategories": [],
+      "class2HomologationCategories": [],
+      "class3HomologationCategories": [],
+      "limitations": [],
+      "class1Limitations": [],
+      "class2Limitations": [],
+      "class3Limitations": []
+    }
+  ],
+  "isMobileWorkshop": false,
+  "serviceTypes": [{ "id": "ST_10", "activity": "A2", "serviceType": ["CLASS_3"] }],
+  "authorizationSuspensionInfo": []
+}

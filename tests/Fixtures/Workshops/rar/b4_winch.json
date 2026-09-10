@@ -1,0 +1,63 @@
+{
+  "status": "ACT",
+  "no": "9904",
+  "exitNo": "OCS.CJ.NI.900020",
+  "date": "2021-12-02T00:00:00.000+0000",
+  "initialAuthDate": "2026-04-24T00:00:00.000+0000",
+  "validFrom": "2026-04-24T00:00:00.000+0000",
+  "validUntil": "2027-05-31T00:00:00.000+0000",
+  "revisionNo": 5,
+  "branch": {
+    "organisationInfo": {
+      "fiscalIndicator": "RO",
+      "taxRegisterNo": "15428073",
+      "tradeRegisterNo": "J12/2143/2005",
+      "name": "OFFROAD MONTAJ S.R.L.",
+      "address": {
+        "street": "Calea Florești",
+        "streetNo": "100",
+        "city": "Cluj-Napoca",
+        "county": "Cluj",
+        "country": "Romania",
+        "originalAddress": "MUN. CLUJ-NAPOCA, CALEA FLOREȘTI NR. 100, JUD. CLUJ",
+        "gpsLocation": "46.7505,23.5460"
+      }
+    },
+    "name": "OFFROAD MONTAJ S.R.L., MUN. CLUJ-NAPOCA, CALEA FLOREȘTI NR. 100, JUD. CLUJ",
+    "address": {
+      "street": "Calea Florești",
+      "streetNo": "100",
+      "city": "Cluj-Napoca",
+      "county": "Cluj",
+      "country": "Romania",
+      "originalAddress": "MUN. CLUJ-NAPOCA, CALEA FLOREȘTI NR. 100, JUD. CLUJ",
+      "gpsLocation": "46.7505,23.5460",
+      "administrativeTerritorialUnit": "Cluj-Napoca"
+    },
+    "telephoneNo": "0744 000 202",
+    "contactPerson": {
+      "id": "00000000000000000000000000000004",
+      "person": { "idCard": {}, "telephoneNo": "0744000202", "isRomanianCitizen": true },
+      "role": "ADM"
+    }
+  },
+  "system": "B4",
+  "auditFileNo": "MCCJ9001",
+  "noOfWorkstation": 3,
+  "isMobileWorkshop": false,
+  "b4Class": "CLASS_1",
+  "hasConstructiveChanges": true,
+  "authorizationB4ActivitiesDetails": [
+    {
+      "activity": "B4_1_3",
+      "activities": [
+        { "activity": "B4_1_3", "installationComponent": "C40", "installationVehicleCategory": ["M1", "N1"], "installationType": "WITHOUT_WINDSHIELD_DISSASSEMBLY", "installationBrand": [], "limitation": "Masa max = 3,5 t", "initialVehicleCategories": [], "finalVehicleCategories": [] },
+        { "activity": "B4_1_3", "installationComponent": "C9", "installationVehicleCategory": ["M1", "N1"], "installationBrand": [], "initialVehicleCategories": [], "finalVehicleCategories": [] },
+        { "activity": "B4_1_3", "installationComponent": "C56", "installationVehicleCategory": ["M1", "N1", "N2"], "installationBrand": [], "limitation": "Înălțare max = 50 mm", "initialVehicleCategories": [], "finalVehicleCategories": [] }
+      ],
+      "limitations": []
+    }
+  ],
+  "b4Brands": [{ "id": "B_1", "brand": "NU ESTE CAZUL", "vehicleType": "aplicare", "commercialName": "fără demontare" }],
+  "authorizationSuspensionInfo": []
+}

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\WorkshopApiController;
 use App\Http\Controllers\ServiceShopLinkController;
 use App\Http\Controllers\SitemapController;
 use App\Livewire\Admin\Catalog\AttributesIndex;
@@ -47,6 +48,11 @@ use App\Livewire\Admin\Suppliers\SupplierEditor;
 use App\Livewire\Admin\Suppliers\SuppliersIndex;
 use App\Livewire\Admin\Suppliers\SyncRunsIndex;
 use App\Livewire\Admin\VehiclesIndex;
+use App\Livewire\Admin\Workshops\WorkshopDetail;
+use App\Livewire\Admin\Workshops\WorkshopReviewQueue;
+use App\Livewire\Admin\Workshops\WorkshopsIndex;
+use App\Livewire\Admin\Workshops\WorkshopSourceRecordDetail;
+use App\Livewire\Admin\Workshops\WorkshopSourcesIndex;
 use App\Livewire\Customer\Appointments as CustomerAppointments;
 use App\Livewire\Customer\Dashboard as CustomerDashboard;
 use App\Livewire\Customer\Favourites as CustomerFavourites;
@@ -206,6 +212,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/service-shops/{shop}/edit', ServiceShopEditor::class)->name('service-shops.edit');
     Route::get('/service-catalog', ServiceCatalogIndex::class)->name('service-catalog');
     Route::get('/service-appointments', ServiceAppointmentsIndex::class)->name('service-appointments');
+    Route::get('/workshops', WorkshopsIndex::class)->name('workshops.index');
+    Route::get('/workshops/review', WorkshopReviewQueue::class)->name('workshops.review');
+    Route::get('/workshops/sources', WorkshopSourcesIndex::class)->name('workshops.sources');
+    Route::get('/workshops/{workshop}', WorkshopDetail::class)->whereNumber('workshop')->name('workshops.show');
+    Route::get('/workshop-records/{record}', WorkshopSourceRecordDetail::class)->whereNumber('record')->name('workshops.records.show');
+    // Internal JSON for back-office tools, behind the same admin login. Raw source content
+    // (HTML, full RAR payloads) is never part of it.
+    Route::get('/api/workshops', [WorkshopApiController::class, 'index'])->name('api.workshops.index');
+    Route::get('/api/workshops/{workshop}', [WorkshopApiController::class, 'show'])->whereNumber('workshop')->name('api.workshops.show');
+    Route::get('/api/workshop-services', [WorkshopApiController::class, 'services'])->name('api.workshop-services');
     Route::get('/articles', ArticlesIndex::class)->name('articles.index');
     Route::get('/articles/create', ArticleEditor::class)->name('articles.create');
     Route::get('/articles/{article}/edit', ArticleEditor::class)->name('articles.edit');

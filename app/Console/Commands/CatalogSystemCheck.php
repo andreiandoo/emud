@@ -29,6 +29,8 @@ class CatalogSystemCheck extends Command
         'catalog-enrichment',
         'catalog-imports',
         'imports',
+        // The national workshop registry: county fetches, ONRC and OSM imports, website crawls.
+        'workshops',
     ];
 
     /**

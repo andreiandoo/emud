@@ -75,6 +75,9 @@ class AdminNavigation
                     ['route' => 'admin.service-shops.index', 'label' => 'Ateliere', 'icon' => 'wrench'],
                     ['route' => 'admin.service-catalog', 'label' => 'Lucrări & servicii', 'icon' => 'sliders'],
                     ['route' => 'admin.service-appointments', 'label' => 'Cereri de programare', 'icon' => 'history'],
+                    ['route' => 'admin.workshops.index', 'label' => 'Registru național', 'icon' => 'search'],
+                    ['route' => 'admin.workshops.review', 'label' => 'Ateliere de verificat', 'icon' => 'shuffle'],
+                    ['route' => 'admin.workshops.sources', 'label' => 'Surse ateliere', 'icon' => 'download'],
                 ],
             ],
             [

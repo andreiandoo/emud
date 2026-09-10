@@ -1,0 +1,59 @@
+{
+  "status": "ACT",
+  "no": "5001",
+  "exitNo": "OCS.BV.NI.900010",
+  "date": "2026-07-15T00:00:00.000+0000",
+  "initialAuthDate": "2026-08-02T00:00:00.000+0000",
+  "validFrom": "2026-08-02T00:00:00.000+0000",
+  "validUntil": "2028-08-01T00:00:00.000+0000",
+  "revisionNo": 2,
+  "branch": {
+    "organisationInfo": {
+      "fiscalIndicator": "RO",
+      "taxRegisterNo": "20963285",
+      "tradeRegisterNo": "J08/346/2007",
+      "name": "AUTO TEHNIC ŞERBAN S.R.L.",
+      "address": {
+        "city": "Brasov",
+        "county": "Brasov",
+        "country": "Romania",
+        "originalAddress": "STR. ŢESĂTORILOR NR. 12, BRAŞOV, JUD. BRAŞOV"
+      }
+    },
+    "name": "AUTO TEHNIC ŞERBAN S.R.L., Şos. Cristianului nr. 6, Braşov, jud. Braşov",
+    "address": {
+      "street": "Şos. Cristianului",
+      "streetNo": "6",
+      "city": "Brasov",
+      "county": "Brasov",
+      "country": "Romania",
+      "originalAddress": "Şos. Cristianului nr. 6, Braşov, jud. Braşov",
+      "administrativeTerritorialUnit": "Brasov"
+    },
+    "telephoneNo": "0268000102",
+    "contactPerson": {
+      "id": "00000000000000000000000000000003",
+      "person": { "idCard": {}, "telephoneNo": "0268000102", "isRomanianCitizen": true },
+      "role": "ADM"
+    }
+  },
+  "system": "ITP",
+  "auditFileNo": "BV901",
+  "stationCode": "BV901",
+  "isMobileWorkshop": false,
+  "itpAuthClass": ["ITP_CLASS_2"],
+  "itpAuthClassDetails": [
+    {
+      "id": "ITP_1",
+      "lines": 1,
+      "itpAuthClass": "ITP_CLASS_2",
+      "itpAuthLimitations": [{ "limitation": "ITP_LIMITATION_dmin", "limitationValue": "1.02 m" }],
+      "itpAuthInterdictions": ["ITP_INTERDICTION_TRACTORS", "ITP_INTERDICTION_AUTO_PERMANENT_ALLWHEEL"],
+      "itpAuthObservations": ["ITP_OBSERVATIONS_1"],
+      "lineLimitations": [],
+      "lineObservations": [],
+      "lineInterdictions": []
+    }
+  ],
+  "authorizationSuspensionInfo": []
+}

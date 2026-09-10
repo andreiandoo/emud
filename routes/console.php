@@ -29,3 +29,14 @@ Schedule::command('exchange-rates:fetch')->dailyAt('01:30')->withoutOverlapping(
 // After the nightly catalogue sync. Cost changes reprice as they arrive; this pass catches
 // what nothing triggered: an edited pricing rule, a rate that moved, a lapsed offer.
 Schedule::command('pricing:reprice --all')->dailyAt('03:10')->withoutOverlapping(60);
+
+// The national workshop registry refreshes itself only once WORKSHOPS_SCHEDULE_ENABLED is on:
+// a national RAR pass is a decision, not a default. RAR weekly; OpenStreetMap and ONRC monthly,
+// and both skip themselves when the source has not changed. Websites are never crawled on a
+// schedule; that is started by hand, in bounded batches.
+if (config('workshops.schedule.enabled')) {
+    Schedule::command('workshops:rar:import --section=all')->cron((string) config('workshops.schedule.rar_cron'))->withoutOverlapping(360);
+    Schedule::command('workshops:osm:import')->cron((string) config('workshops.schedule.osm_cron'))->withoutOverlapping(360);
+    Schedule::command('workshops:onrc:import')->cron((string) config('workshops.schedule.onrc_cron'))->withoutOverlapping(360);
+    Schedule::command('workshops:deduplicate')->weeklyOn(1, '07:30')->withoutOverlapping(120);
+}
