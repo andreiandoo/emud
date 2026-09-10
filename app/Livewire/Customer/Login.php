@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Customer;
 
+use App\Storefront\CartManager;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -45,6 +46,10 @@ class Login extends Component
 
         RateLimiter::clear($key);
         session()->regenerate();
+
+        // The basket built before signing in belongs to this account now. Without the merge it
+        // stayed a guest cart and was gone the next time the customer came back on a new session.
+        app(CartManager::class)->mergeInto(Auth::user());
 
         return redirect()->intended(route('customer.dashboard'));
     }

@@ -102,7 +102,7 @@ class CheckoutPage extends Component
             return null;
         }
 
-        return $this->redirectRoute('storefront.order', ['order' => $order->checkout_token]);
+        return $this->redirectRoute('storefront.order', ['token' => $order->checkout_token]);
     }
 
     public function render(CartManager $carts)
