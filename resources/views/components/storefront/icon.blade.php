@@ -46,6 +46,18 @@
     'tool' => 'M15 4a5 5 0 0 0-6.5 6.5L3 16v5h5l5.5-5.5A5 5 0 0 0 20 9l-3 3-3-3 3-3a5 5 0 0 0-2-2z',
     'offroad' => 'M4 17h16M6 17V8l3-3h6l3 3v9M8 20h2M14 20h2M4 11l2-2M20 11l-2-2M9 11h6',
     'part' => 'M12 3l8 4v10l-8 4-8-4V7zM4 7l8 4 8-4M12 11v10',
+
+    // Social networks, drawn in the same stroke weight as everything else rather than pasted in
+    // as brand glyphs: a row of filled logos next to outlined icons reads as a third-party
+    // widget dropped into the footer.
+    'facebook' => 'M15 3h-2a4 4 0 0 0-4 4v3H6v4h3v7h4v-7h3l1-4h-4V8a1 1 0 0 1 1-1h2z',
+    'instagram' => 'M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM17.4 6.6h.01',
+    'youtube' => 'M21.6 7.2a3 3 0 0 0-2.1-2.1C17.7 4.6 12 4.6 12 4.6s-5.7 0-7.5.5A3 3 0 0 0 2.4 7.2 31 31 0 0 0 2 12a31 31 0 0 0 .4 4.8 3 3 0 0 0 2.1 2.1c1.8.5 7.5.5 7.5.5s5.7 0 7.5-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 22 12a31 31 0 0 0-.4-4.8zM10 15V9l5 3z',
+    'tiktok' => 'M16 4v10.5a4.5 4.5 0 1 1-4.5-4.5M16 4a5 5 0 0 0 5 5',
+    'linkedin' => 'M4 9h3v11H4zM5.5 5.5h.01M10 20V9h3v1.6A3.4 3.4 0 0 1 20 13v7h-3v-6a2 2 0 0 0-4 0v6z',
+    'twitter' => 'M5 4l14 16M19 4L5 20',
+    'mail' => 'M3 6h18v12H3zM3 7l9 6 9-6',
+    'arrow-right' => 'M4 12h16M14 6l6 6-6 6',
 ])
 
 {{-- Size comes from presentation attributes rather than a default class: a `class="h-4 w-4"`

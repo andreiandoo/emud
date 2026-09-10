@@ -3,6 +3,7 @@
 namespace App\Livewire\Storefront;
 
 use App\Models\Category;
+use App\Models\Review;
 use App\Storefront\VehicleContext;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -29,6 +30,12 @@ class Home extends Component
                 ->orderBy('position')
                 ->orderBy('name')
                 ->limit(12)
+                ->get(),
+            'reviews' => Review::query()
+                ->published()
+                ->where('is_featured', true)
+                ->ordered()
+                ->limit(3)
                 ->get(),
         ]);
     }

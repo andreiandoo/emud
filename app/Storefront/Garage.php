@@ -3,6 +3,7 @@
 namespace App\Storefront;
 
 use App\Models\CustomerVehicle;
+use App\Models\VehicleCollection;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,7 @@ class Garage
     public function forUser(User $user): Collection
     {
         return $user->vehicles()
-            ->with(['make', 'model', 'generation'])
+            ->with(['make', 'model', 'generation', 'collection'])
             ->orderByDesc('is_primary')
             ->orderBy('id')
             ->get();
@@ -41,7 +42,11 @@ class Garage
                 $this->demoteOthers($user);
             }
 
-            return $user->vehicles()->create([...$attributes, 'is_primary' => $isPrimary]);
+            return $user->vehicles()->create([
+                ...$attributes,
+                'is_primary' => $isPrimary,
+                ...$this->collectionFor($attributes),
+            ]);
         });
 
         $this->refreshContext();
@@ -57,7 +62,9 @@ class Garage
                 $this->demoteOthers($vehicle->user_id, $vehicle->id);
             }
 
-            $vehicle->update($attributes);
+            // Re-resolved on every edit: changing the model changes which collection — and so
+            // which picture — belongs to this car.
+            $vehicle->update([...$attributes, ...$this->collectionFor($attributes)]);
         });
 
         $this->refreshContext();
@@ -91,6 +98,31 @@ class Garage
         });
 
         $this->refreshContext();
+    }
+
+    /**
+     * The editorial collection this car belongs to, which is where its picture in the garage
+     * comes from. Absent when the shop has no page for that car — the garage then shows the
+     * plain card it always did.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, int|null>
+     */
+    private function collectionFor(array $attributes): array
+    {
+        // A partial update — a nickname, a mileage reading — says nothing about which car this
+        // is, so recomputing from it would clear a perfectly good link.
+        if (! array_intersect(['make_id', 'model_id', 'generation_id'], array_keys($attributes))) {
+            return [];
+        }
+
+        $collection = VehicleCollection::forVehicle(
+            isset($attributes['make_id']) ? (int) $attributes['make_id'] : null,
+            isset($attributes['model_id']) ? (int) $attributes['model_id'] : null,
+            isset($attributes['generation_id']) ? (int) $attributes['generation_id'] : null,
+        );
+
+        return ['vehicle_collection_id' => $collection?->id];
     }
 
     private function demoteOthers(User|int $user, ?int $except = null): void

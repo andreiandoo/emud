@@ -22,30 +22,7 @@
 
 <main class="shell py-8">{{ $slot }}</main>
 
-<footer class="mt-16 border-t border-stone-200 bg-white">
-    <div class="shell space-y-4 py-8 text-xs text-stone-500">
-        @php($footerPages = \App\Models\Page::query()->published()->where('show_in_footer', true)->orderBy('position')->orderBy('title')->get())
-        @if($footerPages->isNotEmpty())
-            <nav class="flex flex-wrap gap-x-5 gap-y-2">
-                @foreach($footerPages as $footerPage)
-                    <a href="{{ route('storefront.page', $footerPage->slug) }}" class="hover:text-stone-900 hover:underline">{{ $footerPage->title }}</a>
-                @endforeach
-                <a href="{{ route('storefront.contact') }}" class="hover:text-stone-900 hover:underline">Contact</a>
-            </nav>
-        @endif
-
-        @php($social = collect($settings->array('social_links'))->filter())
-        @if($social->isNotEmpty())
-            <nav class="flex flex-wrap gap-x-5 gap-y-2">
-                @foreach($social as $network => $url)
-                    <a href="{{ $url }}" target="_blank" rel="noopener" class="capitalize hover:text-stone-900 hover:underline">{{ $network }}</a>
-                @endforeach
-            </nav>
-        @endif
-
-        <p>{{ $settings->string('site_title', 'eMUD') }} · piese și accesorii 4x4, off-road și overlanding</p>
-    </div>
-</footer>
+<x-storefront.footer />
 @livewireScripts
 </body>
 </html>

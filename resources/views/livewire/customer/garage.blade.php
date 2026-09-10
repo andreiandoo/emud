@@ -13,6 +13,16 @@
                 'border-lime-400 ring-1 ring-lime-400' => $vehicle->is_primary,
                 'border-stone-200' => ! $vehicle->is_primary,
             ])>
+                {{-- The picture comes from the collection this car belongs to, assigned when it
+                     was saved. A car the shop has no collection for shows no image rather than a
+                     placeholder pretending to be one. --}}
+                @if($vehicle->collection?->garageImageUrl())
+                    <a href="{{ $vehicle->collection->url() }}" class="shrink-0">
+                        <img src="{{ $vehicle->collection->garageImageUrl() }}" alt="{{ $vehicle->collection->name }}"
+                             class="h-14 w-20 rounded-lg object-cover">
+                    </a>
+                @endif
+
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="font-semibold">{{ $vehicle->make?->name }} {{ $vehicle->model?->name }}</span>
@@ -29,6 +39,9 @@
                 </div>
 
                 <div class="flex items-center gap-3 text-sm">
+                    @if($vehicle->collection)
+                        <a href="{{ $vehicle->collection->url() }}" class="text-stone-600 underline hover:text-stone-900">Piese pentru ea</a>
+                    @endif
                     <a href="{{ route('customer.garage.vehicle', $vehicle->id) }}" class="font-semibold underline hover:text-stone-900">Detalii</a>
                     @unless($vehicle->is_primary)
                         <button wire:click="makePrimary({{ $vehicle->id }})" class="text-stone-600 underline hover:text-stone-900">Fă principală</button>

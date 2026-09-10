@@ -20,6 +20,7 @@ class SettingsPage extends Component
     public const TABS = [
         'general' => 'General',
         'header' => 'Header',
+        'footer' => 'Footer',
         'company' => 'Date firmă',
         'contact' => 'Contact',
         'documents' => 'Serii documente',

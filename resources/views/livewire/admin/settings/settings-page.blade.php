@@ -7,6 +7,9 @@
         @case('header')
             <livewire:admin.settings.header-settings />
             @break
+        @case('footer')
+            <livewire:admin.settings.footer-settings />
+            @break
         @case('company')
             <livewire:admin.settings.company-settings />
             @break

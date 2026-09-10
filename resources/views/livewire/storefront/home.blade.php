@@ -20,6 +20,8 @@
         @endif
     </section>
 
+    <x-storefront.choose-your-ride />
+
     <section>
         <h2 class="mb-4 text-lg font-bold">Categorii</h2>
 
@@ -40,4 +42,15 @@
             </div>
         @endif
     </section>
+
+    @if($reviews->isNotEmpty())
+        <section>
+            <h2 class="mb-4 text-lg font-bold">Din garajele clienților</h2>
+            <div class="grid gap-4 md:grid-cols-3">
+                @foreach($reviews as $review)
+                    <x-storefront.review-card :review="$review" />
+                @endforeach
+            </div>
+        </section>
+    @endif
 </div>

@@ -83,6 +83,31 @@ class VehicleCollection extends Model
         return $query->orderBy('position')->orderBy('name');
     }
 
+    /**
+     * The best collection for one concrete car: the generation's own if there is one, otherwise
+     * the model's, otherwise the make's.
+     *
+     * Narrowest first, because a Jimny III page says more than a Suzuki page, and a car with no
+     * collection at any level is normal rather than an error — the shop simply has no page for
+     * it yet.
+     */
+    public static function forVehicle(?int $makeId, ?int $modelId, ?int $generationId): ?self
+    {
+        foreach ([['generation_id', $generationId], ['model_id', $modelId], ['make_id', $makeId]] as [$column, $value]) {
+            if ($value === null) {
+                continue;
+            }
+
+            $found = self::query()->active()->where($column, $value)->orderBy('position')->first();
+
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
     public function url(): string
     {
         return route('storefront.collection', $this->slug);
