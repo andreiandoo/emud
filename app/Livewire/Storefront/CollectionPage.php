@@ -120,8 +120,6 @@ class CollectionPage extends Component
     {
         $vehicle = $context->current();
 
-        // ->title(), because nothing else sets one: the layout falls back to the shop tagline,
-        // which gave every collection in the shop an identical <title> in search results.
         return view('livewire.storefront.collection-page', [
             'vehicle' => $vehicle,
             'products' => $this->products($vehicle, $matcher),
@@ -132,7 +130,7 @@ class CollectionPage extends Component
             'reviews' => $this->reviews(),
             'verdicts' => fn (Product $product) => $vehicle === null ? null : $matcher->verdictFor($product, $vehicle),
             'breadcrumbs' => $this->breadcrumbs(),
-        ])->title($this->collection->seo_title ?: $this->collection->name);
+        ]);
     }
 
     /**

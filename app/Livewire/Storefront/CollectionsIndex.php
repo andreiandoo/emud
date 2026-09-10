@@ -60,7 +60,7 @@ class CollectionsIndex extends Component
                 app(CatalogMetrics::class)->snapshot(),
                 static fn (array $metric): bool => $metric['value'] > 0,
             ),
-        ])->title('Colecții pe model de mașină');
+        ]);
     }
 
     /** @return Collection<int, VehicleCollection> */

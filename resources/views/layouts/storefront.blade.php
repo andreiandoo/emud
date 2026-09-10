@@ -9,7 +9,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? $settings->string('site_tagline', 'Piese și accesorii 4x4') }} · {{ $settings->string('site_title', 'eMUD') }}</title>
+    {{-- Three sources, narrowest first: whatever the component set through ->title(), then the
+         title its <x-seo> stated, then the shop tagline. Before this, every page in the shop
+         shared one <title>, which is what a search engine sees as the name of the page. --}}
+    @php($seoTitle = trim($__env->yieldPushContent('page-title')))
+    <title>{{ $title ?? ($seoTitle !== '' ? $seoTitle : $settings->string('site_tagline', 'Piese și accesorii 4x4')) }} · {{ $settings->string('site_title', 'eMUD') }}</title>
     @if($faviconPath !== '')
         <link rel="icon" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($faviconPath) }}">
     @endif
