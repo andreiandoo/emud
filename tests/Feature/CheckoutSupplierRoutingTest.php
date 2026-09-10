@@ -99,7 +99,13 @@ class CheckoutSupplierRoutingTest extends TestCase
         $fulfilment = $this->place($product)->items()->sole()->snapshot['fulfilment'];
 
         $this->assertSame('RO', $fulfilment['supplier_code']);
-        $this->assertContains(['supplier' => 'DOARSK', 'reason' => 'destination_not_served'], $fulfilment['excluded']);
+
+        // Matched on values, not with assertContains: the snapshot is stored as jsonb, which
+        // returns object keys reordered (reason before supplier), and a strict array comparison
+        // fails on the order alone.
+        $this->assertTrue(collect($fulfilment['excluded'])->contains(
+            fn (array $row): bool => $row['supplier'] === 'DOARSK' && $row['reason'] === 'destination_not_served',
+        ));
     }
 
     public function test_a_cost_that_cannot_be_completed_is_not_stored_as_the_line_cost(): void
