@@ -157,6 +157,25 @@
                 </x-admin.section>
             @endif
 
+            {{-- The invoice is made out to whatever is here: a firm with its tax code, or the
+                 person, who may be invoiced at an address other than the delivery one. --}}
+            @if($freshOrder->billingAddress)
+                @php($billing = $freshOrder->billingAddress)
+                <x-admin.section :title="$billing->company ? 'Facturare pe firmă' : 'Date de facturare'">
+                    <p class="text-sm leading-relaxed text-stone-700">
+                        @if($billing->company)
+                            <span class="font-semibold text-stone-900">{{ $billing->company }}</span><br>
+                            CUI {{ $billing->vat_number }}@if($billing->trade_register_number) · {{ $billing->trade_register_number }}@endif<br>
+                            Contact: {{ $billing->first_name }} {{ $billing->last_name }}<br>
+                        @else
+                            {{ $billing->first_name }} {{ $billing->last_name }}<br>
+                        @endif
+                        {{ $billing->line_1 }}<br>
+                        {{ $billing->city }}@if($billing->county), {{ $billing->county }}@endif
+                    </p>
+                </x-admin.section>
+            @endif
+
             @if($freshOrder->customer_note)
                 <x-admin.section title="Notă de la client">
                     <p class="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{{ $freshOrder->customer_note }}</p>

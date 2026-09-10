@@ -1,11 +1,15 @@
+@php($isCategory = $category !== null)
+@php($chooserLabel = $isCategory ? 'Alege subcategoria' : 'Alege din modele')
 @php($panels = [
     'pick' => ['Alege mașina ta', 'car'],
     'vin' => ['Caută după VIN', 'vin'],
-    'variants' => ['Alege din modele', 'grid'],
+    'variants' => [$chooserLabel, 'grid'],
 ])
 
 {{-- One Alpine scope for the bar and all three dialogs. The panel a visitor gave up on has to
-     be one click from the next one, so they share a single piece of state rather than three. --}}
+     be one click from the next one, so they share a single piece of state rather than three.
+     The same bar serves a collection (its derivatives behind the third button) and a category
+     (its subcategories). --}}
 <div x-data="{ open: null }"
      @keydown.escape.window="open = null"
      @vehicle-picked.window="open = null"
@@ -14,14 +18,27 @@
 
     <section class="border-b border-gl bg-g1 text-bone">
         <div class="shell flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
-            <p class="text-sm text-mute">
-                <span class="font-semibold text-bone">Găsește ce se potrivește pe mașina ta.</span>
-                Spune-ne ce conduci și filtrăm catalogul pentru tine.
-            </p>
+            @if($current)
+                <p class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-mute">
+                    <span class="h-2 w-2 shrink-0 rounded-full bg-fit-bright shadow-[0_0_0_4px_rgba(77,184,116,.18)]"></span>
+                    Mașina ta:
+                    <span class="font-semibold text-bone">{{ $current->label() }}</span>
+                    <span class="max-sm:hidden">· o schimbi oricând de aici.</span>
+                </p>
+            @else
+                <p class="text-sm text-mute">
+                    <span class="font-semibold text-bone">Găsește ce se potrivește pe mașina ta.</span>
+                    @if($isCategory)
+                        Spune-ne ce conduci și îți arătăm doar piesele din {{ $category->name }} care i se potrivesc.
+                    @else
+                        Spune-ne ce conduci și filtrăm catalogul pentru tine.
+                    @endif
+                </p>
+            @endif
 
             <div class="flex flex-wrap gap-2">
                 @foreach($panels as $key => [$label, $icon])
-                    @continue($key === 'variants' && $children->isEmpty())
+                    @continue($key === 'variants' && $choices->isEmpty())
                     <button type="button" @click="open = '{{ $key }}'" class="st-btn st-btn--ghost st-btn--sm">
                         <x-storefront.icon :name="$icon" />
                         {{ $label }}
@@ -34,14 +51,18 @@
             <div class="shell pb-5">
                 <p class="flex items-start gap-2.5 rounded-[3px] border border-fit-bright/30 bg-fit-bright/10 px-4 py-3 text-sm text-bone">
                     <x-storefront.icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-fit-bright" />
-                    <span><span class="font-semibold">Filtrăm pentru {{ $applied }}.</span> Bifează „Doar ce se potrivește” în filtre ca să restrângi lista.</span>
+                    @if($isCategory)
+                        <span><span class="font-semibold">Am reținut {{ $applied }}.</span> Lista de mai jos arată acum doar piesele care i se potrivesc.</span>
+                    @else
+                        <span><span class="font-semibold">Filtrăm pentru {{ $applied }}.</span> Bifează „Doar ce se potrivește” în filtre ca să restrângi lista.</span>
+                    @endif
                 </p>
             </div>
         @endif
     </section>
 
-    {{-- 1. Pick the car. The manufacturer starts on the collection being viewed, because someone
-            already looking at Dacia should not be asked which make they meant. --}}
+    {{-- 1. Pick the car. On a collection the manufacturer starts on the collection being viewed,
+            because someone already looking at Dacia should not be asked which make they meant. --}}
     <div x-show="open === 'pick'" x-cloak class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6"
          role="dialog" aria-modal="true" aria-label="Alege mașina ta">
         <div @click="open = null" class="absolute inset-0 bg-g0/70 backdrop-blur-sm"></div>
@@ -181,25 +202,29 @@
         </div>
     </div>
 
-    {{-- 3. The derivatives. Real links rendered server side, so they stay crawlable and reachable
-            without JavaScript now that the public grid shows only main collections. --}}
-    @if($children->isNotEmpty())
-        @php($variantNames = $children->map(fn ($child) => mb_strtolower($child->name))->values()->all())
+    {{-- 3. One level narrower: a collection's derivatives or a category's subcategories. Real
+            links rendered server side, so they stay crawlable and reachable without JavaScript. --}}
+    @if($choices->isNotEmpty())
+        @php($choiceNames = $choices->map(fn (array $choice) => mb_strtolower($choice['name']))->values()->all())
 
         <div x-show="open === 'variants'" x-cloak
-             x-data="{ q: '', names: @js($variantNames), get matches() { return this.names.filter(n => n.includes(this.q.toLowerCase())).length } }"
+             x-data="{ q: '', names: @js($choiceNames), get matches() { return this.names.filter(n => n.includes(this.q.toLowerCase())).length } }"
              class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6"
-             role="dialog" aria-modal="true" aria-label="Alege din modele">
+             role="dialog" aria-modal="true" aria-label="{{ $chooserLabel }}">
 
             <div @click="open = null" class="absolute inset-0 bg-g0/70 backdrop-blur-sm"></div>
 
             <div class="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[3px] bg-light text-ink shadow-2xl sm:rounded-[3px]">
                 <div class="flex items-start justify-between gap-4 border-b border-line p-6">
                     <div class="grid gap-2">
-                        <p class="st-kicker text-ink2">Variante</p>
-                        <h2 class="font-display text-2xl font-semibold">Alege din modele</h2>
+                        <p class="st-kicker text-ink2">{{ $isCategory ? 'Subcategorii' : 'Variante' }}</p>
+                        <h2 class="font-display text-2xl font-semibold">{{ $chooserLabel }}</h2>
                         <p class="text-sm text-ink2">
-                            {{ $children->count() }} {{ $children->count() === 1 ? 'variantă' : 'variante' }} de {{ $collection->name }}.
+                            @if($isCategory)
+                                Restrânge {{ $category->name }} la ce te interesează.
+                            @else
+                                {{ $choices->count() }} {{ $choices->count() === 1 ? 'variantă' : 'variante' }} de {{ $collection?->name }}.
+                            @endif
                         </p>
                     </div>
                     <button type="button" @click="open = null" class="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line2 transition hover:border-ink" aria-label="Închide">
@@ -209,29 +234,32 @@
 
                 <div class="border-b border-line p-6 pb-4">
                     <label class="relative block">
-                        <span class="sr-only">Caută modelul</span>
+                        <span class="sr-only">{{ $isCategory ? 'Caută subcategoria' : 'Caută modelul' }}</span>
                         <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-ink2">
                             <x-storefront.icon name="search" class="h-4 w-4" />
                         </span>
-                        <input type="search" x-model="q" autocomplete="off" placeholder="Scrie codul sau numele modelului…" class="pl-10">
+                        <input type="search" x-model="q" autocomplete="off" class="pl-10"
+                               placeholder="{{ $isCategory ? 'Scrie numele subcategoriei…' : 'Scrie codul sau numele modelului…' }}">
                     </label>
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-3" data-lenis-prevent>
                     <ul class="grid gap-1 sm:grid-cols-2">
-                        @foreach($children as $child)
-                            <li data-name="{{ mb_strtolower($child->name) }}"
+                        @foreach($choices as $choice)
+                            <li data-name="{{ mb_strtolower($choice['name']) }}"
                                 x-show="q === '' || $el.dataset.name.includes(q.toLowerCase())">
-                                <a href="{{ $child->url() }}" class="flex items-center gap-3 rounded-[3px] px-3 py-2.5 transition hover:bg-white">
-                                    @if($child->squareImageUrl())
-                                        <img src="{{ $child->squareImageUrl() }}" alt="" loading="lazy" class="h-10 w-10 shrink-0 rounded-[2px] object-cover">
+                                <a href="{{ $choice['url'] }}" class="flex items-center gap-3 rounded-[3px] px-3 py-2.5 transition hover:bg-white">
+                                    @if($choice['image'])
+                                        <img src="{{ $choice['image'] }}" alt="" loading="lazy" class="h-10 w-10 shrink-0 rounded-[2px] object-cover">
                                     @else
-                                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-[2px] bg-g2 text-sand"><x-storefront.icon name="car" class="h-4 w-4" /></span>
+                                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-[2px] bg-g2 text-sand">
+                                            <x-storefront.icon :name="$choice['icon']" class="h-4 w-4" />
+                                        </span>
                                     @endif
                                     <span class="min-w-0 flex-1">
-                                        <span class="block truncate text-sm font-semibold">{{ $child->name }}</span>
-                                        @if($child->yearRange())
-                                            <span class="block font-mono text-[11px] text-ink2">{{ $child->yearRange() }}</span>
+                                        <span class="block truncate text-sm font-semibold">{{ $choice['name'] }}</span>
+                                        @if($choice['meta'])
+                                            <span class="block font-mono text-[11px] text-ink2">{{ $choice['meta'] }}</span>
                                         @endif
                                     </span>
                                     <x-storefront.icon name="chevron-right" class="h-4 w-4 shrink-0 text-ink2" />
@@ -241,7 +269,7 @@
                     </ul>
 
                     <p x-show="matches === 0" x-cloak class="p-6 text-center text-sm text-ink2">
-                        Niciun model care să se potrivească.
+                        {{ $isCategory ? 'Nicio subcategorie cu numele ăsta.' : 'Niciun model care să se potrivească.' }}
                     </p>
                 </div>
             </div>

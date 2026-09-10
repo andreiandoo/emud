@@ -33,12 +33,7 @@
 
             <div x-show="category === {{ $top['id'] }}" x-cloak class="col-start-2 row-start-1 min-w-0">
                 <div class="mb-7 flex items-end justify-between gap-6 border-b border-gl pb-5">
-                    <div class="grid gap-3">
-                        <p class="st-kicker text-mute">
-                            {{ $top['children']->count() }} {{ $top['children']->count() === 1 ? 'subcategorie' : 'subcategorii' }}
-                        </p>
-                        <h2 class="st-display text-[2.4rem] text-bone">{{ $top['name'] }}</h2>
-                    </div>
+                    <h2 class="st-display text-[2.4rem] text-bone">{{ $top['name'] }}</h2>
 
                     <a href="{{ route('storefront.category', $top['path']) }}" class="st-link shrink-0 text-bone">
                         Vezi toată categoria <x-storefront.icon name="arrow-right" />

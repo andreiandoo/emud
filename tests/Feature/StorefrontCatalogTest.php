@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Livewire\Storefront\CategoryPage;
 use App\Livewire\Storefront\SearchResults;
+use App\Livewire\Storefront\VehicleFinder;
+use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductAttributeValue;
 use App\Models\ProductFitment;
 use App\Models\ProductVariant;
 use App\Models\VehicleGeneration;
@@ -231,6 +234,75 @@ class StorefrontCatalogTest extends TestCase
         ]);
 
         $this->get(route('storefront.product', $product))->assertNotFound();
+    }
+
+    public function test_a_category_can_be_narrowed_to_one_brand(): void
+    {
+        $category = $this->category();
+        $kept = $this->product(name: 'Arc Old Man Emu');
+        $dropped = $this->product(name: 'Arc Ironman');
+        $kept->categories()->attach($category);
+        $dropped->categories()->attach($category);
+
+        Livewire::test(CategoryPage::class, ['category' => $category])
+            ->set('brands', [$kept->brand->slug])
+            ->assertSee('Arc Old Man Emu')
+            ->assertDontSee('Arc Ironman');
+    }
+
+    public function test_a_category_can_be_narrowed_to_one_of_its_subcategories(): void
+    {
+        $parent = $this->category('Suspensie', 'suspensie');
+        $springs = $this->category('Arcuri', 'suspensie/arcuri', $parent);
+        $shocks = $this->category('Amortizoare', 'suspensie/amortizoare', $parent);
+        $this->product(name: 'Arc spate')->categories()->attach($springs);
+        $this->product(name: 'Amortizor fata')->categories()->attach($shocks);
+
+        Livewire::test(CategoryPage::class, ['category' => $parent])
+            ->set('subcategories', ['arcuri'])
+            ->assertSee('Arc spate')
+            ->assertDontSee('Amortizor fata');
+    }
+
+    public function test_a_specification_filter_keeps_only_the_parts_that_have_it(): void
+    {
+        $category = $this->category();
+        $lift = Attribute::create(['name' => 'Înălțare', 'code' => 'inaltare', 'type' => 'number', 'unit' => 'mm']);
+        $lift->categories()->attach($category, ['is_filterable' => true]);
+
+        foreach (['Kit înălțare 50' => 50, 'Kit înălțare 70' => 70] as $name => $height) {
+            $product = $this->product(name: $name);
+            $product->categories()->attach($category);
+            ProductAttributeValue::create(['product_id' => $product->id, 'attribute_id' => $lift->id, 'value_number' => $height]);
+        }
+
+        Livewire::test(CategoryPage::class, ['category' => $category])
+            ->assertSee('Kit înălțare 70')
+            ->call('toggleSpec', 'inaltare', 'n50')
+            ->assertSee('Kit înălțare 50')
+            ->assertDontSee('Kit înălțare 70');
+    }
+
+    /** A value typed into the URL by hand is ignored, not turned into an error page. */
+    public function test_a_malformed_specification_filter_is_ignored(): void
+    {
+        $category = $this->category();
+        $this->product(name: 'Bară față')->categories()->attach($category);
+
+        Livewire::withQueryParams(['f' => ['inaltare' => 'nu-e-lista', 5 => ['x']]])
+            ->test(CategoryPage::class, ['category' => $category])
+            ->assertSee('Bară față');
+    }
+
+    public function test_on_a_category_the_finder_offers_its_subcategories(): void
+    {
+        $parent = $this->category('Suspensie', 'suspensie');
+        $this->category('Arcuri', 'suspensie/arcuri', $parent);
+
+        Livewire::test(VehicleFinder::class, ['category' => $parent])
+            ->assertSee('Alege mașina ta')
+            ->assertSee('Alege subcategoria')
+            ->assertSee('Arcuri');
     }
 
     private function vehicle(bool $withGeneration = true, ?int $year = 2020): SelectedVehicle

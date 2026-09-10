@@ -68,7 +68,14 @@ function onScroll(callback) {
     callback(window.scrollY);
 }
 
-/** The bar hides while the page moves down and comes back the moment it moves up. */
+/**
+ * The bar hides while the page moves down and comes back the moment it moves up. Anywhere but
+ * the very top it comes back as its main row only (is-tucked); the rows above it show again
+ * once the page is back at the top.
+ *
+ * --st-header-visible is how much of the bar is on screen right now, for anything that sticks
+ * underneath it: a filter bar, a sticky gallery.
+ */
 function header() {
     const bar = document.querySelector('[data-st-header]');
 
@@ -76,16 +83,33 @@ function header() {
         return;
     }
 
-    const measure = () => html.style.setProperty('--st-header-h', `${bar.offsetHeight}px`);
-    measure();
-    new ResizeObserver(measure).observe(bar);
-
+    const main = bar.querySelector('[data-st-header-main]');
+    let tuck = 0;
     let last = window.scrollY;
 
-    onScroll((y) => {
-        bar.classList.toggle('is-solid', y > 24);
+    const expose = () => {
+        const visible = bar.classList.contains('is-hidden')
+            ? 0
+            : bar.offsetHeight - (bar.classList.contains('is-tucked') ? tuck : 0);
 
-        const busy = bar.dataset.open === '1';
+        html.style.setProperty('--st-header-visible', `${visible}px`);
+    };
+
+    const measure = () => {
+        tuck = main ? main.offsetTop : 0;
+        html.style.setProperty('--st-header-h', `${bar.offsetHeight}px`);
+        html.style.setProperty('--st-header-tuck', `${tuck}px`);
+        expose();
+    };
+
+    const update = (y) => {
+        bar.classList.toggle('is-solid', y > 24);
+        // Only once the rows above have scrolled past on their own: tucking earlier would open
+        // a gap between the bar and a page that has not moved far enough to fill it.
+        bar.classList.toggle('is-tucked', y > Math.max(24, tuck));
+
+        // A panel opened from the bar, or the vehicle picker opened from anywhere on the page.
+        const busy = bar.dataset.open === '1' || bar.hasAttribute('data-picking');
 
         if (! busy && y > 240 && y > last + 4) {
             bar.classList.add('is-hidden');
@@ -94,7 +118,17 @@ function header() {
         }
 
         last = y;
-    });
+        expose();
+    };
+
+    measure();
+    new ResizeObserver(measure).observe(bar);
+    onScroll(update);
+
+    // Opening the picker from a button further down the page has to bring a hidden bar back,
+    // even though nothing scrolled.
+    new MutationObserver(() => update(window.scrollY))
+        .observe(bar, { attributes: true, attributeFilter: ['data-open', 'data-picking'] });
 }
 
 /**
@@ -273,9 +307,6 @@ function cursor() {
             dot.classList.remove('is-on');
         }
     });
-
-    document.addEventListener('pointerdown', () => dot.classList.add('is-down'));
-    document.addEventListener('pointerup', () => dot.classList.remove('is-down'));
 }
 
 /** The band of promises drifts on its own and speeds up while the page is being scrolled. */

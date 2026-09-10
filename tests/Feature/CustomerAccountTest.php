@@ -8,6 +8,7 @@ use App\Livewire\Customer\Profile;
 use App\Livewire\Customer\ResetPassword;
 use App\Models\Order;
 use App\Models\User;
+use App\Storefront\AddressBook;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -164,6 +165,85 @@ class CustomerAccountTest extends TestCase
         Livewire::test(Profile::class)->set('name', 'Andrei Nou')->call('saveProfile');
 
         $this->assertSame($granted->toDateString(), $user->refresh()->marketing_consent_at?->toDateString());
+    }
+
+    public function test_the_delivery_address_is_kept_on_the_account(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(Profile::class)
+            ->set('shipping.first_name', 'Andrei')
+            ->set('shipping.last_name', 'Popescu')
+            ->set('shipping.line_1', 'Str. Exemplu 1')
+            ->set('shipping.city', 'Cluj-Napoca')
+            ->call('saveShipping')
+            ->assertHasNoErrors();
+
+        $this->assertSame('Cluj-Napoca', app(AddressBook::class)->shipping($user)?->city);
+    }
+
+    public function test_company_billing_details_are_kept_on_the_account(): void
+    {
+        $user = User::factory()->create(['name' => 'Andrei Popescu']);
+        $this->actingAs($user);
+
+        Livewire::test(Profile::class)
+            ->set('billingType', 'company')
+            ->set('billing.company', 'Off Road Garage SRL')
+            ->set('billing.vat_number', 'ro 12345678')
+            ->set('billing.trade_register_number', 'j40/1234/2020')
+            ->set('billing.line_1', 'Str. Depozitului 4')
+            ->set('billing.city', 'Brașov')
+            ->call('saveBilling')
+            ->assertHasNoErrors();
+
+        $billing = app(AddressBook::class)->billing($user);
+
+        $this->assertSame('Off Road Garage SRL', $billing?->company);
+        $this->assertSame('RO12345678', $billing?->vat_number);
+        $this->assertSame('J40/1234/2020', $billing?->trade_register_number);
+        // With no delivery name saved yet, the invoice's contact comes from the account name.
+        $this->assertSame('Andrei', $billing?->first_name);
+    }
+
+    public function test_a_company_is_not_saved_without_its_tax_code(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(Profile::class)
+            ->set('billingType', 'company')
+            ->set('billing.company', 'Off Road Garage SRL')
+            ->set('billing.line_1', 'Str. Depozitului 4')
+            ->set('billing.city', 'Brașov')
+            ->call('saveBilling')
+            ->assertHasErrors('billing.vat_number');
+    }
+
+    /**
+     * Most customers are invoiced where the parcel goes. That is one address, not a second copy
+     * of it waiting to drift out of date.
+     */
+    public function test_invoicing_the_delivery_person_keeps_no_second_address(): void
+    {
+        $user = User::factory()->create();
+        $book = app(AddressBook::class);
+        $book->saveBilling($user, AddressBook::billingDetails('company', [
+            'company' => 'Off Road Garage SRL',
+            'vat_number' => '12345678',
+            'line_1' => 'Str. Depozitului 4',
+            'city' => 'Brașov',
+        ], ['first_name' => 'Andrei', 'last_name' => 'Popescu']));
+        $this->actingAs($user);
+
+        Livewire::test(Profile::class)
+            ->assertSet('billingType', 'company')
+            ->set('billingType', 'person')
+            ->set('billingSame', true)
+            ->call('saveBilling')
+            ->assertHasNoErrors();
+
+        $this->assertNull($book->billing($user));
     }
 
     private function order(User $user, string $number): Order

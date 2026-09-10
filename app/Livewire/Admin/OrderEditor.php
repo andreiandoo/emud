@@ -43,7 +43,7 @@ class OrderEditor extends Component
     {
         return view('livewire.admin.order-editor', [
             'providers' => ShippingProvider::where('is_active', true)->get(),
-            'freshOrder' => $this->order->fresh(['items', 'payments.provider', 'shipments.provider', 'shipments.events', 'shippingAddress']),
+            'freshOrder' => $this->order->fresh(['items', 'payments.provider', 'shipments.provider', 'shipments.events', 'shippingAddress', 'billingAddress']),
         ]);
     }
 }
