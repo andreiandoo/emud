@@ -105,6 +105,93 @@ html.lenis body {
         text-wrap: balance;
     }
 
+    /* Rich text written in the back office: descriptions, guides, legal pages. The typography
+       plugin is not installed, so this is the one place those elements get their shape. */
+    .st-prose {
+        max-width: 68ch;
+        color: var(--color-ink2);
+        font-size: 1.0625rem;
+        line-height: 1.75;
+    }
+
+    .st-prose > * + * {
+        margin-top: 1.1em;
+    }
+
+    .st-prose :where(h2, h3, h4) {
+        margin-top: 1.8em;
+        color: var(--color-ink);
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        line-height: 1.15;
+    }
+
+    .st-prose h2 {
+        font-size: 1.75rem;
+    }
+
+    .st-prose h3 {
+        font-size: 1.35rem;
+    }
+
+    .st-prose :where(strong, b) {
+        color: var(--color-ink);
+    }
+
+    .st-prose a {
+        color: var(--color-ink);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    .st-prose a:hover {
+        color: var(--color-signal);
+    }
+
+    .st-prose :where(ul, ol) {
+        padding-left: 1.3em;
+    }
+
+    .st-prose ul {
+        list-style: disc;
+    }
+
+    .st-prose ol {
+        list-style: decimal;
+    }
+
+    .st-prose li + li {
+        margin-top: 0.4em;
+    }
+
+    .st-prose li::marker {
+        color: var(--color-signal);
+    }
+
+    .st-prose blockquote {
+        border-left: 2px solid var(--color-signal);
+        padding-left: 1.2em;
+        color: var(--color-ink);
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+    }
+
+    .st-prose img {
+        border-radius: 3px;
+    }
+
+    .st-prose table {
+        width: 100%;
+        font-size: 0.9375rem;
+    }
+
+    .st-prose :where(th, td) {
+        border-bottom: 1px solid var(--color-line);
+        padding: 0.6em 0.8em 0.6em 0;
+        text-align: left;
+    }
+
     /* ---------- buttons and links ---------- */
 
     .st-btn {

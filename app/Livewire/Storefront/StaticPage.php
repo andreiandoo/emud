@@ -6,7 +6,7 @@ use App\Models\Page;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class StaticPage extends Component
 {
     public Page $page;

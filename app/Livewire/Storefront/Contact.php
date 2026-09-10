@@ -8,7 +8,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class Contact extends Component
 {
     public string $name = '';
