@@ -37,8 +37,10 @@ final class Availability
 
     public static function forProduct(Product $product): self
     {
+        // routable(), not just is_active: an offer from a paused supplier, or one past its
+        // freshness window, cannot be sold, so it must not be what the page promises either.
         $offers = SupplierOffer::query()
-            ->where('is_active', true)
+            ->routable()
             ->whereHas('supplierProduct', fn ($query) => $query->where('product_id', $product->id))
             ->get(['stock_status', 'stock_quantity', 'dispatch_days_min', 'dispatch_days_max']);
 

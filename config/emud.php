@@ -66,5 +66,16 @@ return [
             'stock_stale_after_hours' => (int) env('SUPPLIER_STOCK_STALE_HOURS', 6),
             'error_rate_threshold' => (float) env('SUPPLIER_ERROR_RATE_THRESHOLD', 0.05),
         ],
+
+        // How much more the shop will pay to have a part sooner. Routing compares suppliers
+        // on landed cost raised by these penalties, so each one reads as a willingness to
+        // pay: a backordered offer must be more than 8% cheaper to beat one in stock.
+        'routing' => [
+            'backorder_penalty_percent' => (float) env('ROUTING_BACKORDER_PENALTY', 8),
+            'low_stock_penalty_percent' => (float) env('ROUTING_LOW_STOCK_PENALTY', 2),
+            'dispatch_day_penalty_percent' => (float) env('ROUTING_DISPATCH_DAY_PENALTY', 0.5),
+            // An offer that states no dispatch window is assumed slow, not instant.
+            'unknown_dispatch_days' => (int) env('ROUTING_UNKNOWN_DISPATCH_DAYS', 5),
+        ],
     ],
 ];

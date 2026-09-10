@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\OfferSourceType;
 use App\Enums\ShippingClass;
 use App\Enums\StockStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -57,6 +58,23 @@ class SupplierOffer extends Model
     public function stockHistory(): HasMany
     {
         return $this->hasMany(SupplierStockHistory::class);
+    }
+
+    /**
+     * Offers that may be considered at all: switched on, from a supplier whose feed is
+     * running, for an article still in the feed, and not past its freshness window.
+     *
+     * Stock status is deliberately not filtered here. The product page must still be able
+     * to say "out of stock" from these offers; only routing refuses to sell from them.
+     */
+    public function scopeRoutable(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where(fn ($inner) => $inner->whereNull('stale_after')->orWhere('stale_after', '>', now()))
+            ->whereHas('supplierProduct', fn ($product) => $product
+                ->whereNull('discontinued_at')
+                ->whereHas('supplier', fn ($supplier) => $supplier->where('is_active', true)));
     }
 
     public function isSellable(): bool

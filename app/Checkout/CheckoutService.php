@@ -2,8 +2,11 @@
 
 namespace App\Checkout;
 
+use App\Commerce\RoutingResult;
+use App\Commerce\SupplierOfferRouter;
 use App\Models\Address;
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\PaymentProvider;
 use App\Models\ShippingMethod;
@@ -18,7 +21,11 @@ use Throwable;
 
 class CheckoutService
 {
-    public function __construct(private PaymentService $payments, private VehicleContext $vehicles) {}
+    public function __construct(
+        private PaymentService $payments,
+        private VehicleContext $vehicles,
+        private SupplierOfferRouter $router,
+    ) {}
 
     public function place(Cart $cart, array $customer, ShippingMethod $method, ?PaymentProvider $provider = null, array $paymentContext = []): Order
     {
@@ -28,8 +35,10 @@ class CheckoutService
         // shopping for, and so a session lookup never happens with a transaction open.
         $activeVehicleId = $this->vehicles->current()?->customerVehicleId;
 
-        $order = DB::transaction(function () use ($cart, $customer, $method, $activeVehicleId): Order {
-            $cart->load('items.product', 'items.variant');
+        $cart->load('items.product', 'items.variant');
+        $routes = $this->routeLines($cart, (string) ($customer['shipping']['country_code'] ?? 'RO'));
+
+        $order = DB::transaction(function () use ($cart, $customer, $method, $activeVehicleId, $routes): Order {
             $shipping = Address::create([...$customer['shipping'], 'user_id' => $cart->user_id, 'type' => 'shipping']);
             $billingData = $customer['billing'] ?? $customer['shipping'];
             $billing = Address::create([...$billingData, 'user_id' => $cart->user_id, 'type' => 'billing']);
@@ -57,6 +66,8 @@ class CheckoutService
             ]);
 
             foreach ($cart->items as $index => $item) {
+                $route = $routes[$item->id];
+
                 $order->items()->create([
                     'product_id' => $item->product_id, 'variant_id' => $item->variant_id,
                     'customer_vehicle_id' => $activeVehicleId,
@@ -64,7 +75,9 @@ class CheckoutService
                     'sku' => $item->snapshot['sku'] ?? $item->variant?->sku ?? $item->product->sku,
                     'quantity' => $item->quantity, 'unit_price' => $item->unit_price,
                     'line_total' => $lineTotals[$index]->toDecimal(),
-                    'tax_rate' => $item->snapshot['tax_rate'] ?? 0, 'snapshot' => $item->snapshot,
+                    'tax_rate' => $item->snapshot['tax_rate'] ?? 0,
+                    ...$this->fulfilmentColumns($route, $currency),
+                    'snapshot' => [...($item->snapshot ?? []), 'fulfilment' => $this->fulfilmentSnapshot($route)],
                 ]);
             }
 
@@ -88,6 +101,99 @@ class CheckoutService
         $this->confirmByEmail($order);
 
         return $order->refresh();
+    }
+
+    /**
+     * Chooses a supplier for every line before anything is written.
+     *
+     * An order used to be placed with no idea who would fulfil it: the supplier columns on
+     * order_items existed and were never filled, so the shop took money for parts nobody had
+     * been asked for, at a cost nobody had recorded. Routing here also refuses a line no
+     * supplier can currently fulfil, while the cart is still intact and can be corrected.
+     *
+     * @return array<int, RoutingResult> keyed by cart item id
+     */
+    private function routeLines(Cart $cart, string $destinationCountry): array
+    {
+        $routes = [];
+
+        foreach ($cart->items as $item) {
+            $routes[$item->id] = $this->router->route($item->product, (int) $item->quantity, strtoupper($destinationCountry), $item->variant);
+        }
+
+        $unavailable = $cart->items
+            ->filter(fn (CartItem $item): bool => $routes[$item->id]->unavailable())
+            ->map(fn (CartItem $item): string => (string) ($item->snapshot['name'] ?? $item->product->name))
+            ->values()
+            ->all();
+
+        if ($unavailable !== []) {
+            throw CheckoutLineUnavailable::for($unavailable);
+        }
+
+        return $routes;
+    }
+
+    /**
+     * The supplier and cost columns order_items has always had. unit_cost is written only
+     * when the landed cost is complete and already in the order's currency: a partial or
+     * converted-on-the-fly figure stored there would be read later as a real margin.
+     *
+     * @return array<string, mixed>
+     */
+    private function fulfilmentColumns(RoutingResult $route, string $currency): array
+    {
+        $chosen = $route->chosen();
+
+        if ($chosen === null) {
+            return [];
+        }
+
+        $landed = $chosen['landed'];
+
+        return [
+            'supplier_id' => $chosen['supplier']->id,
+            'supplier_product_id' => $chosen['supplier_product']->id,
+            'unit_cost' => $landed['complete'] && $landed['currency'] === $currency ? $landed['unit_landed_cost'] : null,
+        ];
+    }
+
+    /**
+     * Why this supplier, at what cost, and what else was available. Kept on the line so a
+     * decision made at checkout can still be explained when the supplier's prices have long
+     * since moved on.
+     *
+     * @return array<string, mixed>
+     */
+    private function fulfilmentSnapshot(RoutingResult $route): array
+    {
+        $chosen = $route->chosen();
+
+        if ($chosen === null) {
+            return ['mode' => 'own_stock', 'routed_at' => now()->toIso8601String()];
+        }
+
+        $offer = $chosen['offer'];
+        $landed = $chosen['landed'];
+
+        return [
+            'mode' => 'supplier',
+            'supplier_code' => $chosen['supplier']->code,
+            'supplier_sku' => $chosen['supplier_product']->supplier_sku ?? $chosen['supplier_product']->external_id,
+            'offer_id' => $offer->id,
+            'supplier_cost' => $offer->cost_price === null ? null : (float) $offer->cost_price,
+            'supplier_currency' => $offer->currency,
+            'fx_rate' => $landed['fx_rate'],
+            'fx_rate_date' => $landed['fx_rate_date'],
+            'landed' => array_intersect_key($landed, array_flip([
+                'currency', 'unit_cost', 'dropship_fee', 'handling_fee', 'freight', 'total', 'unit_landed_cost', 'complete', 'missing',
+            ])),
+            'effective_unit_cost' => $chosen['effective_unit_cost'],
+            'adjustments' => $chosen['adjustments'],
+            'alternatives' => $route->eligible->count() - 1,
+            'excluded' => $route->excluded,
+            'routed_at' => now()->toIso8601String(),
+        ];
     }
 
     /**
