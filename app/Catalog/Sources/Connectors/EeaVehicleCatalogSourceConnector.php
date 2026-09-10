@@ -90,6 +90,12 @@ class EeaVehicleCatalogSourceConnector implements CatalogSourceConnector, Catalo
             }
 
             $this->datasetIndex = $index;
+
+            // Before the manufacturer list, not after: that query already filters on [Mk] and
+            // [Cn], so a dataset missing a required column would otherwise fail there with
+            // Discodata's raw "Invalid column name" instead of naming the column that is absent.
+            // The probe is cached per table, so datasetRecords() does not repeat it.
+            $this->projectionFor($source, $dataset);
             $manufacturers = $this->manufacturers($source, $dataset);
             $resumeAt = $index === $resumeIndex ? $resumeManufacturer : '';
             $position = $resumeAt === '' ? false : array_search($resumeAt, $manufacturers, true);

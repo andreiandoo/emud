@@ -38,6 +38,10 @@ class GeneralSettings extends Component
 
     public function save(StoreSettings $settings): void
     {
+        // Normalised before validating, not after: the allowed list is upper-case ISO codes,
+        // so uppercasing the validated value meant "ron" was refused before it could be fixed.
+        $this->default_currency = strtoupper(trim($this->default_currency));
+
         $data = $this->validate([
             'site_title' => ['required', 'string', 'max:120'],
             'site_tagline' => ['nullable', 'string', 'max:180'],
@@ -56,7 +60,7 @@ class GeneralSettings extends Component
             'site_title' => $data['site_title'],
             'site_tagline' => $data['site_tagline'] ?: null,
             'site_description' => $data['site_description'] ?: null,
-            'default_currency' => strtoupper($data['default_currency']),
+            'default_currency' => $data['default_currency'],
             'timezone' => $data['timezone'],
         ];
 
