@@ -44,6 +44,63 @@ class VehicleCollectionSeeder extends Seeder
         // the id of its parent and that id does not exist until the make row is written.
         $this->seedMakes();
         $this->seedModels();
+        $this->backfillSeo();
+    }
+
+    /**
+     * Writes a title and a description for every collection that has none.
+     *
+     * Separate from the two passes above because the rows that most need it are the ones that
+     * already exist: eleven thousand collections were created before this text was written, and
+     * a seeder that only ever inserts would never reach them.
+     *
+     * Only null columns are filled. Copy an operator wrote by hand is the whole point of the
+     * column being editable, and a seeder that "refreshes" it would quietly undo their work on
+     * every deploy.
+     */
+    private function backfillSeo(): void
+    {
+        VehicleCollection::query()
+            ->where(fn ($query) => $query->whereNull('seo_title')->orWhereNull('seo_description'))
+            ->orderBy('id')
+            ->chunkById(500, function ($collections): void {
+                foreach ($collections as $collection) {
+                    $collection->forceFill(array_filter([
+                        'seo_title' => $collection->seo_title === null ? self::seoTitle($collection->name) : null,
+                        'seo_description' => $collection->seo_description === null
+                            ? self::seoDescription($collection->name, $collection->year_from, $collection->year_to, $collection->parent_id === null)
+                            : null,
+                    ]))->save();
+                }
+            });
+    }
+
+    /**
+     * The layout already appends the shop name, so the title must not repeat it — "Piese Dacia ·
+     * eMUD · eMUD" is what happens when both halves try to own the branding.
+     */
+    public static function seoTitle(string $name): string
+    {
+        return Str::limit('Piese și accesorii '.$name, 60, '');
+    }
+
+    /**
+     * Around 155 characters, which is roughly what a search result shows before it truncates —
+     * and a description cut mid-word by Google reads worse than a shorter one written to fit.
+     */
+    public static function seoDescription(string $name, ?int $yearFrom, ?int $yearTo, bool $isRoot): string
+    {
+        $years = match (true) {
+            $yearFrom !== null && $yearTo !== null => ' ('.$yearFrom.'–'.$yearTo.')',
+            $yearFrom !== null => ' (din '.$yearFrom.')',
+            default => '',
+        };
+
+        $text = $isRoot
+            ? 'Piese de schimb, accesorii off-road și echipare pentru '.$name.'. Alege-ți modelul și vezi doar ce se potrivește pe mașina ta.'
+            : 'Piese și accesorii pentru '.$name.$years.'. Compatibilitate verificată, livrare în toată țara și montaj la service-urile partenere.';
+
+        return Str::limit($text, 155, '');
     }
 
     private function seedMakes(): void
@@ -72,6 +129,8 @@ class VehicleCollectionSeeder extends Seeder
                 'name' => $make->name,
                 'slug' => $this->uniqueSlug($make->name, $takenSlugs),
                 'subtitle' => 'Piese și accesorii pentru '.$make->name,
+                'seo_title' => self::seoTitle($make->name),
+                'seo_description' => self::seoDescription($make->name, null, null, true),
                 // Present and null rather than absent: a bulk insert needs every row to carry
                 // the same columns, and a make-level collection spans no years.
                 'year_from' => null,
@@ -136,6 +195,13 @@ class VehicleCollectionSeeder extends Seeder
                         'name' => $name,
                         'slug' => $this->uniqueSlug($name, $takenSlugs),
                         'subtitle' => 'Piese și accesorii pentru '.$name,
+                        'seo_title' => self::seoTitle($name),
+                        'seo_description' => self::seoDescription(
+                            $name,
+                            $years->pluck('year_from')->filter()->min(),
+                            $years->pluck('year_to')->filter()->max(),
+                            false,
+                        ),
                         // Nulls stay null: a model whose generations carry no years should say
                         // nothing rather than claim a range it does not know.
                         'year_from' => $years->pluck('year_from')->filter()->min(),

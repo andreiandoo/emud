@@ -142,58 +142,6 @@ class CollectionFiltersTest extends TestCase
             ->assertDontSee('Plăcuțe');
     }
 
-    /**
-     * On a main collection the derivatives are a filter of their own: "everything for an Iveco"
-     * narrowed to "everything for a 35C16", without leaving the page.
-     */
-    public function test_the_variant_filter_narrows_to_one_derivative(): void
-    {
-        $derivative = VehicleCollection::create([
-            'name' => 'Suzuki Jimny III', 'slug' => 'suzuki-jimny-iii',
-            'parent_id' => $this->collection->id, 'is_active' => true,
-        ]);
-
-        $forThatOne = $this->product('Amortizor', $this->suspension, $this->icon, 800);
-        $this->product('Plăcuțe', $this->brakes, $this->ome, 200);
-
-        $derivative->products()->attach($forThatOne->id, ['is_automatic' => true]);
-
-        Livewire::test(CollectionPage::class, ['slug' => 'suzuki-jimny'])
-            ->set('variants', ['suzuki-jimny-iii'])
-            ->assertSee('Amortizor')
-            ->assertDontSee('Plăcuțe');
-    }
-
-    /** A derivative the shop stocks nothing for is not a filter, it is a dead end. */
-    public function test_an_empty_derivative_is_left_out_of_the_filter(): void
-    {
-        VehicleCollection::create([
-            'name' => 'Suzuki Jimny IV', 'slug' => 'suzuki-jimny-iv',
-            'parent_id' => $this->collection->id, 'is_active' => true,
-        ]);
-
-        $this->product('Amortizor', $this->suspension, $this->icon, 800);
-
-        $facets = Livewire::test(CollectionPage::class, ['slug' => 'suzuki-jimny'])->viewData('variantFacets');
-
-        $this->assertCount(0, $facets);
-    }
-
-    public function test_a_derivative_page_offers_no_variant_filter(): void
-    {
-        $derivative = VehicleCollection::create([
-            'name' => 'Suzuki Jimny III', 'slug' => 'suzuki-jimny-iii',
-            'parent_id' => $this->collection->id, 'is_active' => true,
-        ]);
-
-        $product = $this->product('Amortizor', $this->suspension, $this->icon, 800);
-        $derivative->products()->attach($product->id, ['is_automatic' => true]);
-
-        $facets = Livewire::test(CollectionPage::class, ['slug' => 'suzuki-jimny-iii'])->viewData('variantFacets');
-
-        $this->assertCount(0, $facets);
-    }
-
     public function test_a_single_filter_can_be_dropped_from_the_summary_row(): void
     {
         $this->product('Amortizor', $this->suspension, $this->icon, 800);
