@@ -3,6 +3,7 @@
 namespace App\Livewire\Customer;
 
 use App\Models\User;
+use App\Storefront\CartManager;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Attributes\Layout;
@@ -51,6 +52,9 @@ class Register extends Component
 
         Auth::login($user);
         session()->regenerate();
+
+        // Whatever the visitor put in the basket before making the account comes with them.
+        app(CartManager::class)->mergeInto($user);
 
         return redirect()->route('customer.garage');
     }
