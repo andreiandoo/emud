@@ -33,6 +33,10 @@
                 <a href="{{ route('storefront.home') }}" class="transition hover:text-white">Acasă</a>
                 <span class="mx-1.5 text-stone-500">/</span>
                 <a href="{{ route('storefront.collections') }}" class="transition hover:text-white">Colecții</a>
+                @if($collection->parent)
+                    <span class="mx-1.5 text-stone-500">/</span>
+                    <a href="{{ $collection->parent->url() }}" class="transition hover:text-white">{{ $collection->parent->name }}</a>
+                @endif
                 <span class="mx-1.5 text-stone-500">/</span>
                 <span class="text-white">{{ $collection->name }}</span>
             </nav>
@@ -48,12 +52,47 @@
                 </p>
             @endif
 
-            <p class="mt-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold backdrop-blur">
-                <x-storefront.icon name="part" class="h-4 w-4" />
-                {{ $products->total() }} {{ $products->total() === 1 ? 'produs' : 'produse' }}
-            </p>
+            <div class="mt-6 flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold backdrop-blur">
+                    <x-storefront.icon name="part" class="h-4 w-4" />
+                    {{ $products->total() }} {{ $products->total() === 1 ? 'produs' : 'produse' }}
+                </span>
+
+                @if($children->isNotEmpty())
+                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold backdrop-blur">
+                        <x-storefront.icon name="car" class="h-4 w-4" />
+                        {{ $children->count() }} {{ $children->count() === 1 ? 'variantă' : 'variante' }}
+                    </span>
+                @endif
+            </div>
         </div>
     </section>
+
+    {{-- 1b. The derivatives, when this collection has any. They sit directly under the hero
+             because they are a narrowing of it: someone who knows they drive a 35S18 should not
+             have to scroll past two hundred products for the whole make to find their own page. --}}
+    @if($children->isNotEmpty())
+        <section class="border-b border-stone-200 bg-white">
+            <div class="shell py-6">
+                <h2 class="mb-3 text-xs font-bold uppercase tracking-wider text-stone-500">
+                    Variante de {{ $collection->name }}
+                </h2>
+                <ul class="flex flex-wrap gap-2">
+                    @foreach($children as $child)
+                        <li>
+                            <a href="{{ $child->url() }}"
+                               class="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3.5 py-1.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-900 hover:text-white">
+                                {{ $child->name }}
+                                @if($child->yearRange())
+                                    <span class="text-xs font-normal text-stone-400">{{ $child->yearRange() }}</span>
+                                @endif
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        </section>
+    @endif
 
     {{-- 2. The break: the one band between the photograph and the shelves. It carries whatever
             the shop has to say about this car, and collapses to a plain rule when it has

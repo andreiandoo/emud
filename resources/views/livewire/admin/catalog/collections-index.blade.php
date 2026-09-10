@@ -28,7 +28,7 @@
                     <tr>
                         <th class="w-14"><span class="sr-only">Imagine</span></th>
                         <th>Colecție</th>
-                        <th>Marcă</th>
+                        <th>Subordonare</th>
                         <th>Ani</th>
                         <th class="text-right">Produse</th>
                         <th class="text-right">Recenzii</th>
@@ -54,9 +54,23 @@
                                 <a href="{{ route('admin.collections.edit', $collection) }}" class="font-medium text-stone-900 hover:underline">
                                     {{ $collection->name }}
                                 </a>
+                                @if($collection->make && ! $collection->parent)
+                                    <span class="ml-1 text-xs text-stone-400">{{ $collection->make->name }}</span>
+                                @endif
                                 <span class="block text-xs text-stone-400">/colectii/{{ $collection->slug }}</span>
                             </td>
-                            <td class="text-stone-600">{{ $collection->make?->name ?? '—' }}</td>
+                            <td class="text-stone-600">
+                                @if($collection->parent)
+                                    <a href="{{ route('admin.collections.edit', $collection->parent) }}" class="hover:underline">
+                                        ↳ {{ $collection->parent->name }}
+                                    </a>
+                                @else
+                                    <span class="pill-neutral">principală</span>
+                                    @if($collection->children_count > 0)
+                                        <span class="ml-1 text-xs text-stone-400">{{ $collection->children_count }} variante</span>
+                                    @endif
+                                @endif
+                            </td>
                             <td class="text-stone-600">{{ $collection->yearRange() ?? '—' }}</td>
                             <td class="text-right tabular-nums">{{ $collection->products_count }}</td>
                             <td class="text-right tabular-nums">{{ $collection->reviews_count }}</td>

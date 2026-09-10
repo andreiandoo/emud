@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -49,6 +50,8 @@ class CollectionEditor extends Component
     public string $tab = 'general';
 
     public ?int $collectionId = null;
+
+    public string $parentId = '';
 
     public string $name = '';
 
@@ -112,6 +115,7 @@ class CollectionEditor extends Component
 
         $this->fill([
             'collectionId' => $collection->id,
+            'parentId' => (string) ($collection->parent_id ?? ''),
             'name' => (string) $collection->name,
             'slug' => (string) $collection->slug,
             'subtitle' => (string) $collection->subtitle,
@@ -153,6 +157,16 @@ class CollectionEditor extends Component
     {
         $this->modelId = '';
         $this->generationId = '';
+
+        // The make's own collection is almost always the right parent for anything narrower, so
+        // it is offered rather than left for the operator to find in a list of eight hundred.
+        if ($this->parentId === '' && $this->makeId !== '') {
+            $this->parentId = (string) (VehicleCollection::query()
+                ->roots()
+                ->where('make_id', $this->makeId)
+                ->whereNull('model_id')
+                ->value('id') ?? '');
+        }
     }
 
     public function updatedModelId(): void
@@ -163,6 +177,7 @@ class CollectionEditor extends Component
     public function save(CollectionMatcher $matcher): void
     {
         $data = $this->validate([
+            'parentId' => ['nullable', 'integer', Rule::exists('vehicle_collections', 'id')],
             'name' => ['required', 'string', 'max:160'],
             'slug' => ['required', 'string', 'max:180', 'regex:/^[a-z0-9-]+$/', Rule::unique('vehicle_collections', 'slug')->ignore($this->collectionId)],
             'subtitle' => ['nullable', 'string', 'max:200'],
@@ -187,11 +202,14 @@ class CollectionEditor extends Component
             'videoUrl' => 'linkul video',
         ]);
 
+        $this->guardHierarchy();
+
         $collection = $this->collectionId === null
             ? new VehicleCollection
             : VehicleCollection::query()->findOrFail($this->collectionId);
 
         $collection->fill([
+            'parent_id' => $data['parentId'] ?: null,
             'name' => $data['name'],
             'slug' => $data['slug'],
             'subtitle' => $data['subtitle'] ?: null,
@@ -227,6 +245,40 @@ class CollectionEditor extends Component
         CollectionShowcase::forget();
 
         $this->saved = 'Colecția a fost salvată.';
+    }
+
+    /**
+     * Two levels and no cycles, checked here rather than left to the database.
+     *
+     * The rule is deliberately simple — a parent must itself be a main collection — because it
+     * makes both failure modes impossible at once: a collection cannot end up under its own
+     * descendant, and the tree cannot grow a third level nobody has designed a page for.
+     */
+    private function guardHierarchy(): void
+    {
+        if ($this->parentId === '' || $this->collectionId === null) {
+            return;
+        }
+
+        if ((int) $this->parentId === $this->collectionId) {
+            throw ValidationException::withMessages([
+                'parentId' => 'O colecție nu poate fi subordonată ei înseși.',
+            ]);
+        }
+
+        $parent = VehicleCollection::query()->findOrFail((int) $this->parentId);
+
+        if ($parent->parent_id !== null) {
+            throw ValidationException::withMessages([
+                'parentId' => 'Colecția aleasă este ea însăși secundară. Alege una principală.',
+            ]);
+        }
+
+        if (VehicleCollection::query()->where('parent_id', $this->collectionId)->exists()) {
+            throw ValidationException::withMessages([
+                'parentId' => 'Colecția asta are deja variante subordonate, deci nu poate deveni ea însăși secundară.',
+            ]);
+        }
     }
 
     /** Removes one image without touching the rest of the form. */
@@ -316,6 +368,11 @@ class CollectionEditor extends Component
         return view('livewire.admin.catalog.collection-editor', [
             'tabs' => self::TABS,
             'makes' => VehicleMake::query()->withConfigurations()->orderBy('name')->get(['id', 'name']),
+            'parents' => VehicleCollection::query()
+                ->roots()
+                ->when($this->collectionId !== null, fn ($query) => $query->whereKeyNot($this->collectionId))
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'models' => $this->makeId === ''
                 ? new EloquentCollection
                 : VehicleModel::query()->where('make_id', $this->makeId)->withConfigurations()->orderBy('name')->get(['id', 'name']),

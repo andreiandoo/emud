@@ -18,8 +18,9 @@ class CollectionsIndex extends Component
     /** @var array<string, string> */
     public const TABS = [
         '' => 'Toate',
+        'roots' => 'Principale',
+        'children' => 'Secundare',
         'featured' => 'În carusel',
-        'with-image' => 'Cu imagine',
         'without-image' => 'Fără imagine',
         'hidden' => 'Ascunse',
     ];
@@ -69,8 +70,8 @@ class CollectionsIndex extends Component
     {
         return view('livewire.admin.catalog.collections-index', [
             'collections' => $this->query()
-                ->with('make:id,name')
-                ->withCount(['products', 'reviews'])
+                ->with(['make:id,name', 'parent:id,name'])
+                ->withCount(['products', 'reviews', 'children'])
                 ->orderBy('position')
                 ->orderBy('name')
                 ->paginate(25),
@@ -84,8 +85,9 @@ class CollectionsIndex extends Component
         return VehicleCollection::query()
             ->when($this->search !== '', fn (Builder $q) => $q
                 ->whereRaw('lower(name) like ?', ['%'.mb_strtolower($this->search).'%']))
+            ->when($this->tab === 'roots', fn (Builder $q) => $q->whereNull('parent_id'))
+            ->when($this->tab === 'children', fn (Builder $q) => $q->whereNotNull('parent_id'))
             ->when($this->tab === 'featured', fn (Builder $q) => $q->where('is_featured', true))
-            ->when($this->tab === 'with-image', fn (Builder $q) => $q->whereNotNull('square_image_path'))
             ->when($this->tab === 'without-image', fn (Builder $q) => $q->whereNull('square_image_path'))
             ->when($this->tab === 'hidden', fn (Builder $q) => $q->where('is_active', false));
     }
@@ -100,8 +102,9 @@ class CollectionsIndex extends Component
     {
         return [
             '' => VehicleCollection::query()->count(),
+            'roots' => VehicleCollection::query()->whereNull('parent_id')->count(),
+            'children' => VehicleCollection::query()->whereNotNull('parent_id')->count(),
             'featured' => VehicleCollection::query()->where('is_featured', true)->count(),
-            'with-image' => VehicleCollection::query()->whereNotNull('square_image_path')->count(),
             'without-image' => VehicleCollection::query()->whereNull('square_image_path')->count(),
             'hidden' => VehicleCollection::query()->where('is_active', false)->count(),
         ];

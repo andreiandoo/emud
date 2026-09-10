@@ -48,7 +48,7 @@
                         <span class="font-semibold text-white">{{ $total }}</span>
                         {{ $total === 1 ? 'colecție găsită' : 'colecții găsite' }} pentru „{{ $search }}”
                     @else
-                        Sau alege din colecțiile de mai jos.
+                        Sau alege marca de mai jos.
                     @endif
                 </p>
             </div>
@@ -121,7 +121,11 @@
                         <span class="block text-sm font-bold uppercase leading-tight tracking-wide text-white sm:text-base">
                             {{ $tile->name }}
                         </span>
-                        @if($tile->yearRange())
+                        @if($tile->children_count > 0)
+                            <span class="mt-0.5 block text-[11px] text-stone-400">
+                                {{ $tile->children_count }} {{ $tile->children_count === 1 ? 'variantă' : 'variante' }}
+                            </span>
+                        @elseif($tile->yearRange())
                             <span class="mt-0.5 block text-[11px] text-stone-400">{{ $tile->yearRange() }}</span>
                         @endif
                     </span>

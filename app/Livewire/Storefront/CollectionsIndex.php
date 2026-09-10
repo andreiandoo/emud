@@ -67,6 +67,10 @@ class CollectionsIndex extends Component
     private function tiles(): Collection
     {
         return $this->query()
+            // Main collections lead. Without a search the wall is only main collections anyway,
+            // so this matters when someone types "iveco" and gets one make and two hundred
+            // derivatives back: the make has to be the first thing they see.
+            ->orderByRaw('case when parent_id is null then 0 else 1 end')
             // A collection with a photograph earns its place on the wall ahead of one without,
             // whatever else is true of it: this page is the pictures.
             ->orderByRaw('case when square_image_path is null then 1 else 0 end')
@@ -74,13 +78,18 @@ class CollectionsIndex extends Component
             ->orderBy('position')
             ->orderBy('name')
             ->limit($this->perPage)
-            ->get(['id', 'name', 'slug', 'square_image_path', 'subtitle', 'year_from', 'year_to']);
+            ->withCount('children')
+            ->get(['id', 'parent_id', 'name', 'slug', 'square_image_path', 'subtitle', 'year_from', 'year_to']);
     }
 
     private function query(): Builder
     {
         return VehicleCollection::query()
             ->active()
+            // Only the top level, until someone searches. A wall of 11.764 tiles is not a page;
+            // 863 makes is. What sits underneath stays reachable — through the box, and through
+            // the parent's own page, which lists its derivatives.
+            ->when($this->search === '', fn (Builder $query) => $query->roots())
             ->when($this->search !== '', function (Builder $query): void {
                 $query->whereRaw('lower(name) like ?', ['%'.mb_strtolower(trim($this->search)).'%']);
             });

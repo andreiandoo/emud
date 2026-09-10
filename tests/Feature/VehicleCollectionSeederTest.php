@@ -38,6 +38,21 @@ class VehicleCollectionSeederTest extends TestCase
         $this->assertFalse(VehicleCollection::query()->where('slug', 'acme-trailers')->exists());
     }
 
+    /** A model collection belongs under its make's, which is what the public grid filters on. */
+    public function test_a_model_collection_is_subordinated_to_its_make(): void
+    {
+        $this->realVehicle('Suzuki', 'Jimny');
+
+        $this->seed(VehicleCollectionSeeder::class);
+
+        $make = VehicleCollection::query()->where('slug', 'suzuki')->firstOrFail();
+        $model = VehicleCollection::query()->where('slug', 'suzuki-jimny')->firstOrFail();
+
+        $this->assertNull($make->parent_id);
+        $this->assertSame($make->id, $model->parent_id);
+        $this->assertSame(1, $make->children()->count());
+    }
+
     public function test_the_model_collection_takes_its_years_from_the_generations(): void
     {
         $this->realVehicle('Suzuki', 'Jimny', 1998, 2018);

@@ -30,6 +30,22 @@ class VehicleCollection extends Model
         ];
     }
 
+    /**
+     * The broader collection this one sits under — a make, for a model or a derivative.
+     *
+     * Only two levels exist: the editor refuses a parent that is not itself a root, so a child
+     * can never acquire children of its own.
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
     public function make(): BelongsTo
     {
         return $this->belongsTo(VehicleMake::class, 'make_id');
@@ -70,6 +86,12 @@ class VehicleCollection extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    /** The top level — what the public listing shows, and the only thing a child may point at. */
+    public function scopeRoots(Builder $query): Builder
+    {
+        return $query->whereNull('parent_id');
     }
 
     public function scopeFeatured(Builder $query): Builder

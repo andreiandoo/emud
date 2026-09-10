@@ -54,6 +54,24 @@
                 </x-admin.panel>
 
                 <div class="space-y-6">
+                    <x-admin.panel title="Subordonare"
+                                   subtitle="Colecțiile principale sunt cele care apar în grila din magazin.">
+                        <label class="block">
+                            <span class="field-label">Colecție principală</span>
+                            <select wire:model="parentId">
+                                <option value="">— aceasta este o colecție principală —</option>
+                                @foreach($parents as $parent)
+                                    <option value="{{ $parent->id }}">{{ $parent->name }}</option>
+                                @endforeach
+                            </select>
+                            <span class="field-hint">
+                                Ex.: „IVECO 35C16” se subordonează colecției „IVECO”. Doar două niveluri —
+                                o colecție secundară nu poate avea la rândul ei variante.
+                            </span>
+                            @error('parentId') <span class="field-error">{{ $message }}</span> @enderror
+                        </label>
+                    </x-admin.panel>
+
                     <x-admin.panel title="Mașina"
                                    subtitle="De aici știe importul ce produse să lege automat de colecție.">
                         <label class="block">

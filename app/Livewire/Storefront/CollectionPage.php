@@ -64,7 +64,7 @@ class CollectionPage extends Component
     public function mount(string $slug): void
     {
         $this->collection = VehicleCollection::query()
-            ->with(['make', 'model'])
+            ->with(['make', 'model', 'parent'])
             ->where('slug', $slug)
             ->where('is_active', true)
             ->firstOrFail();
@@ -123,10 +123,32 @@ class CollectionPage extends Component
             'categoryFacets' => $this->categoryFacets(),
             'brandFacets' => $this->brandFacets(),
             'priceBounds' => $this->priceBounds(),
+            'children' => $this->children(),
             'reviews' => $this->reviews(),
             'verdicts' => fn (Product $product) => $vehicle === null ? null : $matcher->verdictFor($product, $vehicle),
             'breadcrumbs' => $this->breadcrumbs(),
         ]);
+    }
+
+    /**
+     * The derivatives filed under this one — the 35C16 and 35S18 beneath an Iveco.
+     *
+     * Only on a main collection: a derivative has none by construction, and asking for them is a
+     * query that can only ever come back empty.
+     *
+     * @return EloquentCollection<int, VehicleCollection>
+     */
+    private function children(): EloquentCollection
+    {
+        if ($this->collection->parent_id !== null) {
+            return new EloquentCollection;
+        }
+
+        return $this->collection->children()
+            ->where('is_active', true)
+            ->orderBy('position')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'square_image_path', 'year_from', 'year_to']);
     }
 
     private function products(mixed $vehicle, FitmentMatcher $matcher): LengthAwarePaginator
@@ -278,14 +300,27 @@ class CollectionPage extends Component
      */
     private function breadcrumbs(): string
     {
+        $trail = [
+            ['name' => 'Acasă', 'item' => route('storefront.home')],
+            ['name' => 'Colecții', 'item' => route('storefront.collections')],
+        ];
+
+        // A derivative names its make on the way down, so the trail matches what the page shows
+        // and search engines see the same hierarchy the visitor does.
+        if ($this->collection->parent !== null) {
+            $trail[] = ['name' => $this->collection->parent->name, 'item' => $this->collection->parent->url()];
+        }
+
+        $trail[] = ['name' => $this->collection->name, 'item' => $this->collection->url()];
+
         return (string) json_encode([
             '@context' => 'https://schema.org',
             '@type' => 'BreadcrumbList',
-            'itemListElement' => [
-                ['@type' => 'ListItem', 'position' => 1, 'name' => 'Acasă', 'item' => route('storefront.home')],
-                ['@type' => 'ListItem', 'position' => 2, 'name' => 'Colecții', 'item' => route('storefront.collections')],
-                ['@type' => 'ListItem', 'position' => 3, 'name' => $this->collection->name, 'item' => $this->collection->url()],
-            ],
+            'itemListElement' => array_map(
+                static fn (array $crumb, int $index): array => ['@type' => 'ListItem', 'position' => $index + 1] + $crumb,
+                $trail,
+                array_keys($trail),
+            ),
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
