@@ -279,7 +279,26 @@ supplier_product_identifiers:
 
 ---
 
-### Etapa 4 — Routing, preț public și checkout ← **următoarea**
+### Etapa 4 — Routing, preț public și checkout
+
+Împărțită în două, pentru că au naturi diferite: 4a e corectitudinea comenzii și nu cere nicio decizie comercială; 4b schimbă prețurile pe care le văd clienții și are nevoie de o politică de preț.
+
+#### 4a — Routing și furnizorul pe comandă — **LIVRATĂ**
+
+- `SupplierOfferRouter` înlocuiește `BestSupplierOffer` (cod mort, șters). Compară ofertele pe **cost efectiv**: costul aterizat, crescut cu o penalizare pentru backorder (8%), stoc limitat (2%) și fiecare zi de expediere (0,5%). Politica se citește ca „cât în plus plătim ca să-l avem mai repede", iar penalizările sunt configurare (`emud.suppliers.routing`). O ofertă al cărei cost nu poate fi calculat nu bate niciodată una care poate; prioritatea furnizorului rupe doar egalitățile exacte;
+- reguli dure, fiecare cu motiv raportat: stoc nevandabil, cantitate insuficientă (fără backorder), articol exclus de la dropship, destinație nedeservită. Furnizorii opriți, ofertele expirate și articolele retrase nici nu intră în calcul (`SupplierOffer::routable()`);
+- `CheckoutService` alege furnizorul pentru fiecare linie **înainte** să scrie ceva și refuză comanda cu un mesaj pentru client dacă un produs vândut prin furnizori nu mai poate fi livrat de niciunul — coșul rămâne intact. Produsele fără furnizor (stoc propriu) trec neschimbat;
+- `order_items.supplier_id`, `supplier_product_id` și `unit_cost` sunt în sfârșit populate. `unit_cost` se scrie doar când costul aterizat e complet și în moneda comenzii; snapshot-ul liniei păstrează furnizorul, costul lui în moneda lui, cursul, defalcarea costului aterizat, penalizările, câte alternative au existat și de ce au fost excluse celelalte;
+- `Availability` pe pagina de produs folosește același filtru `routable()`: nu mai promite stoc de la un furnizor oprit sau dintr-o ofertă expirată.
+
+**Amânat pentru Etapa 6:** revalidarea stocului în timp real la checkout. Niciun conector nu o suportă încă; o interfață pe care n-o implementează nimeni ar fi speculativă.
+
+#### 4b — Preț public automat — **așteaptă politica de preț**
+
+Constatat la recon: `variants.retail_price` se scrie o singură dată, la crearea produsului, din prețul recomandat al furnizorului. Când furnizorul ridică costul, magazinul continuă să vândă la prețul vechi. Rezolvarea — reguli de preț pe categorie/brand/furnizor, marjă minimă, respectarea MAP, repricing la schimbarea costului — schimbă prețurile afișate, deci așteaptă decizia pe: repricing automat sau doar alertă, markup-uri, marja minimă de contribuție, tratamentul MAP.
+
+<details>
+<summary>Specificația inițială a etapei</summary>
 
 Aici se leagă subsistemul de magazin. Azi legătura nu există.
 
@@ -303,7 +322,9 @@ supplier_score =
 - Checkout (spec §9): revalidare **live** stoc + preț înainte de plată pentru furnizorii cu `supports_realtime_stock`; dacă s-a schimbat material, rerutare pe alt furnizor eligibil sau blocare linie.
 - `CheckoutService` scrie `order_items.supplier_id`, `supplier_product_id` și un snapshot de cost. Coloanele există; doar nu sunt populate.
 
-**Definition of done:** o comandă de test are pe fiecare linie furnizorul ales, costul la momentul comenzii și motivul alegerii.
+**Definition of done:** o comandă de test are pe fiecare linie furnizorul ales, costul la momentul comenzii și motivul alegerii. ✔ (4a)
+
+</details>
 
 ---
 
@@ -466,7 +487,7 @@ Estimare de efort, orientativă:
 | 1 — erori, gardă, sănătate, alerte | **livrată** |
 | 2 — ofertă completă, FX, landed cost | **livrată** |
 | 3 — scara de matching + identificatori | **livrată** |
-| 4 — routing, prețuri, checkout | medie-mare |
+| 4 — routing, prețuri, checkout | **4a livrată**, 4b așteaptă politica de preț |
 | 5 — fulfilment multi-furnizor | mare |
 | 6 — per adaptor | mică fiecare, după ce 0–3 sunt gata |
 | 7 — conformitate + atribute 4×4 | medie |
@@ -495,7 +516,7 @@ Cu zero conturi deschise, asta e tot ce rămâne pe masă — și e mult:
 - ~~Etapa 1~~ — livrată.
 - ~~Etapa 2~~ — livrată.
 - ~~Etapa 3~~ — livrată.
-- Etapa 4 integral, cu oferte generate de mock — routingul și revalidarea la checkout nu au nevoie de furnizor real ca să fie corecte.
+- ~~Etapa 4a~~ — livrată. 4b așteaptă politica de preț.
 - Etapa 5 în modul manual (PO generat, plasat de operator) — funcționează chiar și fără niciun API de furnizor.
 - Etapa 7, partea de schemă: câmpuri de conformitate + set de atribute 4×4 + mapare categorii/atribute furnizor.
 - Parser XLSX (necesar oricum pentru AVEX).
