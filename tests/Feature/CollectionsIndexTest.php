@@ -131,7 +131,24 @@ class CollectionsIndexTest extends TestCase
     {
         $this->collection('Dacia Duster', 'dacia-duster')->update(['is_active' => false]);
 
-        Livewire::test(CollectionsIndex::class)->assertDontSee('Dacia Duster');
+        Livewire::test(CollectionsIndex::class)
+            ->assertDontSee('Dacia Duster')
+            // An empty catalogue is not a failed search: offering to clear a search nobody typed
+            // reads as though the visitor had done something wrong.
+            ->assertSee('Încă nu am publicat nicio colecție.')
+            ->assertDontSee('Vezi toate colecțiile');
+    }
+
+    public function test_a_search_that_matches_nothing_offers_a_way_back(): void
+    {
+        $this->collection('Dacia Duster', 'dacia-duster');
+
+        Livewire::test(CollectionsIndex::class)
+            ->set('search', 'lamborghini')
+            ->assertSee('Nicio colecție pentru')
+            ->assertSee('Vezi toate colecțiile')
+            ->call('clearSearch')
+            ->assertSee('Dacia Duster');
     }
 
     private function collection(string $name, string $slug): VehicleCollection

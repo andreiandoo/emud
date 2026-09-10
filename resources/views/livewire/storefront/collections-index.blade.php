@@ -79,12 +79,23 @@
     {{-- The wall. No gaps: the tiles are meant to read as one surface, and a grid gutter here
          turns a wall of cars into a spreadsheet of cars. --}}
     @if($tiles->isEmpty())
+        {{-- Two different silences. "Nothing matched" is a dead end the visitor can back out of;
+             "there is nothing here yet" is the shop's problem, and offering to clear a search
+             that was never typed would just be confusing. --}}
         <section class="shell py-24 text-center text-white">
-            <p class="text-lg font-semibold">Nicio colecție pentru „{{ $search }}”.</p>
-            <p class="mt-2 text-sm text-stone-400">Încearcă doar marca — „Dacia” în loc de „Dacia Duster 2019”.</p>
-            <button type="button" wire:click="clearSearch" class="mt-6 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
-                Vezi toate colecțiile
-            </button>
+            @if($search !== '')
+                <p class="text-lg font-semibold">Nicio colecție pentru „{{ $search }}”.</p>
+                <p class="mt-2 text-sm text-stone-400">Încearcă doar marca, fără an sau motorizare.</p>
+                <button type="button" wire:click="clearSearch" class="mt-6 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
+                    Vezi toate colecțiile
+                </button>
+            @else
+                <p class="text-lg font-semibold">Încă nu am publicat nicio colecție.</p>
+                <p class="mt-2 text-sm text-stone-400">Spune-ne ce mașină ai și îți facem una.</p>
+                <a href="{{ route('storefront.contact') }}" class="mt-6 inline-flex rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
+                    Scrie-ne
+                </a>
+            @endif
         </section>
     @else
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
