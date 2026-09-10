@@ -23,6 +23,9 @@ class DatabaseSeeder extends Seeder
             SupplierProfileSeeder::class,
             SupplierProspectSeeder::class,
             PageSeeder::class,
+            // Last, and a no-op until the vehicle graph is imported: it reads makes and models
+            // rather than writing them.
+            VehicleCollectionSeeder::class,
         ]);
 
         if (filled(env('ADMIN_EMAIL')) && filled(env('ADMIN_PASSWORD'))) {

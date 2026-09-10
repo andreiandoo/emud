@@ -33,6 +33,7 @@ class AdminNavigation
                 'items' => [
                     ['route' => 'admin.products.index', 'label' => 'Produse', 'icon' => 'box'],
                     ['route' => 'admin.categories.index', 'label' => 'Categorii', 'icon' => 'tree'],
+                    ['route' => 'admin.collections.index', 'label' => 'Colecții', 'icon' => 'layers'],
                     ['route' => 'admin.attributes.index', 'label' => 'Filtre & atribute', 'icon' => 'sliders'],
                     ['route' => 'admin.brands.index', 'label' => 'Branduri', 'icon' => 'tag'],
                     ['route' => 'admin.media.index', 'label' => 'Bibliotecă media', 'icon' => 'image'],
@@ -79,6 +80,7 @@ class AdminNavigation
                 'items' => [
                     ['route' => 'admin.pages.index', 'label' => 'Pagini statice', 'icon' => 'file'],
                     ['route' => 'admin.articles.index', 'label' => 'Articole & ghiduri', 'icon' => 'book'],
+                    ['route' => 'admin.reviews.index', 'label' => 'Recenzii', 'icon' => 'star'],
                 ],
             ],
         ];

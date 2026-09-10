@@ -65,6 +65,19 @@ class Product extends Model
         return $this->hasMany(ProductMedia::class)->orderBy('position');
     }
 
+    /** @see \App\Catalog\CollectionMatcher */
+    public function collections(): BelongsToMany
+    {
+        return $this->belongsToMany(VehicleCollection::class, 'product_vehicle_collection')
+            ->withPivot('is_automatic')
+            ->withTimestamps();
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', ProductStatus::Active->value)->whereNotNull('published_at');

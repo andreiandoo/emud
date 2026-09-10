@@ -2,6 +2,7 @@
 
 namespace App\Suppliers;
 
+use App\Catalog\CollectionMatcher;
 use App\Commerce\CurrencyConverter;
 use App\Enums\ProductStatus;
 use App\Jobs\EvaluateProductAlerts;
@@ -24,7 +25,10 @@ use Throwable;
 
 class SupplierCatalogImporter
 {
-    public function __construct(private readonly CurrencyConverter $converter) {}
+    public function __construct(
+        private readonly CurrencyConverter $converter,
+        private readonly CollectionMatcher $collections,
+    ) {}
 
     /** @return array{created: bool, updated: bool} */
     public function import(Supplier $supplier, SupplierRecord $record, string $mode, ?SupplierSyncRun $run = null): array
@@ -272,6 +276,10 @@ class SupplierCatalogImporter
         $this->attachCategory($supplier, $product, $record);
         $this->attachAttributes($product, $record);
         $this->attachFitments($product, $record);
+        // Right after the fitments, because those are the only thing collection matching reads.
+        // Doing it here rather than on a queue keeps a newly imported part out of a collection
+        // page for zero seconds instead of however long the queue is behind.
+        $this->collections->syncForProduct($product->load('fitments'));
 
         $retail = $this->retailInBaseCurrency($record);
 

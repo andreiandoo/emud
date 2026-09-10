@@ -44,6 +44,15 @@ class CustomerVehicle extends Model
         return $this->belongsTo(VehicleGeneration::class, 'generation_id');
     }
 
+    /**
+     * The editorial collection for this car, when the shop has one. It is what gives a saved
+     * vehicle a picture: the graph knows the model, but only a collection has a photo of it.
+     */
+    public function collection(): BelongsTo
+    {
+        return $this->belongsTo(VehicleCollection::class, 'vehicle_collection_id');
+    }
+
     public function reminders(): HasMany
     {
         return $this->hasMany(VehicleServiceReminder::class);
