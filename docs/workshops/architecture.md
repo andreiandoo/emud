@@ -91,7 +91,10 @@ authorisation, or belong to one company, at different addresses; such pairs are 
 Nor does it ever merge two **different companies**, even at one address with one phone: an owner's
 service firm and ITP firm at one gate, and two tenants of one yard sharing the landlord's number,
 look the same in the data. Those pairs wait for a person with `different_companies` in their evidence.
-A likely pair (≥ 55) waits in the review queue; a decision a person took is never reopened.
+The very same point at two plainly different addresses is not "the same yard": RAR often copies the
+office's point to every branch.
+A likely pair (≥ 55) waits in the review queue; a decision a person took is never reopened, and a
+waiting pair that a later run no longer finds likely is taken out of the queue.
 
 Addresses are compared by `AddressNormalizer::similarity`: abbreviations expanded, roads and
 house-number letters written one way ("DN 65" = "DN65", "18 A" = "18A"), postal codes, floor areas
