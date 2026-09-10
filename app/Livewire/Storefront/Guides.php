@@ -9,7 +9,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class Guides extends Component
 {
     use WithPagination;

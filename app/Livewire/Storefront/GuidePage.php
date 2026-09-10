@@ -6,7 +6,7 @@ use App\Models\Article;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class GuidePage extends Component
 {
     public Article $article;

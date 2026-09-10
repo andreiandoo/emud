@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-3xl space-y-6">
+<div>
     <x-seo :title="$page->seo_title ?? $page->title"
            :description="$page->seo_description ?? $page->excerpt"
            :canonical="$page->canonical_url"
@@ -6,20 +6,28 @@
            :follow="$page->robots_follow"
            type="article" />
 
-    <h1 class="text-3xl font-black tracking-tight">{{ $page->title }}</h1>
+    <section class="relative isolate overflow-hidden bg-g0 text-bone">
+        <canvas data-st-topo="rgba(241,238,230,.06)" class="pointer-events-none absolute inset-0 -z-10 h-full w-full" aria-hidden="true"></canvas>
 
-    @if($page->version || $page->effective_from)
-        <p class="text-xs text-stone-500">
-            @if($page->version) Versiunea {{ $page->version }} @endif
-            @if($page->effective_from) · în vigoare din {{ $page->effective_from->format('d.m.Y') }} @endif
-        </p>
-    @endif
+        <div class="shell pb-12 pt-14 sm:pt-20">
+            <h1 class="st-display max-w-4xl text-[clamp(2.4rem,5vw,4.5rem)] leading-[.95]">{{ $page->title }}</h1>
 
-    @if($page->content)
-        <div class="prose prose-stone max-w-none">{!! app(\App\Support\HtmlSanitizer::class)->clean($page->content) !!}</div>
-    @else
-        <p class="rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-500">
-            Conținutul acestei pagini nu a fost încă redactat.
-        </p>
-    @endif
+            @if($page->version || $page->effective_from)
+                <p class="mt-5 font-mono text-xs uppercase tracking-[.08em] text-mute">
+                    @if($page->version) Versiunea {{ $page->version }} @endif
+                    @if($page->effective_from) · în vigoare din {{ $page->effective_from->format('d.m.Y') }} @endif
+                </p>
+            @endif
+        </div>
+    </section>
+
+    <div class="shell pb-24 pt-12 sm:pt-16">
+        @if($page->content)
+            <div class="st-prose mx-auto">{!! app(\App\Support\HtmlSanitizer::class)->clean($page->content) !!}</div>
+        @else
+            <p class="mx-auto max-w-3xl rounded-[3px] border border-dashed border-line2 bg-white p-8 text-ink2">
+                Conținutul acestei pagini nu a fost încă redactat.
+            </p>
+        @endif
+    </div>
 </div>
