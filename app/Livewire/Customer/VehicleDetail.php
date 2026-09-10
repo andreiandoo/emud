@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class VehicleDetail extends Component
 {
     public CustomerVehicle $vehicle;

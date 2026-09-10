@@ -1,48 +1,50 @@
-<div class="mx-auto max-w-md">
-    <h1 class="mb-1 text-2xl font-black tracking-tight">Creează cont</h1>
-    <p class="mb-6 text-sm text-stone-600">Salvează-ți mașinile în garaj și vezi doar piesele care li se potrivesc.</p>
-
-    <form wire:submit="register" class="space-y-4 rounded-xl border border-stone-200 bg-white p-6">
+<x-storefront.auth title="Creează cont" intro="Salvează-ți mașinile în garaj și vezi doar piesele care li se potrivesc.">
+    <form wire:submit="register" class="grid gap-5">
         <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Nume</span>
-            <input type="text" wire:model="name" autocomplete="name" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('name') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
+            <span class="field-label">Nume</span>
+            <input type="text" wire:model="name" autocomplete="name">
+            @error('name') <span class="field-error">{{ $message }}</span> @enderror
         </label>
 
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Email</span>
-            <input type="email" wire:model="email" autocomplete="email" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('email') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
-        </label>
+        <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block">
+                <span class="field-label">Email</span>
+                <input type="email" wire:model="email" autocomplete="email">
+                @error('email') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
 
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Telefon <span class="font-normal text-stone-400">(opțional)</span></span>
-            <input type="tel" wire:model="phone" autocomplete="tel" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('phone') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
-        </label>
+            <label class="block">
+                <span class="field-label">Telefon <span class="font-normal opacity-70">(opțional)</span></span>
+                <input type="tel" wire:model="phone" autocomplete="tel">
+                @error('phone') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+        </div>
 
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Parolă</span>
-            <input type="password" wire:model="password" autocomplete="new-password" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('password') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
-        </label>
+        <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block">
+                <span class="field-label">Parolă</span>
+                <input type="password" wire:model="password" autocomplete="new-password">
+                @error('password') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
 
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Confirmă parola</span>
-            <input type="password" wire:model="password_confirmation" autocomplete="new-password" class="w-full rounded-lg border-stone-300 text-sm">
-        </label>
+            <label class="block">
+                <span class="field-label">Confirmă parola</span>
+                <input type="password" wire:model="password_confirmation" autocomplete="new-password">
+            </label>
+        </div>
 
-        <label class="flex items-start gap-2 text-sm text-stone-600">
-            <input type="checkbox" wire:model="marketing_consent" class="mt-0.5 rounded border-stone-300">
+        <label class="flex items-start gap-2.5 text-sm text-ink2">
+            <input type="checkbox" wire:model="marketing_consent" class="mt-0.5">
             <span>Vreau să primesc noutăți și oferte pe email. Mă pot dezabona oricând.</span>
         </label>
 
-        <button type="submit" class="w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-700">
-            Creează contul
+        <button type="submit" class="st-btn st-btn--block">
+            <span wire:loading.remove wire:target="register">Creează contul</span>
+            <span wire:loading wire:target="register">Se creează…</span>
         </button>
     </form>
 
-    <p class="mt-4 text-center text-sm text-stone-600">
-        Ai deja cont? <a href="{{ route('customer.login') }}" class="font-semibold underline">Autentifică-te</a>
+    <p class="mt-8 border-t border-line pt-6 text-sm text-ink2">
+        Ai deja cont? <a href="{{ route('customer.login') }}" class="font-semibold text-ink underline underline-offset-2">Autentifică-te</a>
     </p>
-</div>
+</x-storefront.auth>

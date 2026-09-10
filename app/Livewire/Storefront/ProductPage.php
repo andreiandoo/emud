@@ -117,6 +117,7 @@ class ProductPage extends Component
         }
 
         $this->dispatch('cart-changed');
+        $this->dispatch('cart-added');
         session()->flash('cart-added', 'Produsul a fost adăugat în coș.');
     }
 

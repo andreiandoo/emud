@@ -1,49 +1,55 @@
-<div class="mx-auto max-w-2xl space-y-6">
-    <h1 class="text-2xl font-black tracking-tight">Datele mele</h1>
-
+<x-storefront.account active="profile" title="Datele mele" intro="Numele, adresa de email și parola contului.">
     @if($status)
-        <p class="rounded-lg border border-lime-300 bg-lime-50 p-3 text-sm text-lime-900">{{ $status }}</p>
+        <p class="mb-8 flex items-start gap-2.5 rounded-[3px] bg-sand px-4 py-3 text-sm text-sandink">
+            <x-storefront.icon name="check" class="mt-0.5 h-4 w-4 shrink-0" /> {{ $status }}
+        </p>
     @endif
 
-    <form wire:submit="saveProfile" class="space-y-4 rounded-xl border border-stone-200 bg-white p-6">
-        <h2 class="text-lg font-bold">Profil</h2>
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Nume</span>
-            <input type="text" wire:model="name" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('name') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
-        </label>
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Email</span>
-            <input type="email" wire:model="email" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('email') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
-        </label>
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Telefon</span>
-            <input type="tel" wire:model="phone" class="w-full rounded-lg border-stone-300 text-sm">
-        </label>
-        <label class="flex items-start gap-2 text-sm text-stone-600">
-            <input type="checkbox" wire:model="marketing_consent" class="mt-0.5 rounded border-stone-300">
-            <span>Vreau să primesc noutăți și oferte pe email.</span>
-        </label>
-        <button type="submit" class="rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-700">Salvează</button>
-    </form>
+    <div class="grid gap-6 lg:grid-cols-2">
+        <form wire:submit="saveProfile" class="grid content-start gap-5 rounded-[3px] bg-white p-6 sm:p-8">
+            <h2 class="font-display text-2xl font-semibold">Profil</h2>
 
-    <form wire:submit="changePassword" class="space-y-4 rounded-xl border border-stone-200 bg-white p-6">
-        <h2 class="text-lg font-bold">Schimbă parola</h2>
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Parola actuală</span>
-            <input type="password" wire:model="current_password" autocomplete="current-password" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('current_password') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
-        </label>
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Parola nouă</span>
-            <input type="password" wire:model="password" autocomplete="new-password" class="w-full rounded-lg border-stone-300 text-sm">
-            @error('password') <span class="mt-1 block text-xs text-red-600">{{ $message }}</span> @enderror
-        </label>
-        <label class="block">
-            <span class="mb-1 block text-xs font-medium text-stone-600">Confirmă parola nouă</span>
-            <input type="password" wire:model="password_confirmation" autocomplete="new-password" class="w-full rounded-lg border-stone-300 text-sm">
-        </label>
-        <button type="submit" class="rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-700">Schimbă parola</button>
-    </form>
-</div>
+            <label class="block">
+                <span class="field-label">Nume</span>
+                <input type="text" wire:model="name" autocomplete="name">
+                @error('name') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+            <label class="block">
+                <span class="field-label">Email</span>
+                <input type="email" wire:model="email" autocomplete="email">
+                @error('email') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+            <label class="block">
+                <span class="field-label">Telefon</span>
+                <input type="tel" wire:model="phone" autocomplete="tel">
+            </label>
+            <label class="flex items-start gap-2.5 text-sm text-ink2">
+                <input type="checkbox" wire:model="marketing_consent" class="mt-0.5">
+                <span>Vreau să primesc noutăți și oferte pe email.</span>
+            </label>
+
+            <div><button type="submit" class="st-btn st-btn--ink">Salvează</button></div>
+        </form>
+
+        <form wire:submit="changePassword" class="grid content-start gap-5 rounded-[3px] bg-white p-6 sm:p-8">
+            <h2 class="font-display text-2xl font-semibold">Schimbă parola</h2>
+
+            <label class="block">
+                <span class="field-label">Parola actuală</span>
+                <input type="password" wire:model="current_password" autocomplete="current-password">
+                @error('current_password') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+            <label class="block">
+                <span class="field-label">Parola nouă</span>
+                <input type="password" wire:model="password" autocomplete="new-password">
+                @error('password') <span class="field-error">{{ $message }}</span> @enderror
+            </label>
+            <label class="block">
+                <span class="field-label">Confirmă parola nouă</span>
+                <input type="password" wire:model="password_confirmation" autocomplete="new-password">
+            </label>
+
+            <div><button type="submit" class="st-btn st-btn--ink">Schimbă parola</button></div>
+        </form>
+    </div>
+</x-storefront.account>
