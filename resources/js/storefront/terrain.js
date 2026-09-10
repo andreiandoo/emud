@@ -9,8 +9,10 @@
 import {
     CatmullRomCurve3,
     Color,
+    ColorManagement,
     CylinderGeometry,
     DoubleSide,
+    LinearSRGBColorSpace,
     Mesh,
     MeshBasicMaterial,
     PerspectiveCamera,
@@ -24,6 +26,11 @@ import {
     WebGLRenderer,
 } from 'three';
 import { random } from './effects';
+
+// The shaders here write their colour straight out, the way three.js did before r152. With
+// colour management on, every hex below would be converted to linear light on the way in and
+// never converted back, and the whole scene comes out several stops darker than it was drawn.
+ColorManagement.enabled = false;
 
 const small = window.innerWidth < 760;
 
@@ -170,9 +177,11 @@ function groundMaterial(options) {
                 float light = clamp(dot(normalize(vNormal), uSun), 0.0, 1.0);
                 vec3 colour = mix(uBase, uHigh, t) * (0.32 + 0.9 * light);
                 float h = vHeight / uStep;
-                float line = 1.0 - smoothstep(0.0, fwidth(h) * 1.4, abs(fract(h - 0.5) - 0.5));
+                // fwidth is zero on a perfectly flat valley floor, and smoothstep(0, 0, x) is undefined:
+                // without the floor the flats fill with speckle.
+                float line = 1.0 - smoothstep(0.0, max(fwidth(h), 1e-4) * 1.4, abs(fract(h - 0.5) - 0.5));
                 float hm = vHeight / (uStep * 5.0);
-                float major = 1.0 - smoothstep(0.0, fwidth(hm) * 1.9, abs(fract(hm - 0.5) - 0.5));
+                float major = 1.0 - smoothstep(0.0, max(fwidth(hm), 1e-4) * 1.9, abs(fract(hm - 0.5) - 0.5));
                 float near = 1.0 - smoothstep(uNear * 0.5, uFar, vDepth);
                 colour = mix(colour, uLine, line * uLineAlpha * near);
                 colour = mix(colour, uMajor, major * uMajorAlpha * near);
@@ -187,6 +196,7 @@ function renderer(canvas) {
         const gl = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
         gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         gl.setClearColor(0x000000, 0);
+        gl.outputColorSpace = LinearSRGBColorSpace;
 
         return gl;
     } catch {
