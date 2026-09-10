@@ -61,6 +61,10 @@ class VehicleCollectionSeeder extends Seeder
                     'name' => $make->name,
                     'slug' => $this->uniqueSlug($make->name, $takenSlugs),
                     'subtitle' => 'Piese și accesorii pentru '.$make->name,
+                    // Present and null rather than absent: a bulk insert needs every row to
+                    // carry the same columns, and a make-level collection spans no years.
+                    'year_from' => null,
+                    'year_to' => null,
                     'is_featured' => isset($featured[$make->name]),
                     'position' => $featured[$make->name] ?? 100,
                     'is_active' => true,
@@ -109,7 +113,8 @@ class VehicleCollectionSeeder extends Seeder
         }
 
         // Chunked because a full vehicle graph produces thousands of rows and a single insert
-        // with that many bindings exceeds what the driver will accept.
+        // with that many bindings exceeds what the driver will accept. Every row carries an
+        // identical set of columns, which insert() requires of a multi-row batch.
         foreach (array_chunk($rows, 500) as $chunk) {
             DB::table('vehicle_collections')->insert($chunk);
         }

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -77,16 +78,32 @@ return new class extends Migration
             $table->index('vehicle_collection_id');
         });
 
+        // The column and its constraint are added separately, and the constraint is skipped on
+        // SQLite. A foreign key in an ALTER on SQLite makes Laravel rebuild the whole table, and
+        // the rebuild recreates the indexes without their WHERE clause — which would silently
+        // turn customer_vehicles_one_primary_per_user into "one vehicle per customer" and reject
+        // the second car anyone saves.
         Schema::table('customer_vehicles', function (Blueprint $table): void {
-            $table->foreignId('vehicle_collection_id')->nullable()->after('generation_id')
-                ->constrained('vehicle_collections')->nullOnDelete();
+            $table->unsignedBigInteger('vehicle_collection_id')->nullable()->after('generation_id');
         });
+
+        if (DB::getDriverName() !== 'sqlite') {
+            Schema::table('customer_vehicles', function (Blueprint $table): void {
+                $table->foreign('vehicle_collection_id')->references('id')->on('vehicle_collections')->nullOnDelete();
+            });
+        }
     }
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'sqlite') {
+            Schema::table('customer_vehicles', function (Blueprint $table): void {
+                $table->dropForeign(['vehicle_collection_id']);
+            });
+        }
+
         Schema::table('customer_vehicles', function (Blueprint $table): void {
-            $table->dropConstrainedForeignId('vehicle_collection_id');
+            $table->dropColumn('vehicle_collection_id');
         });
 
         Schema::dropIfExists('product_vehicle_collection');

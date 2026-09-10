@@ -57,7 +57,7 @@ class VehicleCollectionSeederTest extends TestCase
 
         $this->seed(VehicleCollectionSeeder::class);
 
-        $this->assertTrue(VehicleCollection::query()->where('slug', 'suzuki')->value('is_featured'));
+        $this->assertTrue((bool) VehicleCollection::query()->where('slug', 'suzuki')->value('is_featured'));
         $this->assertFalse((bool) VehicleCollection::query()->where('slug', 'ferrari')->value('is_featured'));
     }
 
