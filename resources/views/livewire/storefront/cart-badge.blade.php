@@ -1,4 +1,4 @@
-<a href="{{ route('storefront.cart') }}" class="st-icon-btn"
+<a href="{{ route('storefront.cart') }}" class="st-icon-btn" @click.prevent="$dispatch('open-cart')"
    aria-label="Coșul meu{{ $count > 0 ? ' ('.$count.')' : '' }}">
     <x-storefront.icon name="cart" class="h-5 w-5" />
 

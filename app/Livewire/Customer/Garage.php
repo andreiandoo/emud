@@ -2,19 +2,24 @@
 
 namespace App\Livewire\Customer;
 
+use App\Livewire\Concerns\DecodesVin;
 use App\Models\CustomerVehicle;
 use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
 use App\Storefront\Garage as GarageService;
+use App\Storefront\SelectedVehicle;
+use App\Storefront\VehicleContext;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('layouts::storefront')]
+#[Layout('layouts::storefront', ['fullWidth' => true])]
 class Garage extends Component
 {
+    use DecodesVin;
+
     public ?int $editingId = null;
 
     public ?int $makeId = null;
@@ -29,15 +34,26 @@ class Garage extends Component
 
     public string $registration_number = '';
 
+    /** Set when the car was filled in from its VIN: the exact build, not just the model. */
+    public ?int $configurationId = null;
+
     public function updatedMakeId(): void
     {
         $this->modelId = null;
         $this->generationId = null;
+        $this->configurationId = null;
     }
 
     public function updatedModelId(): void
     {
         $this->generationId = null;
+        $this->configurationId = null;
+    }
+
+    /** A different generation is a different build, so a decoded configuration no longer applies. */
+    public function updatedGenerationId(): void
+    {
+        $this->configurationId = null;
     }
 
     public function edit(int $vehicleId): void
@@ -51,6 +67,8 @@ class Garage extends Component
         $this->nickname = (string) $vehicle->nickname;
         $this->year = $vehicle->year;
         $this->registration_number = (string) $vehicle->registration_number;
+        $this->vin = (string) $vehicle->vin;
+        $this->configurationId = $vehicle->configuration_id;
     }
 
     public function save(GarageService $garage): void
@@ -62,7 +80,9 @@ class Garage extends Component
             'nickname' => ['nullable', 'string', 'max:60'],
             'year' => ['required', 'integer', 'min:1950', 'max:'.(date('Y') + 1)],
             'registration_number' => ['nullable', 'string', 'max:16'],
+            'vin' => ['nullable', 'string', 'regex:/^[A-HJ-NPR-Z0-9]{17}$/i'],
         ], [
+            'vin.regex' => 'Seria de șasiu are 17 caractere și nu conține literele I, O sau Q.',
             'modelId.exists' => 'Modelul ales nu aparține acestei mărci.',
             'generationId.exists' => 'Generația aleasă nu aparține acestui model.',
         ]);
@@ -74,6 +94,8 @@ class Garage extends Component
             'nickname' => $data['nickname'] ?: null,
             'year' => $data['year'],
             'registration_number' => $data['registration_number'] ?: null,
+            'vin' => $this->vin !== '' ? mb_strtoupper($this->vin) : null,
+            'configuration_id' => $this->configurationId,
         ];
 
         if ($this->editingId !== null) {
@@ -101,8 +123,23 @@ class Garage extends Component
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'makeId', 'modelId', 'generationId', 'nickname', 'year', 'registration_number']);
+        $this->reset(['editingId', 'makeId', 'modelId', 'generationId', 'nickname', 'year', 'registration_number', 'vin', 'vinMessage', 'vinCandidates', 'configurationId']);
         $this->resetValidation();
+    }
+
+    /**
+     * A decoded VIN fills the form instead of choosing a car for the shop: the customer checks
+     * what we found, adds a nickname if they like, and saves. The configuration travels with
+     * it, which is what lets the vehicle page show the engine and the drive.
+     */
+    protected function selectVehicle(VehicleContext $context, SelectedVehicle $vehicle): void
+    {
+        $this->makeId = $vehicle->makeId;
+        $this->modelId = $vehicle->modelId;
+        $this->generationId = $vehicle->generationId;
+        $this->configurationId = $vehicle->configurationId;
+        $this->year = $vehicle->year ?? $this->year;
+        $this->vinMessage = 'Am completat mașina din serie: '.$vehicle->label().'. Verifică datele și salveaz-o.';
     }
 
     /**

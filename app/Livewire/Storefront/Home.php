@@ -14,7 +14,6 @@ use App\Storefront\CollectionShowcase;
 use App\Storefront\Compatibility\FitmentMatcher;
 use App\Storefront\SelectedVehicle;
 use App\Storefront\VehicleContext;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;

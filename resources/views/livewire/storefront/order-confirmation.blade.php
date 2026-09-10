@@ -1,75 +1,91 @@
-<div class="mx-auto max-w-2xl space-y-6">
+<div>
     <x-seo title="Comanda ta" :index="false" :follow="false" />
 
-    <div class="rounded-xl border border-lime-300 bg-lime-50 p-6">
-        <h1 class="text-2xl font-black tracking-tight">Comanda a fost înregistrată</h1>
-        <p class="mt-1 text-sm text-stone-700">
-            Numărul comenzii este <span class="font-semibold">{{ $order->number }}</span>.
-            Ți-am trimis detaliile pe {{ $order->customer_email }}.
-        </p>
-    </div>
-
-    {{-- The order is recorded, but a payment is only complete once the provider confirms it,
-         so this page never claims the money has been taken. --}}
-    <div class="rounded-xl border border-stone-200 bg-white p-6">
-        <h2 class="mb-2 text-lg font-bold">Plata</h2>
-        @if($transaction?->redirect_url)
-            <p class="text-sm text-stone-600">Finalizează plata la procesator pentru a confirma comanda.</p>
-            <a href="{{ $transaction->redirect_url }}" class="mt-3 inline-block rounded-lg bg-stone-900 px-6 py-3 text-sm font-semibold text-white">
-                Continuă către plată
-            </a>
-        @else
-            <p class="text-sm text-stone-600">
-                Starea plății: <span class="font-semibold">{{ $transaction?->status ?? 'în așteptare' }}</span>.
-                Confirmarea vine de la procesator; îți scriem imediat ce o primim.
+    <section class="relative isolate overflow-hidden bg-g0 text-bone">
+        <canvas data-st-topo="rgba(241,238,230,.05)" class="pointer-events-none absolute inset-0 -z-10 h-full w-full" aria-hidden="true"></canvas>
+        <div class="shell grid gap-5 pb-12 pt-12 sm:pt-16">
+            <p class="st-kicker text-mute">Comandă plasată</p>
+            <h1 class="st-display text-[clamp(2.25rem,4.4vw,4.25rem)]">Comanda a fost înregistrată</h1>
+            <p class="max-w-[60ch] text-[#cfcdc6]">
+                Numărul comenzii este <span class="font-mono font-semibold text-bone">{{ $order->number }}</span>.
+                Ți-am trimis detaliile pe {{ $order->customer_email }}.
             </p>
-        @endif
-    </div>
-
-    <div class="rounded-xl border border-stone-200 bg-white p-6">
-        <h2 class="mb-3 text-lg font-bold">Produse</h2>
-        <ul class="space-y-2 text-sm">
-            @foreach($order->items as $item)
-                <li class="flex justify-between gap-3">
-                    <span class="min-w-0 flex-1">{{ $item->name }} × {{ $item->quantity }}</span>
-                    <span class="font-medium">{{ \App\Support\Money::of($item->line_total, $order->currency)->format() }}</span>
-                </li>
-            @endforeach
-        </ul>
-        <div class="mt-3 space-y-1 border-t border-stone-100 pt-3 text-sm">
-            <div class="flex justify-between"><span class="text-stone-600">Subtotal</span><span>{{ \App\Support\Money::of($order->subtotal, $order->currency)->format() }}</span></div>
-            <div class="flex justify-between"><span class="text-stone-600">Transport</span><span>{{ \App\Support\Money::of($order->shipping_total, $order->currency)->format() }}</span></div>
-            <div class="flex justify-between pt-2 text-lg font-black"><span>Total</span><span>{{ \App\Support\Money::of($order->grand_total, $order->currency)->format() }}</span></div>
         </div>
-    </div>
+    </section>
 
-    @if($fitters->isNotEmpty())
-        {{-- The one moment the customer is certainly thinking about who will fit the part.
-             The order token travels with the link so the request arrives at the workshop with
-             the parts list attached instead of "ceva de la eMUD". --}}
-        <section class="space-y-3 rounded-xl border border-stone-900 bg-white p-6">
-            <h2 class="text-lg font-bold tracking-tight">Ai nevoie de montaj?</h2>
-            <p class="text-sm text-stone-600">
-                Service-uri din {{ $order->shippingAddress?->city }} care montează piese cumpărate de la noi.
-            </p>
+    <div class="shell grid gap-10 pb-24 pt-10 sm:pt-14 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+        <div class="grid content-start gap-6">
+            {{-- The order is recorded, but a payment is only complete once the provider confirms
+                 it, so this page never claims the money has been taken. --}}
+            <section class="grid gap-4 rounded-[3px] bg-white p-6 sm:p-8">
+                <h2 class="font-display text-2xl font-semibold">Plata</h2>
 
-            <div class="space-y-2">
-                @foreach($fitters as $fitter)
-                    <a href="{{ $fitter->url() }}?order={{ $order->checkout_token }}#programare"
-                       class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 p-4 transition hover:border-stone-900">
-                        <span class="min-w-0">
-                            <span class="block font-semibold text-stone-900">{{ $fitter->name }}</span>
-                            <span class="block text-sm text-stone-500">{{ $fitter->address ?: $fitter->city }}</span>
-                        </span>
-                        <span class="shrink-0 text-sm font-semibold text-stone-900 underline underline-offset-4">Cere o programare</span>
-                    </a>
+                @if($transaction?->redirect_url)
+                    <p class="text-ink2">Finalizează plata la procesator pentru a confirma comanda.</p>
+                    <div>
+                        <a href="{{ $transaction->redirect_url }}" class="st-btn">Continuă către plată <x-storefront.icon name="arrow-right" class="st-arrow" /></a>
+                    </div>
+                @else
+                    <p class="text-ink2">
+                        Starea plății: <span class="font-semibold text-ink">{{ $transaction?->status ?? 'în așteptare' }}</span>.
+                        Confirmarea vine de la procesator; îți scriem imediat ce o primim.
+                    </p>
+                @endif
+            </section>
+
+            @if($fitters->isNotEmpty())
+                {{-- The one moment the customer is certainly thinking about who will fit the part.
+                     The order token travels with the link so the request arrives at the workshop
+                     with the parts list attached instead of "ceva de la eMUD". --}}
+                <section class="grid gap-5 rounded-[3px] bg-sand p-6 text-ink sm:p-8">
+                    <div class="grid gap-2">
+                        <p class="st-kicker text-sandink">Montaj</p>
+                        <h2 class="font-display text-2xl font-semibold">Ai nevoie de montaj?</h2>
+                        <p class="text-sandink">Service-uri din {{ $order->shippingAddress?->city }} care montează piese cumpărate de la noi.</p>
+                    </div>
+
+                    <div class="grid gap-2">
+                        @foreach($fitters as $fitter)
+                            <a href="{{ $fitter->url() }}?order={{ $order->checkout_token }}#programare"
+                               class="group flex flex-wrap items-center justify-between gap-3 rounded-[3px] bg-[#eee7d9] p-4 transition hover:bg-ink hover:text-light">
+                                <span class="min-w-0">
+                                    <span class="block font-semibold">{{ $fitter->name }}</span>
+                                    <span class="block text-sm opacity-75">{{ $fitter->address ?: $fitter->city }}</span>
+                                </span>
+                                <span class="flex shrink-0 items-center gap-2 text-sm font-semibold">Cere o programare <x-storefront.icon name="arrow-right" class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1" /></span>
+                            </a>
+                        @endforeach
+                    </div>
+
+                    <a href="{{ route('storefront.services', ['city' => $order->shippingAddress?->city, 'fitsOurParts' => 1]) }}"
+                       class="st-link w-fit">Vezi toate service-urile din oraș <x-storefront.icon name="arrow-right" /></a>
+                </section>
+            @endif
+
+            <a href="{{ route('storefront.home') }}" class="st-link w-fit"><x-storefront.icon name="arrow-left" /> Înapoi în magazin</a>
+        </div>
+
+        <aside class="grid gap-5 rounded-[3px] bg-white p-6">
+            <h2 class="font-display text-xl font-semibold">Produse</h2>
+
+            <ul class="grid gap-3 border-t border-line pt-4 text-sm">
+                @foreach($order->items as $item)
+                    <li class="flex justify-between gap-3">
+                        <span class="min-w-0 flex-1">{{ $item->name }} <span class="text-ink2">× {{ $item->quantity }}</span></span>
+                        <span class="font-medium tabular-nums">{{ \App\Support\Money::of($item->line_total, $order->currency)->format() }}</span>
+                    </li>
                 @endforeach
+            </ul>
+
+            <div class="grid gap-2 border-t border-line pt-4 text-sm">
+                <div class="flex justify-between"><span class="text-ink2">Subtotal</span><span class="tabular-nums">{{ \App\Support\Money::of($order->subtotal, $order->currency)->format() }}</span></div>
+                <div class="flex justify-between"><span class="text-ink2">Transport</span><span class="tabular-nums">{{ \App\Support\Money::of($order->shipping_total, $order->currency)->format() }}</span></div>
             </div>
 
-            <a href="{{ route('storefront.services', ['city' => $order->shippingAddress?->city, 'fitsOurParts' => 1]) }}"
-               class="inline-block text-sm font-semibold underline underline-offset-4">Vezi toate service-urile din oraș</a>
-        </section>
-    @endif
-
-    <a href="{{ route('storefront.home') }}" class="inline-block text-sm font-semibold underline">Înapoi în magazin</a>
+            <div class="flex items-baseline justify-between border-t border-line pt-4">
+                <span class="font-semibold">Total</span>
+                <span class="font-display text-3xl font-semibold tabular-nums">{{ \App\Support\Money::of($order->grand_total, $order->currency)->format() }}</span>
+            </div>
+        </aside>
+    </div>
 </div>

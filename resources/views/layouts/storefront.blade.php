@@ -41,6 +41,8 @@
 <main id="continut" class="{{ ($fullWidth ?? false) ? '' : 'shell pb-24 pt-10' }}">{{ $slot }}</main>
 
 <x-storefront.footer />
+
+<livewire:storefront.cart-drawer />
 @livewireScripts
 </body>
 </html>

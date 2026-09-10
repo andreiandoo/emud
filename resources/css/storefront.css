@@ -44,6 +44,38 @@ html.lenis body {
     overflow: clip;
 }
 
+/*
+ * Form controls in the shop. The shared base rules in app.css draw them for the back office
+ * too (stone, rounded-lg); here they take the shop's shape. The extra `body` in the selector
+ * outranks those base rules inside the same layer, and any utility on the element still wins.
+ */
+@layer base {
+    html.storefront body :where(input:not([type='checkbox'], [type='radio'], [type='file'], [type='submit'], [type='button'],
+        [type='reset'], [type='image'], [type='hidden'], [type='range'], [type='color']), select, textarea) {
+        min-height: 2.875rem;
+        border-color: var(--color-line2);
+        border-radius: 3px;
+        font-size: 0.9375rem;
+    }
+
+    html.storefront body :where(input:not([type='checkbox'], [type='radio']), select, textarea):focus {
+        border-color: var(--color-ink);
+        box-shadow: 0 0 0 1px var(--color-ink);
+    }
+
+    html.storefront body :where(input[type='checkbox'], input[type='radio']) {
+        accent-color: var(--color-signal);
+    }
+
+    html.storefront body .field-label {
+        margin-bottom: 0.4rem;
+        color: var(--color-ink2);
+        font: 500 0.6875rem/1.2 var(--font-mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+}
+
 @layer components {
     /* ---------- type ---------- */
 
