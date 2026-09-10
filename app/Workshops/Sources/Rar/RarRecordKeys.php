@@ -9,8 +9,11 @@ use App\Workshops\Support\TextNormalizer;
  * How RAR records are identified. The registry exposes no record id, so this is derived from
  * what was observed in the data (2026-09-10, all five sections):
  *
- *  - The exit number (exitNo, "OCS.BV.NI.244886") identifies one authorisation document. Every
- *    revision gets a new one, and for a while RAR lists the old and new revision side by side.
+ *  - The exit number (exitNo, "OCS.BV.NI.244886") together with the authorisation number (no)
+ *    identifies one authorisation document. Every revision gets a new exit number, and for a
+ *    while RAR lists the old and new revision side by side. In the tachograph section two lines
+ *    at one address are issued under a single exit number ("901" and "901-1"), which is why the
+ *    exit number alone is not enough.
  *  - The audit file (auditFileNo, "BV0351") stays the same across revisions of a workshop's
  *    authorisation, but in the ITP section two companies can share one, so it is paired with the
  *    fiscal code. An ITP station has its own stable code (stationCode, "AB080"), used first.
@@ -20,9 +23,10 @@ class RarRecordKeys
     public static function externalId(string $system, array $row): string
     {
         $exit = TextNormalizer::clean($row['exitNo'] ?? null);
+        $number = TextNormalizer::clean($row['no'] ?? null);
 
         if ($exit !== null) {
-            return strtoupper($system).':'.$exit;
+            return strtoupper($system).':'.$exit.($number !== null ? ':'.$number : '');
         }
 
         $parts = array_filter([

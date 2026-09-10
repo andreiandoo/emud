@@ -142,11 +142,29 @@ class RarImportTest extends TestCase
         $this->assertSame(1, Workshop::query()->count());
     }
 
+    public function test_two_lines_issued_under_one_exit_number_are_two_records_of_one_workshop(): void
+    {
+        // As the tachograph section does: "901" and "901-1", one exit number, one address.
+        $this->fakeRegistry(['Brasov' => [
+            $this->rarPayload('service_awd'),
+            $this->rarPayload('service_awd', ['no' => '90001-1', 'auditFileNo' => 'BV9011']),
+        ]]);
+
+        $this->import();
+        $second = $this->import();
+
+        $this->assertSame(2, WorkshopSourceRecord::query()->where('record_type', 'authorization')->count());
+        $this->assertSame(1, Workshop::query()->count());
+        $this->assertSame(2, Workshop::query()->firstOrFail()->authorizations()->count());
+        $this->assertSame(2, $second->unchanged_count);
+        $this->assertSame(0, $second->updated_count);
+    }
+
     public function test_a_record_the_registry_stops_listing_is_retired_not_deleted(): void
     {
         $this->fakeRegistry(['Brasov' => [$this->rarPayload('service_awd'), $this->rarPayload('service_branch')]]);
         $this->import();
-        $branch = WorkshopSourceRecord::query()->where('external_id', 'SERVICE:OCS.BV.NI.900002')->firstOrFail();
+        $branch = WorkshopSourceRecord::query()->where('external_id', 'SERVICE:OCS.BV.NI.900002:90002')->firstOrFail();
 
         $this->travel(1)->minutes();
         $this->fakeRegistry(['Brasov' => [$this->rarPayload('service_awd')]]);

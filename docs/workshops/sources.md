@@ -35,10 +35,12 @@ point of work, with a GPS pair), `branch.telephoneNo`, the contact person's phon
 per activity group), `serviceAuthorizations` (vehicle makes the workshop services under contract),
 `authorizationSuspensionInfo`, `noOfWorkstation`, `noOfEmployees`.
 
-**Identity.** There is no record id. The document is identified by `exitNo`; a workshop's
-authorisation by `auditFileNo` + CUI (in ITP two companies can share an audit file, so there the
-`stationCode` is used). RAR lists the old and new revision of a renewed authorisation side by side
-for a while, and occasionally repeats a row across a page boundary.
+**Identity.** There is no record id. The document is identified by `exitNo` together with `no`:
+the tachograph section issues two lines at one address under a single exit number (`901` and
+`901-1`, four such pairs on 2026-09-10). A workshop's authorisation is followed by `auditFileNo` +
+CUI (in ITP two companies can share an audit file, so there the `stationCode` is used). RAR lists
+the old and new revision of a renewed authorisation side by side for a while, and occasionally
+repeats a row across a page boundary.
 
 **Coordinates are weak.** Of 13 000 SERVICE points of work, 9 881 carry two decimals (town level),
 8 986 repeat the registered office's point, 140 have none, and some sit in another county (a

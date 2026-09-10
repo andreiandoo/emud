@@ -189,7 +189,8 @@ class RarAuthorizationParserTest extends TestCase
         $service = $this->payload('service_awd');
         $itp = $this->payload('itp_station');
 
-        $this->assertSame('SERVICE:OCS.BV.NI.900001', RarRecordKeys::externalId('SERVICE', $service));
+        $this->assertSame('SERVICE:OCS.BV.NI.900001:90001', RarRecordKeys::externalId('SERVICE', $service));
+        $this->assertNotSame(RarRecordKeys::externalId('TLV', ['no' => '901'] + $service), RarRecordKeys::externalId('TLV', ['no' => '901-1'] + $service));
         $this->assertSame('SERVICE:BV9001:20963285', RarRecordKeys::identityKey('SERVICE', $service));
         $this->assertSame('ITP:BV901', RarRecordKeys::identityKey('ITP', $itp));
         $this->assertSame('SERVICE:90001|BV9001|2025-12-24T00:00:00.000+0000|20963285', RarRecordKeys::externalId('SERVICE', ['exitNo' => null] + $service));
