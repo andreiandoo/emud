@@ -15,6 +15,16 @@
         <script type="application/ld+json">{!! $breadcrumbs !!}</script>
     @endpush
 
+    {{-- The hero and the chooser it opens share one scope. The modal sits outside the hero
+         section on purpose: overflow-hidden on an ancestor is enough to clip a fixed child in
+         some browsers, and this one has to cover the page. --}}
+    @php($variantNames = $children->map(fn ($child) => mb_strtolower($child->name))->values()->all())
+
+    <div x-data="{ chooser: false, q: '', names: @js($variantNames), get matches() { return this.names.filter(n => n.includes(this.q.toLowerCase())).length } }"
+         @keydown.escape.window="chooser = false"
+         {{-- The page behind a modal must not scroll under it. --}}
+         x-effect="document.body.style.overflow = chooser ? 'hidden' : ''">
+
     {{-- 1. Hero, edge to edge. A customer arriving from a search should recognise their own car
             before reading a word, so the photograph is the header rather than an illustration
             inside it. The title sits left, over the darkest part of the gradient, which is what
@@ -59,40 +69,82 @@
                 </span>
 
                 @if($children->isNotEmpty())
-                    <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold backdrop-blur">
+                    <button type="button" @click="chooser = true; $nextTick(() => $refs.chooserSearch?.focus())"
+                            class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-stone-900 transition hover:bg-stone-200">
                         <x-storefront.icon name="car" class="h-4 w-4" />
                         {{ $children->count() }} {{ $children->count() === 1 ? 'variantă' : 'variante' }}
-                    </span>
+                        <span class="font-normal text-stone-500">· alege-o pe a ta</span>
+                    </button>
                 @endif
             </div>
         </div>
     </section>
 
-    {{-- 1b. The derivatives, when this collection has any. They sit directly under the hero
-             because they are a narrowing of it: someone who knows they drive a 35S18 should not
-             have to scroll past two hundred products for the whole make to find their own page. --}}
+    {{-- The chooser. Real links rendered server side so the derivatives stay crawlable and
+         reachable without JavaScript; the box only hides rows, it does not fetch them. --}}
     @if($children->isNotEmpty())
-        <section class="border-b border-stone-200 bg-white">
-            <div class="shell py-6">
-                <h2 class="mb-3 text-xs font-bold uppercase tracking-wider text-stone-500">
-                    Variante de {{ $collection->name }}
-                </h2>
-                <ul class="flex flex-wrap gap-2">
-                    @foreach($children as $child)
-                        <li>
-                            <a href="{{ $child->url() }}"
-                               class="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3.5 py-1.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-900 hover:text-white">
-                                {{ $child->name }}
-                                @if($child->yearRange())
-                                    <span class="text-xs font-normal text-stone-400">{{ $child->yearRange() }}</span>
-                                @endif
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
+        <div x-show="chooser" x-cloak class="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6"
+             role="dialog" aria-modal="true" aria-label="Alege varianta">
+
+            <div @click="chooser = false" x-transition.opacity class="absolute inset-0 bg-stone-950/70 backdrop-blur-sm"></div>
+
+            <div x-transition
+                 class="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+                <div class="flex items-start justify-between gap-4 border-b border-stone-200 p-5">
+                    <div>
+                        <h2 class="text-lg font-bold">Alege varianta ta de {{ $collection->name }}</h2>
+                        <p class="mt-0.5 text-sm text-stone-500">
+                            {{ $children->count() }} {{ $children->count() === 1 ? 'variantă' : 'variante' }} în catalog.
+                        </p>
+                    </div>
+                    <button type="button" @click="chooser = false" class="rounded-lg p-1 text-stone-400 transition hover:bg-stone-100 hover:text-stone-900" aria-label="Închide">
+                        <x-storefront.icon name="close" class="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div class="border-b border-stone-200 p-5 pb-4">
+                    <label class="relative block">
+                        <span class="sr-only">Caută varianta</span>
+                        <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-stone-400">
+                            <x-storefront.icon name="search" class="h-4 w-4" />
+                        </span>
+                        <input type="search" x-ref="chooserSearch" x-model="q" autocomplete="off"
+                               placeholder="Scrie codul sau numele variantei…" class="pl-10">
+                    </label>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto p-3">
+                    <ul class="grid gap-1 sm:grid-cols-2">
+                        @foreach($children as $child)
+                            <li data-name="{{ mb_strtolower($child->name) }}"
+                                x-show="q === '' || $el.dataset.name.includes(q.toLowerCase())">
+                                <a href="{{ $child->url() }}"
+                                   class="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-stone-100">
+                                    @if($child->squareImageUrl())
+                                        <img src="{{ $child->squareImageUrl() }}" alt="" loading="lazy"
+                                             class="h-9 w-9 shrink-0 rounded-md object-cover">
+                                    @endif
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate text-sm font-semibold">{{ $child->name }}</span>
+                                        @if($child->yearRange())
+                                            <span class="block text-xs text-stone-500">{{ $child->yearRange() }}</span>
+                                        @endif
+                                    </span>
+                                    <x-storefront.icon name="chevron-right" class="h-4 w-4 shrink-0 text-stone-400" />
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    <p x-show="matches === 0" x-cloak class="p-6 text-center text-sm text-stone-500">
+                        Nicio variantă care să se potrivească.
+                    </p>
+                </div>
             </div>
-        </section>
+        </div>
     @endif
+
+    </div>
 
     {{-- 2. The break: the one band between the photograph and the shelves. It carries whatever
             the shop has to say about this car, and collapses to a plain rule when it has
@@ -170,6 +222,41 @@
                         <input type="checkbox" wire:model.live="inStock">
                         <span>Doar produse pe stoc</span>
                     </label>
+
+                    @if($variantFacets->isNotEmpty())
+                        {{-- Kept above the categories because it is the coarser cut: which car,
+                             then which part. The box appears only past the point where a list is
+                             faster to read than to scan, and it hides rows rather than fetching
+                             any — the counts are already on the page. --}}
+                        <div x-data="{ open: true, term: '' }" class="border-t border-stone-200 pt-5">
+                            <button type="button" @click="open = ! open" class="mb-3 flex w-full items-center justify-between text-sm font-bold">
+                                Variantă
+                                <span class="text-stone-400 transition-transform" :class="open ? 'rotate-180' : ''" aria-hidden="true">▾</span>
+                            </button>
+
+                            <div x-show="open" x-collapse>
+                                @if($variantFacets->count() > 12)
+                                    <label class="mb-2 block">
+                                        <span class="sr-only">Caută varianta</span>
+                                        <input type="search" x-model="term" placeholder="Caută varianta…" class="py-1.5 text-sm">
+                                    </label>
+                                @endif
+
+                                <ul class="max-h-64 space-y-2 overflow-y-auto pr-1">
+                                    @foreach($variantFacets as $facet)
+                                        <li data-name="{{ mb_strtolower($facet['name']) }}"
+                                            x-show="term === '' || $el.dataset.name.includes(term.toLowerCase())">
+                                            <label class="flex cursor-pointer items-center gap-2.5 text-sm">
+                                                <input type="checkbox" value="{{ $facet['slug'] }}" wire:model.live="variants">
+                                                <span class="min-w-0 flex-1 truncate">{{ $facet['name'] }}</span>
+                                                <span class="text-xs tabular-nums text-stone-400">{{ $facet['total'] }}</span>
+                                            </label>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    @endif
 
                     @if($categoryFacets->isNotEmpty())
                         <div x-data="{ open: true }" class="border-t border-stone-200 pt-5">
@@ -272,6 +359,13 @@
                                 <button type="button" wire:click="removeFilter('category', '{{ $slug }}')" wire:key="chip-cat-{{ $slug }}"
                                         class="inline-flex items-center gap-1.5 rounded-full bg-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-700 transition hover:bg-stone-300">
                                     {{ $categoryFacets->firstWhere('slug', $slug)['name'] ?? $slug }} ✕
+                                </button>
+                            @endforeach
+
+                            @foreach($variants as $slug)
+                                <button type="button" wire:click="removeFilter('variant', '{{ $slug }}')" wire:key="chip-variant-{{ $slug }}"
+                                        class="inline-flex items-center gap-1.5 rounded-full bg-stone-900 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-stone-700">
+                                    {{ $variantFacets->firstWhere('slug', $slug)['name'] ?? $slug }} ✕
                                 </button>
                             @endforeach
 

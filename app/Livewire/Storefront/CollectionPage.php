@@ -14,6 +14,7 @@ use App\Storefront\VehicleContext;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -38,6 +39,9 @@ class CollectionPage extends Component
 
     public VehicleCollection $collection;
 
+    /** @var EloquentCollection<int, VehicleCollection>|null */
+    private ?EloquentCollection $children = null;
+
     /** @var list<string> */
     #[Url(as: 'cat', except: [])]
     public array $categories = [];
@@ -45,6 +49,10 @@ class CollectionPage extends Component
     /** @var list<string> */
     #[Url(as: 'brand', except: [])]
     public array $brands = [];
+
+    /** Slugs of the derivatives to narrow to, on a main collection's page. @var list<string> */
+    #[Url(as: 'varianta', except: [])]
+    public array $variants = [];
 
     #[Url(as: 'min', except: '')]
     public string $priceMin = '';
@@ -85,7 +93,7 @@ class CollectionPage extends Component
 
     public function clearFilters(): void
     {
-        $this->reset(['categories', 'brands', 'priceMin', 'priceMax', 'inStock', 'fitsMyVehicle']);
+        $this->reset(['categories', 'brands', 'variants', 'priceMin', 'priceMax', 'inStock', 'fitsMyVehicle']);
         $this->resetPage();
     }
 
@@ -95,6 +103,7 @@ class CollectionPage extends Component
         match ($type) {
             'category' => $this->categories = array_values(array_diff($this->categories, [$value])),
             'brand' => $this->brands = array_values(array_diff($this->brands, [$value])),
+            'variant' => $this->variants = array_values(array_diff($this->variants, [$value])),
             'price' => $this->reset(['priceMin', 'priceMax']),
             'stock' => $this->inStock = false,
             'vehicle' => $this->fitsMyVehicle = false,
@@ -108,6 +117,7 @@ class CollectionPage extends Component
     {
         return count($this->categories)
             + count($this->brands)
+            + count($this->variants)
             + (($this->priceMin !== '' || $this->priceMax !== '') ? 1 : 0)
             + ($this->inStock ? 1 : 0)
             + ($this->fitsMyVehicle ? 1 : 0);
@@ -122,6 +132,7 @@ class CollectionPage extends Component
             'products' => $this->products($vehicle, $matcher),
             'categoryFacets' => $this->categoryFacets(),
             'brandFacets' => $this->brandFacets(),
+            'variantFacets' => $this->variantFacets(),
             'priceBounds' => $this->priceBounds(),
             'children' => $this->children(),
             'reviews' => $this->reviews(),
@@ -144,7 +155,9 @@ class CollectionPage extends Component
             return new EloquentCollection;
         }
 
-        return $this->collection->children()
+        // Memoised: the chooser, the filter facets and the hero count all ask for the same list
+        // inside one render.
+        return $this->children ??= $this->collection->children()
             ->where('is_active', true)
             ->orderBy('position')
             ->orderBy('name')
@@ -178,6 +191,12 @@ class CollectionPage extends Component
 
         if (! isset($skip['brands']) && $this->brands !== []) {
             $query->whereHas('brand', fn (Builder $q) => $q->whereIn('slug', $this->brands));
+        }
+
+        // A second EXISTS against the same pivot, not a narrowing of the first: the product must
+        // be in this collection *and* in one of the chosen derivatives.
+        if (! isset($skip['variants']) && $this->variants !== []) {
+            $query->whereHas('collections', fn (Builder $q) => $q->whereIn('vehicle_collections.slug', $this->variants));
         }
 
         if (! isset($skip['price']) && ($this->priceMin !== '' || $this->priceMax !== '')) {
@@ -322,6 +341,41 @@ class CollectionPage extends Component
                 array_keys($trail),
             ),
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * The derivatives that actually have something in them, with how much.
+     *
+     * One grouped query over the pivot rather than a count per child: a make with three hundred
+     * derivatives would otherwise be three hundred queries to draw one filter panel.
+     *
+     * @return Collection<int, array{slug: string, name: string, total: int}>
+     */
+    private function variantFacets(): Collection
+    {
+        $children = $this->children();
+
+        if ($children->isEmpty()) {
+            return new Collection;
+        }
+
+        $totals = DB::table('product_vehicle_collection')
+            ->selectRaw('vehicle_collection_id, count(*) as total')
+            ->whereIn('vehicle_collection_id', $children->pluck('id'))
+            ->whereIn('product_id', $this->filtered('variants')->select('products.id'))
+            ->groupBy('vehicle_collection_id')
+            ->pluck('total', 'vehicle_collection_id');
+
+        return $children
+            ->map(fn (VehicleCollection $child): array => [
+                'slug' => (string) $child->slug,
+                'name' => (string) $child->name,
+                'total' => (int) ($totals[$child->id] ?? 0),
+            ])
+            // A derivative the shop stocks nothing for is not a filter, it is a dead end. It
+            // still appears in the hero's chooser, which is navigation rather than narrowing.
+            ->filter(fn (array $facet): bool => $facet['total'] > 0)
+            ->values();
     }
 
     /** @return EloquentCollection<int, Review> */

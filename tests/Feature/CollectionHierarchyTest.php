@@ -57,15 +57,18 @@ class CollectionHierarchyTest extends TestCase
         $this->assertSame('IVECO', $names[0]);
     }
 
-    public function test_the_parent_page_lists_its_derivatives_and_the_child_names_its_parent(): void
+    public function test_the_parent_page_offers_its_derivatives_and_the_child_names_its_parent(): void
     {
         $iveco = $this->collection('IVECO', 'iveco');
         $child = $this->collection('IVECO 35C16', 'iveco-35c16', $iveco);
 
+        // Rendered server side inside the chooser, so the derivatives stay crawlable and
+        // reachable without JavaScript even though the dialog is closed on arrival.
         $this->get($iveco->url())
             ->assertOk()
-            ->assertSee('Variante de IVECO')
-            ->assertSee('IVECO 35C16');
+            ->assertSee('alege-o pe a ta')
+            ->assertSee('IVECO 35C16')
+            ->assertSee($child->url());
 
         // The trail on a derivative goes through its make, on screen and in the structured data.
         $this->get($child->url())
@@ -74,13 +77,13 @@ class CollectionHierarchyTest extends TestCase
             ->assertSee($iveco->url());
     }
 
-    /** A derivative has none by construction, so the page must not offer an empty variants band. */
-    public function test_a_derivative_page_does_not_advertise_variants(): void
+    /** A derivative has none by construction, so the page must not offer an empty chooser. */
+    public function test_a_derivative_page_does_not_offer_a_chooser(): void
     {
         $iveco = $this->collection('IVECO', 'iveco');
         $child = $this->collection('IVECO 35C16', 'iveco-35c16', $iveco);
 
-        $this->get($child->url())->assertOk()->assertDontSee('Variante de');
+        $this->get($child->url())->assertOk()->assertDontSee('alege-o pe a ta');
     }
 
     public function test_an_operator_can_subordinate_a_collection(): void
