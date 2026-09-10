@@ -270,54 +270,98 @@
     </section>
 
     {{-- ============================================================ The trail --}}
-    {{-- Scroll drives a camera along a route across the terrain. The stops are the four places
-         any day out has, and what helps at each; the copy is here, the scene reads it. --}}
-    <section data-st-trail class="relative bg-[#121214] text-bone" wire:ignore aria-labelledby="trail-title">
+    {{-- Scroll drives a car along a route through the Buzău hills. It slows into each checkpoint
+         and holds there long enough to read the panel on the right about it. Real places over
+         generated ground, marked as an example until tours have a home in the back office. The
+         copy is here; the scene reads it. --}}
+    <section data-st-trail data-distance="{{ $trail['distance'] }}" class="relative bg-[#121214] text-bone" wire:ignore aria-labelledby="trail-title">
         <div class="st-trail__stage" data-st-trail-stage>
             <canvas data-st-trail-gl class="absolute inset-0 -z-20 h-full w-full" aria-hidden="true"></canvas>
 
             <div class="pointer-events-none absolute inset-0 z-[1]" aria-hidden="true">
                 @foreach($stops as $stop)
-                    <div class="st-trail__label" data-st-trail-label><span>{{ $stop['title'] }}</span></div>
+                    <div class="st-trail__label" data-st-trail-label><span>Km {{ $stop['km'] }} · {{ $stop['title'] }}</span></div>
                 @endforeach
             </div>
 
-            <div class="absolute inset-0 z-[2] flex items-center max-lg:items-end max-lg:pb-7">
+            {{-- The route: its name, its numbers, the itinerary. --}}
+            <div class="absolute inset-0 z-[2] flex items-center max-lg:items-end max-lg:pb-6">
                 <div class="shell">
-                    <div class="grid w-[min(28rem,100%)] gap-5 pt-20 max-lg:pt-0">
-                        <p class="st-kicker text-mute max-lg:hidden">Comunitatea eMUD</p>
-                        <h2 id="trail-title" class="st-display text-[clamp(2.25rem,4.6vw,4.75rem)]">Ce iei cu tine pe traseu</h2>
-                        <p class="text-mute max-lg:hidden">Patru opriri pe care le are orice tură de o zi, și ce te ajută la fiecare. Derulează ca să le parcurgi.</p>
+                    <div class="grid w-[min(27rem,100%)] gap-5 pt-20 max-lg:gap-3.5 max-lg:pt-0">
+                        <p class="st-kicker text-mute">Comunitatea eMUD · traseu de exemplu</p>
+                        <h2 id="trail-title" class="st-display text-[clamp(2.25rem,4.4vw,4.5rem)]">{{ $trail['name'] }}</h2>
+                        <p class="text-mute max-lg:hidden">
+                            {{ $trail['region'] }}: drum de pământ, un vad și argila vulcanilor noroioși. Derulează ca să-l parcurgi; oprim la fiecare punct de control.
+                        </p>
 
-                        <ol class="border-t border-gl">
+                        <dl class="grid grid-cols-4 border-y border-gl2">
+                            @foreach([['Distanță', $trail['distance'].' km'], ['Nivel', $trail['level']], ['Durată', $trail['duration']], ['Teren', $trail['surface']]] as [$term, $detail])
+                                <div @class(['min-w-0 py-3 pr-3', 'border-l border-gl2 pl-3' => ! $loop->first])>
+                                    <dt class="font-mono text-[10px] uppercase tracking-[.1em] text-mute">{{ $term }}</dt>
+                                    <dd class="mt-1 font-display text-[1.05rem] font-semibold leading-tight">{{ $detail }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+
+                        <ol class="st-trail__stops border-b border-gl">
                             @foreach($stops as $index => $stop)
-                                <li @class(['st-trail__stop grid grid-cols-[3.25rem_1fr] gap-x-3.5 gap-y-1 border-b border-gl py-3', 'is-on' => $index === 0])
+                                <li @class(['st-trail__stop grid grid-cols-[3.75rem_1fr] items-baseline gap-x-3 border-t border-gl py-2.5', 'is-on' => $index === 0])
                                     data-st-trail-stop data-t="{{ $stop['t'] }}">
-                                    <b class="font-mono text-xs font-medium leading-6">{{ str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) }}</b>
+                                    <b class="font-mono text-xs font-medium">Km {{ $stop['km'] }}</b>
                                     <strong class="font-semibold">{{ $stop['title'] }}</strong>
-                                    <p class="col-start-2 text-[13.5px] text-mute">
-                                        {{ $stop['text'] }}
-                                        @foreach($stop['links'] as $link)
-                                            <a href="{{ route('storefront.category', $link->full_path) }}" class="whitespace-nowrap text-bone underline underline-offset-2 hover:text-signal">{{ $link->name }}</a>@if(! $loop->last), @endif
-                                        @endforeach
-                                    </p>
                                 </li>
                             @endforeach
                         </ol>
 
                         <div class="flex flex-wrap gap-2.5">
                             <a href="{{ route('storefront.guides') }}" class="st-btn">Ghiduri de traseu <x-storefront.icon name="arrow-right" class="st-arrow" /></a>
-                            <a href="#newsletter" class="st-btn st-btn--ghost">Anunță-mă de ture</a>
+                            <a href="#newsletter" class="st-btn st-btn--ghost max-sm:hidden">Anunță-mă de ture</a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="absolute bottom-9 right-[var(--st-pad)] z-[2] grid justify-items-end gap-3 max-lg:top-28 max-lg:bottom-auto">
-                <p class="font-display text-[clamp(2.5rem,4vw,4rem)] font-semibold leading-none tracking-[-.03em]">
-                    <span data-st-trail-count>01</span><small class="font-mono text-sm font-normal tracking-normal text-mute"> / {{ str_pad((string) count($stops), 2, '0', STR_PAD_LEFT) }}</small>
+            {{-- The checkpoint the car has stopped at: shown only while it holds there. --}}
+            <aside class="st-trail__panel" data-st-trail-panel aria-live="polite">
+                @foreach($stops as $index => $stop)
+                    <article class="st-trail__detail" data-st-trail-detail>
+                        <p class="font-mono text-[10.5px] uppercase tracking-[.12em] text-signal">Punctul {{ $index + 1 }} din {{ count($stops) }} · km {{ $stop['km'] }}</p>
+                        <h3 class="mt-3 font-display text-[1.75rem] font-semibold leading-none tracking-[-.02em]">{{ $stop['title'] }}</h3>
+                        <p class="mt-2 flex items-center gap-1.5 text-sm text-mute">
+                            <x-storefront.icon name="pin" class="h-4 w-4 shrink-0" /> {{ $stop['place'] }}
+                        </p>
+
+                        <dl class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-[3px] border border-gl2 bg-gl2 text-sm max-lg:hidden">
+                            <div class="bg-g0/85 px-3 py-2.5">
+                                <dt class="font-mono text-[10px] uppercase tracking-[.1em] text-mute">Altitudine</dt>
+                                <dd class="mt-0.5 font-semibold">{{ $stop['altitude'] }}</dd>
+                            </div>
+                            <div class="bg-g0/85 px-3 py-2.5">
+                                <dt class="font-mono text-[10px] uppercase tracking-[.1em] text-mute">Teren</dt>
+                                <dd class="mt-0.5 font-semibold">{{ $stop['terrain'] }}</dd>
+                            </div>
+                        </dl>
+
+                        <p class="mt-4 text-[14.5px] leading-relaxed text-[#d8d6cf] max-lg:mt-2.5 max-lg:text-[13.5px]">{{ $stop['text'] }}</p>
+
+                        @if($stop['links']->isNotEmpty())
+                            <div class="mt-4 flex flex-wrap gap-2 max-lg:hidden">
+                                @foreach($stop['links'] as $link)
+                                    <a href="{{ route('storefront.category', $link->full_path) }}" class="st-chip h-8 text-xs text-bone hover:bg-bone hover:text-ink">
+                                        {{ $link->name }} <x-storefront.icon name="arrow-right" class="h-3.5 w-3.5" />
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+                    </article>
+                @endforeach
+            </aside>
+
+            <div class="absolute bottom-9 right-[var(--st-pad)] z-[2] grid justify-items-end gap-3 max-lg:hidden">
+                <p class="font-display text-[clamp(2.5rem,4vw,4rem)] font-semibold leading-none tracking-[-.03em] tabular-nums">
+                    <span data-st-trail-km>0</span><small class="font-mono text-sm font-normal tracking-normal text-mute"> / {{ $trail['distance'] }} km</small>
                 </p>
-                <svg data-st-trail-map class="h-[140px] w-[180px] rounded-[3px] border border-gl2 bg-g0/70 backdrop-blur max-lg:hidden" viewBox="0 0 180 140" aria-hidden="true"></svg>
+                <svg data-st-trail-map class="h-[140px] w-[180px] rounded-[3px] border border-gl2 bg-g0/70 backdrop-blur" viewBox="0 0 180 140" aria-hidden="true"></svg>
             </div>
 
             <p data-st-trail-hint class="absolute bottom-7 left-1/2 z-[2] -translate-x-1/2 font-mono text-[10.5px] uppercase tracking-[.12em] text-mute transition-opacity duration-500 max-lg:hidden">

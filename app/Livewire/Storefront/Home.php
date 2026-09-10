@@ -94,29 +94,65 @@ class Home extends Component
     ];
 
     /** The stops the trail animation walks through: what helps at each point of a day out. */
+    /**
+     * The route the trail section drives through: real places in the Buzău hills, whose mud
+     * volcanoes are what the region is known for, over generated ground. It shows the kind of
+     * day a tour is rather than surveying one road, so the page calls it an example until tours
+     * have a home in the back office. Distances and heights are rounded, and said to be.
+     */
+    private const TRAIL = [
+        'name' => 'Vulcanii Noroioși',
+        'region' => 'Dealurile Buzăului',
+        'distance' => 46,
+        'level' => '3 / 5',
+        'duration' => '≈ 6 h',
+        'surface' => 'Noroi, vaduri',
+    ];
+
     private const STOPS = [
         [
-            't' => 0.0,
+            'km' => 0,
             'title' => 'Plecarea',
-            'text' => 'Presiunea potrivită terenului și un compresor, ca s-o refaci la asfalt.',
+            'place' => 'Berca, județul Buzău',
+            'altitude' => '≈ 170 m',
+            'terrain' => 'Asfalt, apoi drum de pământ',
+            'text' => 'Presiunea potrivită terenului și un compresor, ca s-o refaci când ieși la asfalt.',
             'paths' => ['trolii-si-recuperare/compresoare'],
         ],
         [
-            't' => 0.29,
-            'title' => 'Vadul',
-            'text' => 'Apa intră pe admisie înainte să treacă de praguri. Un snorkel mută priza de aer sus.',
+            'km' => 11,
+            'title' => 'Vadul Slănicului',
+            'place' => 'Valea Slănicului de Buzău',
+            'altitude' => '≈ 200 m',
+            'terrain' => 'Apă 40–60 cm, prundiș',
+            'text' => 'Apa intră pe admisie înainte să treacă de praguri. Un snorkel mută priza de aer sus, deasupra valului din fața mașinii.',
             'paths' => ['accesorii-interior-exterior/accesorii-exterior/snorkele'],
         ],
         [
-            't' => 0.56,
-            'title' => 'Urcarea',
+            'km' => 19,
+            'title' => 'Vulcanii Noroioși',
+            'place' => 'Pâclele Mari, Scorțoasa',
+            'altitude' => '≈ 330 m',
+            'terrain' => 'Argilă udă, lipicioasă',
+            'text' => 'Argila de aici se lipește de tot și umple profilul anvelopei. Anvelope MT și o șufă cinetică, pentru când rămâi.',
+            'paths' => ['anvelope/anvelope-off-road', 'trolii-si-recuperare/accesorii-recuperare/sufe-cinetice'],
+        ],
+        [
+            'km' => 31,
+            'title' => 'Urcarea pe culme',
+            'place' => 'Culmea dinspre Beceni',
+            'altitude' => '≈ 480 m',
+            'terrain' => 'Pantă abruptă, pietriș',
             'text' => 'Pantă, pietriș, o roată în aer: aici contează blocajul de diferențial și scutul de sub motor.',
             'paths' => ['transmisie/diferentiale-blocabile', 'accesorii-interior-exterior/accesorii-exterior/scuturi-metalice'],
         ],
         [
-            't' => 0.86,
-            'title' => 'Tabăra',
-            'text' => 'Cort pe plafon, lumină pentru seară și energie pentru frigider.',
+            'km' => 46,
+            'title' => 'Tabăra de la Meledic',
+            'place' => 'Platoul Meledic, Mânzălești',
+            'altitude' => '≈ 550 m',
+            'terrain' => 'Poiană lângă lac',
+            'text' => 'Cort pe plafon, lumină pentru seară și energie pentru frigider. De aici se vede tot drumul făcut.',
             'paths' => ['camping-si-outdoor/corturi-de-acoperis-auto', 'iluminare/proiectoare'],
         ],
     ];
@@ -148,7 +184,8 @@ class Home extends Component
                 ->filter(fn (array $metric): bool => $metric['value'] > 0),
             'categories' => $menu->tree(),
             'surfaces' => $this->withLinks(self::SURFACES, $links),
-            'stops' => $this->withLinks(self::STOPS, $links),
+            'trail' => self::TRAIL,
+            'stops' => $this->withLinks($this->trailStops(), $links),
             'reviews' => Review::query()->published()->where('is_featured', true)->ordered()->limit(9)->get(),
             'articles' => Article::query()
                 ->where('status', 'published')
@@ -226,6 +263,20 @@ class Home extends Component
             ->whereIn('full_path', $paths)
             ->get(['id', 'name', 'full_path'])
             ->keyBy('full_path');
+    }
+
+    /**
+     * The stops, each with where it falls along the route from 0 to 1: the scene places its
+     * checkpoints there, so the kilometre posts and the drawing cannot disagree.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function trailStops(): array
+    {
+        return array_map(
+            fn (array $stop): array => [...$stop, 't' => round($stop['km'] / self::TRAIL['distance'], 4)],
+            self::STOPS,
+        );
     }
 
     /**

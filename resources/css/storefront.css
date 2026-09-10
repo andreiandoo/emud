@@ -641,6 +641,101 @@ html.lenis body {
         transition: clip-path 0.6s var(--ease-premium), visibility 0s;
     }
 
+    /* ---------- the home page finder ---------- */
+
+    /* Three steps that open upward into lists. Drawn here rather than with utilities because the
+       open, done and disabled states all restyle the same border and ground. */
+    .st-step {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        width: 100%;
+        min-width: 0;
+        height: 3.875rem;
+        padding: 0 1rem;
+        border: 1px solid rgb(255 255 255 / 0.12);
+        border-radius: 3px;
+        background: rgb(255 255 255 / 0.04);
+        color: var(--color-bone);
+        text-align: left;
+        transition: border-color 0.3s, background-color 0.3s;
+    }
+
+    .st-step:hover,
+    .st-step[aria-expanded="true"] {
+        border-color: rgb(255 255 255 / 0.35);
+        background: rgb(255 255 255 / 0.07);
+    }
+
+    .st-step:disabled {
+        cursor: not-allowed;
+        border-color: rgb(255 255 255 / 0.06);
+        background: rgb(255 255 255 / 0.02);
+        opacity: 0.55;
+    }
+
+    .st-step > b {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border: 1px solid var(--color-gl2);
+        border-radius: 999px;
+        color: var(--color-mute);
+        font: 500 11.5px var(--font-mono);
+        transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+    }
+
+    .st-step.is-done > b {
+        border-color: var(--color-signal);
+        background: var(--color-signal);
+        color: var(--color-ink);
+    }
+
+    .st-step > svg {
+        margin-left: auto;
+        transition: transform 0.4s var(--ease-premium);
+    }
+
+    .st-step[aria-expanded="true"] > svg {
+        transform: rotate(180deg);
+    }
+
+    .st-pop {
+        position: absolute;
+        inset-inline: 0;
+        bottom: calc(100% + 0.5rem);
+        z-index: 20;
+        overflow: hidden;
+        border: 1px solid var(--color-gl2);
+        border-radius: 3px;
+        background: #17181b;
+        box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.6);
+    }
+
+    .st-pop [role="option"] {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.625rem 0.75rem;
+        border-radius: 2px;
+        color: #d8d6cf;
+        font-size: 0.906rem;
+        text-align: left;
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    .st-pop [role="option"]:hover,
+    .st-pop [role="option"]:focus-visible,
+    .st-pop [role="option"][aria-selected="true"] {
+        outline: none;
+        background: rgb(255 255 255 / 0.07);
+        color: var(--color-bone);
+    }
+
     /* ---------- product ---------- */
 
     /* The photograph enlarges under the pointer, anchored where the pointer is, so a customer
@@ -905,6 +1000,40 @@ html.lenis body {
         opacity: 1;
     }
 
+    /* The checkpoint panel: slides in while the car holds at a stop, and shows that stop only. */
+    .st-trail__panel {
+        position: absolute;
+        z-index: 3;
+        right: var(--st-pad);
+        top: max(7.5rem, calc(50% - 17rem));
+        width: min(23rem, calc(100% - var(--st-pad) * 2));
+        padding: 1.4rem 1.4rem 1.5rem;
+        border: 1px solid var(--color-gl2);
+        border-radius: 3px;
+        background: rgb(14 15 17 / 0.8);
+        backdrop-filter: blur(14px) saturate(1.2);
+        -webkit-backdrop-filter: blur(14px) saturate(1.2);
+        opacity: 0;
+        transform: translateX(1.5rem);
+        pointer-events: none;
+        transition: opacity 0.5s, transform 0.8s var(--ease-premium);
+    }
+
+    .st-trail__panel.is-on {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+    }
+
+    .st-trail__detail {
+        display: none;
+    }
+
+    .st-trail__detail.is-on {
+        display: block;
+        animation: st-rise-in 0.6s var(--ease-premium);
+    }
+
     /* ---------- footer ---------- */
 
     .st-giant {
@@ -989,6 +1118,13 @@ html.lenis body {
     }
 }
 
+@keyframes st-rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.6rem);
+    }
+}
+
 @media (max-width: 63.99rem) {
     .st-surface {
         flex-direction: column;
@@ -1016,6 +1152,21 @@ html.lenis body {
 
     .st-trail__stage::after {
         background: linear-gradient(180deg, rgb(14 15 17 / 0.2), rgb(14 15 17 / 0.2) 40%, rgb(14 15 17 / 0.95) 72%);
+    }
+
+    /* On a phone the checkpoint comes in at the top and the itinerary shows only where the car
+       is, so the two never stack over the scene. */
+    .st-trail__panel {
+        top: 5.25rem;
+        left: var(--st-pad);
+        right: var(--st-pad);
+        width: auto;
+        padding: 1rem 1.1rem 1.1rem;
+        transform: translateY(-0.75rem);
+    }
+
+    .st-trail__stops > li:not(.is-on) {
+        display: none;
     }
 }
 
