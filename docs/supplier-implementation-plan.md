@@ -293,9 +293,16 @@ supplier_product_identifiers:
 
 **Amânat pentru Etapa 6:** revalidarea stocului în timp real la checkout. Niciun conector nu o suportă încă; o interfață pe care n-o implementează nimeni ar fi speculativă.
 
-#### 4b — Preț public automat — **așteaptă politica de preț**
+#### 4b — Preț public automat — **LIVRATĂ**
 
-Constatat la recon: `variants.retail_price` se scrie o singură dată, la crearea produsului, din prețul recomandat al furnizorului. Când furnizorul ridică costul, magazinul continuă să vândă la prețul vechi. Rezolvarea — reguli de preț pe categorie/brand/furnizor, marjă minimă, respectarea MAP, repricing la schimbarea costului — schimbă prețurile afișate, deci așteaptă decizia pe: repricing automat sau doar alertă, markup-uri, marja minimă de contribuție, tratamentul MAP.
+Politica aleasă pe 2026-09-10: **repricing automat cu limite, marjă țintă pe categorie, contribuție minimă 8%**.
+
+- prețul de raft se calculează din costul aterizat al ofertei pe care routerul ar alege-o efectiv, după regula cea mai specifică: brand → furnizor → categoria cea mai apropiată pe ramura principală a produsului (arborele e urcat, deci o regulă pe „Iluminare” acoperă tot ce e dedesubt) → regula implicită. Contribuția minimă și limita de mișcare se moștenesc separat de la regula implicită;
+- trei numere, câștigă cel mai mare: marja țintă, prețul care mai lasă contribuția minimă (formulă închisă, nu căutare) și MAP-ul furnizorului. Care dintre ele a decis e salvat. Rotunjirea la `.99` merge doar în sus, ca să nu readucă prețul sub o podea;
+- o mișcare peste limita regulii (15% implicit) **așteaptă aprobare** în „Prețuri de aprobat”, inclusiv prima mișcare față de prețul recomandat de furnizor; doar o variantă fără preț e prețuită direct. O propunere nouă o înlocuiește pe cea încă neaprobată;
+- repricing la fiecare schimbare de ofertă din feed (job unic per produs) plus o trecere nocturnă la 03:10 (`pricing:reprice --all`), care prinde regulile editate și cursurile mișcate;
+- produsele cu **mod de preț manual** (comutator nou în editorul de produs) nu sunt atinse niciodată;
+- regulile aprobate sunt seeduite pe categoriile reale: Iluminare 45%, Accesorii recuperare 40%, Accesorii Exterior 30%, Suspensie & Direcție 25%, Trolii și Recuperare 20%, Jante și Flanșe 20%, Anvelope 15%, implicit 25%. Editabile în „Reguli de preț”.
 
 <details>
 <summary>Specificația inițială a etapei</summary>
@@ -328,7 +335,7 @@ supplier_score =
 
 ---
 
-### Etapa 5 — Fulfilment multi-furnizor
+### Etapa 5 — Fulfilment multi-furnizor ← **următoarea**
 
 Migrare `create_supplier_fulfilment_tables`:
 
@@ -487,7 +494,7 @@ Estimare de efort, orientativă:
 | 1 — erori, gardă, sănătate, alerte | **livrată** |
 | 2 — ofertă completă, FX, landed cost | **livrată** |
 | 3 — scara de matching + identificatori | **livrată** |
-| 4 — routing, prețuri, checkout | **4a livrată**, 4b așteaptă politica de preț |
+| 4 — routing, prețuri, checkout | **livrată** |
 | 5 — fulfilment multi-furnizor | mare |
 | 6 — per adaptor | mică fiecare, după ce 0–3 sunt gata |
 | 7 — conformitate + atribute 4×4 | medie |
@@ -516,7 +523,7 @@ Cu zero conturi deschise, asta e tot ce rămâne pe masă — și e mult:
 - ~~Etapa 1~~ — livrată.
 - ~~Etapa 2~~ — livrată.
 - ~~Etapa 3~~ — livrată.
-- ~~Etapa 4a~~ — livrată. 4b așteaptă politica de preț.
+- ~~Etapa 4~~ — livrată (routing și preț automat).
 - Etapa 5 în modul manual (PO generat, plasat de operator) — funcționează chiar și fără niciun API de furnizor.
 - Etapa 7, partea de schemă: câmpuri de conformitate + set de atribute 4×4 + mapare categorii/atribute furnizor.
 - Parser XLSX (necesar oricum pentru AVEX).
