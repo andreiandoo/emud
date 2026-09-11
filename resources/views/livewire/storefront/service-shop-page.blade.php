@@ -50,7 +50,7 @@
 
             <p class="mt-4 flex items-start gap-2 text-[#cfcdc6]">
                 <x-storefront.icon name="pin" class="mt-1 h-4 w-4 shrink-0 text-sand" />
-                {{ collect([$shop->address, $shop->postal_code, $shop->city, $shop->county])->filter()->implode(', ') }}
+                {{ $shop->fullAddress(withPostalCode: true) }}
             </p>
 
             <div class="mt-6 flex flex-wrap gap-2">
@@ -257,7 +257,7 @@
                         <ul class="grid gap-2.5 text-sm text-[#d8d6cf]">
                             <li class="flex items-start gap-2.5">
                                 <x-storefront.icon name="pin" class="mt-0.5 h-4 w-4 shrink-0 text-sand" />
-                                <span>{{ collect([$shop->address, $shop->postal_code, $shop->city, $shop->county])->filter()->implode(', ') }}</span>
+                                <span>{{ $shop->fullAddress(withPostalCode: true) }}</span>
                             </li>
                             @if($shop->websiteHost())
                                 <li class="flex items-start gap-2.5">

@@ -72,6 +72,20 @@ class ServiceShopContactCardTest extends TestCase
         $this->get($shop->url())->assertOk()->assertSee('Atelier Demo eMUD 4x4')->assertSee('Cere o programare');
     }
 
+    /** Registry addresses often end in the town and county already, and the page must not add them again. */
+    public function test_the_address_names_the_town_and_the_county_once(): void
+    {
+        $fromRegistry = $this->shop(['address' => 'Mun. Ploiești, Str. Curcubeului, Nr. 44, Jud. Prahova']);
+        $typedIn = $this->shop(['slug' => 'service-lunga', 'address' => 'Str. Lungă nr. 1']);
+        $lookalike = $this->shop(['slug' => 'service-deva', 'city' => 'Deva', 'county' => 'Hunedoara', 'address' => 'Str. Devasului 3']);
+
+        $this->assertSame('Mun. Ploiești, Str. Curcubeului, Nr. 44, Jud. Prahova', $fromRegistry->fullAddress());
+        $this->assertSame('Str. Lungă nr. 1, Ploiești, Prahova', $typedIn->fullAddress());
+        $this->assertSame('Str. Devasului 3, Deva, Hunedoara', $lookalike->fullAddress());
+
+        $this->get($fromRegistry->url())->assertOk()->assertDontSee('Jud. Prahova, Ploiești');
+    }
+
     /** @param array<string, mixed> $overrides */
     private function shop(array $overrides = []): ServiceShop
     {
