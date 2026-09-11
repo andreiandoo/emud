@@ -198,6 +198,7 @@ class CategoryPage extends Component
         $query = Product::query()
             ->active()
             ->with(['brand', 'media', 'fitments', 'variants'])
+            ->withAvailability()
             ->whereHas('categories', fn (Builder $q) => $q->whereIn('categories.id', $this->subtree()));
 
         if (! isset($skip['subcategories']) && ($under = $this->idsUnder($this->subcategories)) !== []) {

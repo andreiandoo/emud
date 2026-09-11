@@ -2,11 +2,15 @@
 
 namespace App\Livewire\Storefront;
 
+use App\Directory\NearbyShops;
 use App\Enums\ProductStatus;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\Review;
+use App\Models\Service;
+use App\Models\ServiceShop;
+use App\Models\ShippingMethod;
 use App\Storefront\Availability;
 use App\Storefront\CartManager;
 use App\Storefront\Compatibility\CompatibilityVerdict;
@@ -18,6 +22,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -36,6 +41,9 @@ class ProductPage extends Component
     public bool $published = true;
 
     public int $quantity = 1;
+
+    /** Set once the customer asks for workshops, so a page that is only read never pays for the lookup. */
+    public bool $findingShops = false;
 
     public function mount(Product $product): void
     {
@@ -96,6 +104,11 @@ class ProductPage extends Component
             : 'Produsul a fost salvat pentru '.($vehicle->nickname ?: $vehicle->label()).'.');
     }
 
+    public function findShops(): void
+    {
+        $this->findingShops = true;
+    }
+
     /**
      * Saving lands on the active car's list when the customer is shopping for one of their own
      * vehicles, and on the account list otherwise. A vehicle chosen ad hoc in the picker is not
@@ -123,7 +136,7 @@ class ProductPage extends Component
         session()->flash('cart-added', 'Produsul a fost adăugat în coș.');
     }
 
-    public function render(VehicleContext $context, FitmentMatcher $matcher)
+    public function render(VehicleContext $context, FitmentMatcher $matcher, Wishlist $wishlist, NearbyShops $nearby)
     {
         // With several cars chosen, the page speaks about the one the part suits best: a part for
         // the weekend 4x4 should not read as wrong because the family car comes first.
@@ -136,12 +149,28 @@ class ProductPage extends Component
         // able to disagree about whether the part is in stock.
         $availability = Availability::forProduct($this->product);
         $reviews = $this->reviews();
+        $trail = $this->trail();
+        $currency = (string) ($variant?->currency ?? config('emud.catalog.default_currency', 'RON'));
+        $shipping = ShippingMethod::query()->where('is_active', true)->orderBy('base_price')->first();
+        $user = auth()->user();
+        $location = $user === null ? ['city' => null, 'county' => null] : $nearby->locationOf($user);
+        $service = $this->mountService($trail);
 
         return view('livewire.storefront.product-page', [
             'vehicle' => $vehicle,
             'verdict' => $verdict,
+            'carCount' => $selection === null ? 0 : count($selection),
             'variant' => $variant,
             'availability' => $availability,
+            // The cheapest way the shop delivers, at this part's price: what delivery costs if
+            // this is all the customer orders.
+            'shippingPrice' => $shipping?->priceFor(Money::of($variant?->retail_price ?? 0, $currency)),
+            'freeOver' => $shipping?->free_over === null ? null : Money::of($shipping->free_over, $currency),
+            'inWishlist' => $user !== null && $wishlist->contains($user, $this->product, $this->activeVehicleId()),
+            'mountService' => $service,
+            'mountLocation' => $location,
+            'mountShops' => $this->findingShops ? $this->mountShops($service, $location) : null,
+            'shopsUrl' => route('storefront.services', array_filter(['county' => $location['county'], 'service' => $service?->slug])),
             'gallery' => $this->product->media->where('type', 'image')->values(),
             'downloads' => $this->product->media->where('type', '!=', 'image')->values(),
             'specifications' => $this->specifications(),
@@ -149,7 +178,7 @@ class ProductPage extends Component
             'addOns' => $this->addOns(),
             'related' => $this->related(),
             'reviews' => $reviews,
-            'trail' => $this->trail(),
+            'trail' => $trail,
             'productJsonLd' => $this->productJsonLd($variant, $availability, $reviews),
         ]);
     }
@@ -172,6 +201,72 @@ class ProductPage extends Component
         }
 
         return $trail;
+    }
+
+    /**
+     * The workshop job this part needs, read off the parts category the job catalogue links it
+     * to. The deepest category wins: "Amortizoare" says more than "Suspensie".
+     *
+     * @param  Collection<int, Category>  $trail
+     */
+    private function mountService(Collection $trail): ?Service
+    {
+        $ids = $trail->pluck('id')->values();
+
+        if ($ids->isEmpty()) {
+            return null;
+        }
+
+        return Service::query()
+            ->active()
+            ->whereIn('category_id', $ids)
+            ->get()
+            ->sortByDesc(fn (Service $service): int => (int) $ids->search($service->category_id))
+            ->first();
+    }
+
+    /**
+     * Workshops that do the job, near the customer when we know where that is. When nobody near
+     * lists the job, the nearest workshops come next, then the job anywhere: a short list with
+     * something in it is more use than an empty dialog.
+     *
+     * @param  array{city: ?string, county: ?string}  $location
+     * @return array{shops: EloquentCollection<int, ServiceShop>, byService: bool}
+     */
+    private function mountShops(?Service $service, array $location): array
+    {
+        $citySlug = $location['city'] === null ? null : Str::slug($location['city']);
+        $county = $location['county'];
+        $known = $citySlug !== null || $county !== null;
+
+        $query = fn (bool $byService, bool $nearby): Builder => ServiceShop::query()
+            ->published()
+            ->with('hours')
+            ->when($byService, fn (Builder $q) => $q->whereHas('services', fn (Builder $job) => $job->whereKey($service?->id)))
+            ->when($nearby, fn (Builder $q) => $q->where(fn (Builder $near) => $near
+                ->when($citySlug !== null, fn (Builder $inner) => $inner->orWhere('city_slug', $citySlug))
+                ->when($county !== null, fn (Builder $inner) => $inner->orWhereRaw('lower(county) = ?', [mb_strtolower((string) $county)]))))
+            ->when($nearby && $citySlug !== null, fn (Builder $q) => $q->orderByRaw('case when city_slug = ? then 0 else 1 end', [$citySlug]))
+            ->promotedFirst()
+            ->orderByDesc('fits_parts_bought_here')
+            ->orderBy('name')
+            ->limit(6);
+
+        $attempts = $known ? [[true, true], [false, true], [true, false]] : [[true, false], [false, false]];
+
+        foreach ($attempts as [$byService, $nearby]) {
+            if ($byService && $service === null) {
+                continue;
+            }
+
+            $shops = $query($byService, $nearby)->get();
+
+            if ($shops->isNotEmpty()) {
+                return ['shops' => $shops, 'byService' => $byService];
+            }
+        }
+
+        return ['shops' => new EloquentCollection, 'byService' => false];
     }
 
     /**
@@ -237,6 +332,7 @@ class ProductPage extends Component
         return Product::query()
             ->active()
             ->with(['brand', 'media', 'variants'])
+            ->withAvailability()
             ->whereKeyNot($this->product->id)
             ->whereHas('collections', fn (Builder $q) => $q->whereIn('vehicle_collections.id', $collectionIds))
             ->when($categoryIds->isNotEmpty(), fn (Builder $q) => $q
@@ -248,7 +344,7 @@ class ProductPage extends Component
     }
 
     /**
-     * The same shelf: same category, different product.
+     * The same shelf: same category, different product — the alternatives.
      *
      * @return EloquentCollection<int, Product>
      */
@@ -263,6 +359,7 @@ class ProductPage extends Component
         return Product::query()
             ->active()
             ->with(['brand', 'media', 'variants'])
+            ->withAvailability()
             ->whereKeyNot($this->product->id)
             ->whereHas('categories', fn (Builder $q) => $q->whereIn('categories.id', $categoryIds))
             ->orderByDesc('is_featured')

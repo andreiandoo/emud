@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Catalog\CollectionMatcher;
 use App\Enums\PricingMode;
 use App\Enums\ProductStatus;
+use App\Storefront\Availability;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -84,5 +85,11 @@ class Product extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', ProductStatus::Active->value)->whereNotNull('published_at');
+    }
+
+    /** What a listing loads so each card can say when the part ships, without a query per card. */
+    public function scopeWithAvailability(Builder $query): Builder
+    {
+        return $query->with(Availability::LISTING_RELATIONS);
     }
 }

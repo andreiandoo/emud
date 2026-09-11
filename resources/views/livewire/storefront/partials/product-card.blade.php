@@ -5,6 +5,10 @@
 {{-- fits() is true for "unknown" too; with no fitment data nothing may look like a yes. --}}
 @php($unknown = $verdict === \App\Storefront\Compatibility\CompatibilityVerdict::Unknown)
 @php($fitsForSure = $verdict !== null && in_array($verdict, [\App\Storefront\Compatibility\CompatibilityVerdict::Confirmed, \App\Storefront\Compatibility\CompatibilityVerdict::Conditional], true))
+{{-- A card says yes or maybe, never no: "does not fit" on every card of a catalogue the customer
+     chose to see whole is noise, and the product page says it where it decides something. --}}
+@php($showFit = $verdict !== null && $verdict->fits() && ! $unknown)
+@php($stock = \App\Storefront\Availability::forListing($product))
 
 {{-- One link for the whole card: the target is large, and a card with several small targets
      inside it is a worse thing to tap on a phone. The fit verdict is written out, not only
@@ -23,7 +27,7 @@
             <span class="sr-only">Fără imagine</span>
         @endif
 
-        @if($verdict && $verdict->fits() && ! $unknown)
+        @if($showFit)
             <span @class([
                 'absolute left-3 top-3 rounded-[2px] px-2 py-1 text-[10px] font-semibold uppercase tracking-[.1em]',
                 'bg-fit text-white' => $verdict->isCertain(),
@@ -39,15 +43,21 @@
 
         <span class="line-clamp-2 text-[15.5px] font-semibold leading-snug">{{ $product->name }}</span>
 
-        @if($verdict)
+        @if($showFit)
             <span @class([
                 'mt-0.5 inline-flex items-center gap-1.5 text-[13px] font-medium',
                 'text-fit' => $verdict->isCertain(),
-                'text-amber-700' => ! $verdict->isCertain() && $verdict->fits() && ! $unknown,
-                'text-ink2' => ! $verdict->fits() || $unknown,
+                'text-amber-700' => ! $verdict->isCertain(),
             ])>
-                <x-storefront.icon :name="$fitsForSure ? 'check' : ($verdict->fits() ? 'car' : 'close')" class="h-3.5 w-3.5 shrink-0" />
+                <x-storefront.icon :name="$fitsForSure ? 'check' : 'car'" class="h-3.5 w-3.5 shrink-0" />
                 {{ $verdict->label() }}
+            </span>
+        @endif
+
+        @if($stock?->shortDelivery())
+            <span class="inline-flex items-center gap-1.5 text-[12.5px] text-ink2">
+                <x-storefront.icon name="truck" class="h-3.5 w-3.5 shrink-0" />
+                {{ $stock->shortDelivery() }}
             </span>
         @endif
 

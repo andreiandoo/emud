@@ -186,6 +186,7 @@ class CollectionPage extends Component
         $query = Product::query()
             ->active()
             ->with(['brand', 'media', 'variants'])
+            ->withAvailability()
             ->whereHas('collections', fn (Builder $q) => $q->whereKey($this->collection->id));
 
         if (! isset($skip['categories']) && $this->categories !== []) {

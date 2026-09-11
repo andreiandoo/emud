@@ -250,59 +250,93 @@
                             <span class="h-2 w-2 rounded-full bg-current"></span>
                             {{ $availability->label() }}
                         </span>
-                        @if($availability->dispatchWindow())
+                        @if($availability->deliveryWindow())
+                            <span class="text-ink2">{{ $availability->deliveryWindow() }}</span>
+                        @elseif($availability->dispatchWindow())
                             <span class="text-ink2">{{ $availability->dispatchWindow() }}</span>
                         @endif
                         @if($price)
                             <span class="text-ink2">· TVA inclus</span>
                         @endif
                     </p>
+
+                    {{-- Stock by country when the part can be had from more than one place, or from one
+                         we can name: a warehouse here and one in Poland are different waits. --}}
+                    @php($stocked = $availability->stockedSources())
+                    @if(count($stocked) > 1 || (count($stocked) === 1 && $stocked[0]['country'] !== null))
+                        <div class="mt-1 overflow-hidden rounded-[3px] border border-line bg-white">
+                            <p class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line bg-light px-3.5 py-2 font-mono text-[10.5px] uppercase tracking-[.1em] text-ink2">
+                                <span>{{ count($stocked) > 1 ? 'Stoc disponibil la '.count($stocked).' furnizori' : 'Stoc la furnizor' }}</span>
+                                @unless($availability->confirmed)
+                                    <span class="normal-case tracking-normal">confirmăm stocul la comandă</span>
+                                @endunless
+                            </p>
+                            <ul class="divide-y divide-line text-[13px]">
+                                @foreach($stocked as $source)
+                                    <li class="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3.5 py-2.5">
+                                        @if($source['country'])
+                                            <span class="rounded-[2px] bg-ink px-1.5 py-0.5 font-mono text-[10.5px] font-semibold tracking-[.06em] text-light">{{ $source['country'] }}</span>
+                                        @endif
+                                        <span @class([
+                                            'font-semibold',
+                                            'text-fit' => $source['status'] === \App\Enums\StockStatus::InStock,
+                                            'text-amber-700' => $source['status'] !== \App\Enums\StockStatus::InStock,
+                                        ])>{{ \App\Storefront\Availability::sourceLabel($source['status']) }}</span>
+                                        @if($source['delivery'])
+                                            <span class="text-ink2">· livrabil în {{ \App\Storefront\Availability::range($source['delivery']) }} zile lucrătoare</span>
+                                        @endif
+                                        @if($shippingPrice)
+                                            <span class="ml-auto text-xs text-ink2">livrare {{ $shippingPrice->isZero() ? 'gratuită' : $shippingPrice->format() }}</span>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                 </div>
 
-                {{-- Fit sits above the button on purpose. It is the one thing that decides whether
-                     this is the right part, and below the fold it would be read after the order
-                     rather than before it. --}}
-                <div class="rounded-[3px] bg-g1 p-5 text-bone sm:p-6">
-                    <div class="flex items-start gap-4">
+                {{-- Fit, in one line above the button: it decides whether this is the right part, so it
+                     is read before the order — without taking the buy box's room to say it. --}}
+                @php($connector = $incompatible ? 'cu' : ($fitsForSure ? 'pe' : 'pentru'))
+                <div title="{{ $verdict->explanation() }}" @class([
+                    'flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[3px] border px-3.5 py-2.5 text-[13.5px]',
+                    'border-fit/30 bg-fit/[.06]' => $fitsForSure,
+                    'border-signal/35 bg-signal/[.06]' => $incompatible,
+                    'border-amber-300 bg-amber-50' => ! $fitsForSure && ! $incompatible && ! $unknown,
+                    'border-line bg-white' => $unknown,
+                ])>
+                    <p class="flex min-w-0 flex-1 items-center gap-2.5">
                         <span @class([
-                            'grid h-11 w-11 shrink-0 place-items-center rounded-full',
-                            'bg-fit text-white' => $verdict->isCertain(),
-                            'bg-sand text-sandink' => ! $verdict->isCertain() && ! $unknown && $verdict->fits(),
-                            'bg-signal/15 text-signal' => $incompatible,
-                            'bg-white/10 text-bone' => $unknown,
+                            'grid h-6 w-6 shrink-0 place-items-center rounded-full',
+                            'bg-fit text-white' => $fitsForSure,
+                            'bg-signal text-white' => $incompatible,
+                            'bg-amber-500 text-white' => ! $fitsForSure && ! $incompatible && ! $unknown,
+                            'bg-line text-ink' => $unknown,
                         ])>
-                            <x-storefront.icon :name="$fitsForSure ? 'check' : ($incompatible ? 'close' : 'car')" class="h-5 w-5" />
+                            <x-storefront.icon :name="$fitsForSure ? 'check' : ($incompatible ? 'close' : 'car')" class="h-3.5 w-3.5" />
                         </span>
+                        <span class="min-w-0 leading-snug">
+                            @if($vehicle)
+                                <span class="font-semibold">{{ $verdict->label() }}</span>
+                                <span class="text-ink2">{{ $connector }} {{ $incompatible && $carCount > 1 ? 'mașinile tale din garaj' : $vehicle->label() }}</span>
+                            @else
+                                <span class="font-semibold">Se potrivește pe mașina ta?</span>
+                                <span class="text-ink2">Alege mașina și îți spunem.</span>
+                            @endif
+                        </span>
+                    </p>
 
-                        <div class="min-w-0 flex-1">
-                            <p class="font-mono text-[10.5px] uppercase tracking-[.1em] text-mute">{{ $vehicle ? 'Pe mașina ta' : 'Se potrivește pe mașina ta?' }}</p>
-                            <p class="mt-1 font-semibold leading-snug">
-                                {{ $verdict->label() }}@if($vehicle) <span class="text-mute">·</span> {{ $vehicle->label() }}@endif
-                            </p>
-                            <p class="mt-1 text-sm text-mute">{{ $verdict->explanation() }}</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 flex flex-wrap gap-2 border-t border-gl pt-4">
-                        @if($vehicle)
-                            <button type="button" @click="$dispatch('open-vehicle-selector', { tab: 'car' })" class="st-chip text-bone hover:bg-bone hover:text-ink">
-                                <x-storefront.icon name="car" class="h-4 w-4" /> Schimbă mașina
-                            </button>
-                        @else
-                            <button type="button" @click="$dispatch('open-vehicle-selector', { tab: 'car' })" class="st-chip text-bone hover:bg-bone hover:text-ink">
-                                <x-storefront.icon name="car" class="h-4 w-4" /> Alege mașina
-                            </button>
-                            <button type="button" @click="$dispatch('open-vehicle-selector', { tab: 'vin' })" class="st-chip text-bone hover:bg-bone hover:text-ink">
-                                <x-storefront.icon name="vin" class="h-4 w-4" /> Caută după VIN
-                            </button>
-                        @endif
-
+                    <span class="flex shrink-0 items-center gap-3 text-[12.5px] font-semibold">
+                        <button type="button" @click="$dispatch('open-vehicle-selector', { tab: 'car' })" class="underline underline-offset-2 transition hover:text-signal">
+                            {{ $vehicle ? 'Schimbă' : 'Alege mașina' }}
+                        </button>
+                        @unless($vehicle)
+                            <button type="button" @click="$dispatch('open-vehicle-selector', { tab: 'vin' })" class="underline underline-offset-2 transition hover:text-signal">După VIN</button>
+                        @endunless
                         @if(! $product->is_universal && $fitmentCount > 0)
-                            <a href="#compatibilitate" @click="$dispatch('open-section', 'compatibilitate')" class="st-chip text-bone hover:bg-bone hover:text-ink">
-                                Toate mașinile <span class="font-mono text-xs text-mute">{{ $fitmentCount }}</span>
-                            </a>
+                            <a href="#compatibilitate" @click="$dispatch('open-section', 'compatibilitate')" class="underline underline-offset-2 transition hover:text-signal">Toate mașinile ({{ $fitmentCount }})</a>
                         @endif
-                    </div>
+                    </span>
                 </div>
 
                 <div class="grid gap-3" x-intersect:leave="bar = $el.getBoundingClientRect().top < 0" x-intersect:enter="bar = false">
@@ -327,8 +361,15 @@
                             <x-storefront.icon name="cart" wire:loading.remove wire:target="addToCart" />
                         </button>
 
-                        <button wire:click="toggleWishlist" class="grid h-[3.5rem] w-[3.5rem] shrink-0 place-items-center rounded-[3px] border border-line2 bg-white transition hover:border-ink" aria-label="Salvează la favorite" title="Salvează la favorite">
-                            <x-storefront.icon name="heart" class="h-5 w-5" />
+                        {{-- Filled once saved, so the button says where the part already is. --}}
+                        <button wire:click="toggleWishlist" aria-pressed="{{ $inWishlist ? 'true' : 'false' }}"
+                                aria-label="{{ $inWishlist ? 'Scoate din favorite' : 'Salvează la favorite' }}"
+                                title="{{ $inWishlist ? 'Salvat la favorite' : 'Salvează la favorite' }}" @class([
+                                    'group grid h-[3.5rem] w-[3.5rem] shrink-0 place-items-center rounded-[3px] border transition duration-300',
+                                    'border-signal bg-signal/10 text-signal' => $inWishlist,
+                                    'border-line2 bg-white text-ink hover:border-signal hover:bg-signal/[.06] hover:text-signal' => ! $inWishlist,
+                                ])>
+                            <x-storefront.icon name="heart" :class="'h-5 w-5 transition-transform duration-300 group-hover:scale-110 group-active:scale-90'.($inWishlist ? ' fill-current' : '')" />
                         </button>
                     </div>
 
@@ -341,36 +382,53 @@
                     @endif
                 </div>
 
-                <ul class="grid grid-cols-3 gap-px overflow-hidden rounded-[3px] border border-line bg-line text-[12.5px] leading-snug">
-                    <li class="grid content-start gap-2 bg-white p-4">
-                        <x-storefront.icon name="truck" class="h-5 w-5" />
-                        <span><span class="block font-semibold text-ink">Livrare prin curier</span><span class="text-ink2">în toată țara</span></span>
-                    </li>
-                    <li class="grid content-start gap-2 bg-white p-4">
-                        <x-storefront.icon name="return" class="h-5 w-5" />
-                        <span><span class="block font-semibold text-ink">Retur 14 zile</span><span class="text-ink2">de la primire</span></span>
-                    </li>
-                    <li class="grid content-start gap-2 bg-white p-4">
-                        <x-storefront.icon name="shield" class="h-5 w-5" />
-                        <span><span class="block font-semibold text-ink">Garanție</span><span class="text-ink2">{{ $product->warranty_months ? $product->warranty_months.' luni' : 'legală' }}</span></span>
-                    </li>
+                <ul class="grid gap-2 sm:grid-cols-3">
+                    @foreach([
+                        [
+                            'truck',
+                            $shippingPrice === null ? 'Livrare prin curier' : ($shippingPrice->isZero() ? 'Livrare gratuită' : 'Livrare '.$shippingPrice->format()),
+                            $availability->deliveryWindow() ?? ($freeOver !== null && $shippingPrice !== null && ! $shippingPrice->isZero() ? 'Gratuită de la '.$freeOver->format() : 'Prin curier, în toată țara'),
+                        ],
+                        ['return', 'Retur în 14 zile', 'De la primire, conform legii'],
+                        ['shield', 'Garanție '.($product->warranty_months ? $product->warranty_months.' luni' : 'legală'), 'Factura ține loc de certificat'],
+                    ] as [$icon, $title, $detail])
+                        <li class="group flex items-center gap-3 rounded-[3px] border border-line bg-white p-3 transition-colors duration-300 hover:border-line2">
+                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sand text-sandink transition-colors duration-300 group-hover:bg-ink group-hover:text-light">
+                                <x-storefront.icon :name="$icon" class="h-[1.15rem] w-[1.15rem]" />
+                            </span>
+                            <span class="min-w-0 leading-snug">
+                                <span class="block text-[13px] font-semibold text-ink">{{ $title }}</span>
+                                <span class="block text-xs text-ink2">{{ $detail }}</span>
+                            </span>
+                        </li>
+                    @endforeach
                 </ul>
 
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <a href="{{ route('storefront.services') }}" class="inline-flex items-center gap-2 text-sm text-ink2 underline-offset-2 transition hover:text-ink hover:underline">
-                        <x-storefront.icon name="wrench" class="h-4 w-4" /> Găsește un service care îl montează
-                    </a>
+                {{-- The workshops near the customer that do the job this part needs, in a dialog over
+                     the page rather than instead of it: the customer came here to buy the part. --}}
+                <button type="button" @click="$dispatch('open-mount-shops'); $wire.findShops()"
+                        class="group flex w-full items-center gap-4 rounded-[3px] bg-g1 px-4 py-3.5 text-left text-bone transition-colors duration-300 hover:bg-g0">
+                    <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-signal text-ink transition-transform duration-500 group-hover:-rotate-12">
+                        <x-storefront.icon name="wrench" class="h-5 w-5" />
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block font-semibold">Găsește un service care îl montează</span>
+                        <span class="block truncate text-xs text-mute">
+                            {{ collect([$mountService?->name, $mountLocation['city'] ? 'lângă '.$mountLocation['city'] : ($mountLocation['county'] ? 'în județul '.$mountLocation['county'] : 'ateliere din toată țara')])->filter()->implode(' · ') }}
+                        </span>
+                    </span>
+                    <x-storefront.icon name="arrow-right" class="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+                </button>
 
-                    @if($payments->isNotEmpty())
-                        <ul class="flex flex-wrap gap-1.5">
-                            @foreach($payments as $method)
-                                @if(isset($methodLabels[$method]))
-                                    <li class="rounded-[3px] border border-line2 px-2 py-1 text-[11px] font-semibold text-ink2">{{ $methodLabels[$method] }}</li>
-                                @endif
-                            @endforeach
-                        </ul>
-                    @endif
-                </div>
+                @if($payments->isNotEmpty())
+                    <ul class="flex flex-wrap gap-1.5">
+                        @foreach($payments as $method)
+                            @if(isset($methodLabels[$method]))
+                                <li class="rounded-[3px] border border-line2 px-2 py-1 text-[11px] font-semibold text-ink2">{{ $methodLabels[$method] }}</li>
+                            @endif
+                        @endforeach
+                    </ul>
+                @endif
 
                 {{-- ---------- The part itself, one section at a time. --}}
                 <div class="border-b border-line">
@@ -455,7 +513,11 @@
                         <ul class="grid gap-4 text-[15px] text-ink2">
                             <li class="flex gap-3">
                                 <x-storefront.icon name="truck" class="mt-0.5 h-5 w-5 shrink-0 text-ink" />
-                                <span><strong class="text-ink">Livrare prin curier în toată țara.</strong> {{ $availability->dispatchWindow() }}</span>
+                                <span>
+                                    <strong class="text-ink">Livrare prin curier în toată țara{{ $shippingPrice ? ($shippingPrice->isZero() ? ', gratuit' : ', '.$shippingPrice->format()) : '' }}.</strong>
+                                    {{ $availability->deliveryWindow() ?? $availability->dispatchWindow() }}
+                                    @if($freeOver && $shippingPrice && ! $shippingPrice->isZero()) Gratuită pentru comenzi de la {{ $freeOver->format() }}. @endif
+                                </span>
                             </li>
                             <li class="flex gap-3">
                                 <x-storefront.icon name="return" class="mt-0.5 h-5 w-5 shrink-0 text-ink" />
@@ -467,7 +529,11 @@
                             </li>
                             <li class="flex gap-3">
                                 <x-storefront.icon name="wrench" class="mt-0.5 h-5 w-5 shrink-0 text-ink" />
-                                <span><strong class="text-ink">Montaj.</strong> <a href="{{ route('storefront.services') }}" class="underline underline-offset-2 hover:text-ink">Găsește un service partener</a> care montează piese cumpărate de la noi.</span>
+                                <span>
+                                    <strong class="text-ink">Montaj.</strong>
+                                    <button type="button" @click="$dispatch('open-mount-shops'); $wire.findShops()" class="underline underline-offset-2 hover:text-ink">Găsește un service</button>
+                                    care montează piesa, lângă tine.
+                                </span>
                             </li>
                         </ul>
                     </x-storefront.disclosure>
@@ -518,8 +584,9 @@
         <section class="bg-g0 py-16 text-bone sm:py-20">
             <div class="shell">
                 <div class="mb-10 grid gap-4">
-                    <p class="st-kicker text-mute">Se montează cu</p>
-                    <h2 class="st-display text-[clamp(1.9rem,3.2vw,3rem)]">Alte piese pentru aceleași mașini</h2>
+                    <p class="st-kicker text-mute">Pentru aceeași mașină</p>
+                    <h2 class="st-display text-[clamp(1.9rem,3.2vw,3rem)]">Completează montajul</h2>
+                    <p class="max-w-[52ch] text-mute">Alte piese pentru {{ $product->collections->pluck('name')->take(2)->implode(' și ') }}, pentru alte lucrări decât aceasta.</p>
                 </div>
 
                 <div data-st-carousel data-st-cursor="Trage">
@@ -543,6 +610,24 @@
             </div>
         </section>
     @endif
+
+    {{-- ============================================================ Fitting --}}
+    {{-- Between the car's other parts and the shelf's alternatives, so the two rails read as
+         different things — and because a part bought here is a part someone has to fit. --}}
+    <section class="border-y border-sandink/15 bg-sand text-ink">
+        <div class="shell flex flex-col gap-6 py-12 sm:flex-row sm:items-center sm:justify-between">
+            <div class="grid max-w-[48ch] gap-2">
+                <p class="st-kicker text-sandink">Montaj</p>
+                <h2 class="font-display text-[clamp(1.6rem,2.6vw,2.2rem)] font-semibold leading-tight">Îl montezi la un service de lângă tine</h2>
+                <p class="text-sandink">
+                    {{ $mountService ? 'Ateliere care fac „'.$mountService->name.'”' : 'Ateliere' }}{{ $mountLocation['city'] ? ' în '.$mountLocation['city'] : ($mountLocation['county'] ? ' din județul '.$mountLocation['county'] : ' din toată țara') }}, cu adresă, program și telefon.
+                </p>
+            </div>
+            <button type="button" @click="$dispatch('open-mount-shops'); $wire.findShops()" class="st-btn st-btn--ink shrink-0">
+                <x-storefront.icon name="wrench" /> Vezi atelierele
+            </button>
+        </div>
+    </section>
 
     {{-- ============================================================ Reviews --}}
     @if($reviews->isNotEmpty())
@@ -577,8 +662,9 @@
             <div class="shell py-20">
                 <div class="mb-10 flex flex-wrap items-end justify-between gap-6">
                     <div class="grid gap-4">
-                        <p class="st-kicker text-ink2">Din aceeași categorie</p>
-                        <h2 class="st-display text-[clamp(1.9rem,3.2vw,3rem)]">Ai putea avea nevoie și de</h2>
+                        <p class="st-kicker text-ink2">Alternative</p>
+                        <h2 class="st-display text-[clamp(1.9rem,3.2vw,3rem)]">Alte variante din {{ $trail->last()?->name ?? 'aceeași categorie' }}</h2>
+                        <p class="max-w-[52ch] text-ink2">Aceeași lucrare, alt producător sau altă specificație. Compară înainte să alegi.</p>
                     </div>
                     @if($trail->isNotEmpty())
                         <a href="{{ route('storefront.category', $trail->last()) }}" class="st-link">Toată categoria <x-storefront.icon name="arrow-right" /></a>
@@ -606,6 +692,68 @@
             </div>
         </section>
     @endif
+
+    {{-- ============================================================ Workshops that fit it --}}
+    {{-- Opened from the buy box and from the fitting band. A few workshops over the page; the full
+         directory opens in a new tab with the same filters, so this page stays where it was. --}}
+    <div x-data="{ open: false }" @open-mount-shops.window="open = true" @keydown.escape.window="open = false"
+         x-show="open" x-cloak class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6"
+         role="dialog" aria-modal="true" aria-labelledby="mount-shops-title">
+        <div @click="open = false" class="absolute inset-0 bg-g0/70 backdrop-blur-sm"></div>
+
+        <div x-trap.noscroll="open" class="relative flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-t-[3px] bg-light text-ink shadow-2xl sm:rounded-[3px]">
+            <div class="flex items-start justify-between gap-4 border-b border-line p-6">
+                <div class="grid gap-1.5">
+                    <p class="st-kicker text-ink2">Montaj</p>
+                    <h2 id="mount-shops-title" class="font-display text-2xl font-semibold">Ateliere care îl montează</h2>
+                    <p class="text-sm text-ink2">
+                        {{ collect([$mountService?->name, $mountLocation['city'] ? 'lângă '.$mountLocation['city'] : ($mountLocation['county'] ? 'în județul '.$mountLocation['county'] : null)])->filter()->implode(' · ') ?: 'Ateliere din toată țara' }}
+                    </p>
+                </div>
+                <button type="button" @click="open = false" class="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line2 transition hover:border-ink" aria-label="Închide">
+                    <x-storefront.icon name="close" class="h-5 w-5" />
+                </button>
+            </div>
+
+            <div class="min-h-0 flex-1 overflow-y-auto p-4" data-lenis-prevent>
+                @if($mountShops === null)
+                    <p class="p-6 text-center text-sm text-ink2">Căutăm atelierele…</p>
+                @elseif($mountShops['shops']->isEmpty())
+                    <p class="p-6 text-center text-sm text-ink2">Nu avem încă ateliere listate pentru asta. Caută în director după oraș.</p>
+                @else
+                    @if($mountService && ! $mountShops['byService'])
+                        <p class="mb-3 rounded-[3px] bg-sand px-3.5 py-2.5 text-xs text-sandink">
+                            Niciun atelier din zonă nu listează încă „{{ $mountService->name }}”. Acestea sunt cele mai apropiate: sună-le și întreabă.
+                        </p>
+                    @endif
+                    <ul class="grid gap-2">
+                        @foreach($mountShops['shops'] as $shop)
+                            <li wire:key="mount-shop-{{ $shop->id }}">
+                                <a href="{{ $shop->url() }}" target="_blank" rel="noopener"
+                                   class="group flex items-start justify-between gap-3 rounded-[3px] border border-line bg-white p-3.5 transition hover:border-ink">
+                                    <span class="min-w-0">
+                                        <span class="block font-semibold">{{ $shop->name }}</span>
+                                        <span class="block text-xs text-ink2">{{ $shop->fullAddress() }}</span>
+                                        @if($shop->fits_parts_bought_here)
+                                            <span class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-fit"><x-storefront.icon name="check" class="h-3.5 w-3.5" /> montează piese cumpărate de la noi</span>
+                                        @endif
+                                    </span>
+                                    <x-storefront.icon name="arrow-right" class="mt-1 h-4 w-4 shrink-0 text-ink2 transition-transform duration-300 group-hover:translate-x-0.5" />
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+
+            <div class="grid gap-2 border-t border-line p-4">
+                <a href="{{ $shopsUrl }}" target="_blank" rel="noopener" class="st-btn st-btn--ink st-btn--block">
+                    Toate atelierele din director <x-storefront.icon name="arrow-right" class="st-arrow" />
+                </a>
+                <p class="text-center text-xs text-ink2">Se deschide într-un tab nou; pagina produsului rămâne aici.</p>
+            </div>
+        </div>
+    </div>
 
     {{-- ============================================================ Buy bar --}}
     <div class="fixed inset-x-0 bottom-0 z-30 translate-y-full border-t border-gl bg-g0/92 text-bone backdrop-blur-xl transition-transform duration-500 ease-[cubic-bezier(.2,.8,.2,1)]"
