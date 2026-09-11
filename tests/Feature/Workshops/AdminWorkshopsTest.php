@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workshops;
 
 use App\Enums\WorkshopMatchStatus;
+use App\Enums\WorkshopRecordMatchStatus;
 use App\Livewire\Admin\Workshops\WorkshopReviewQueue;
 use App\Livewire\Admin\Workshops\WorkshopsIndex;
 use App\Livewire\Admin\Workshops\WorkshopSourcesIndex;
@@ -10,7 +11,10 @@ use App\Models\User;
 use App\Models\Workshop;
 use App\Models\WorkshopDataSource;
 use App\Models\WorkshopMatchCandidate;
+use App\Models\WorkshopRecordMatch;
+use App\Workshops\Data\SourceRecordData;
 use App\Workshops\Ingestion\DataSourceCatalog;
+use App\Workshops\Ingestion\SourceRecordStore;
 use App\Workshops\Support\CompanyNameNormalizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -76,6 +80,32 @@ class AdminWorkshopsTest extends TestCase
         $this->assertSame($this->workshop->id, $twin->fresh()->merged_into_id);
         $this->assertSame(WorkshopMatchStatus::Confirmed, $pair->fresh()->status);
         $this->assertSame($this->admin->id, $pair->fresh()->reviewed_by);
+    }
+
+    public function test_a_mapped_point_is_shown_with_its_address_and_each_candidate_with_its_own(): void
+    {
+        // A chain's branches share a name: the address and the distance are what tell them apart.
+        $near = Workshop::query()->create(['name' => 'BEST TIRES SHOP SRL', 'normalized_name' => 'best tires shop', 'address' => 'Str. Zizinului nr. 110, Brașov', 'locality' => 'Brașov', 'county_code' => 'BV', 'latitude' => 45.6400, 'longitude' => 25.6200, 'coordinates_confidence' => 85, 'is_active' => true]);
+        $far = Workshop::query()->create(['name' => 'BEST TIRES SHOP SRL', 'normalized_name' => 'best tires shop', 'address' => 'Calea București nr. 5, Brașov', 'locality' => 'Brașov', 'county_code' => 'BV', 'latitude' => 45.6700, 'longitude' => 25.6200, 'coordinates_confidence' => 85, 'is_active' => true]);
+        $record = app(SourceRecordStore::class)->store(WorkshopDataSource::forKey(DataSourceCatalog::OSM), new SourceRecordData(
+            recordType: 'poi',
+            externalId: 'node/4242',
+            payload: ['type' => 'node', 'id' => 4242, 'lat' => 45.6401, 'lng' => 25.6201, 'tags' => ['name' => 'Best Tires Shop', 'shop' => 'tyres', 'addr:street' => 'Strada Zizinului', 'addr:housenumber' => '110', 'addr:city' => 'Brașov']],
+        ))->record;
+        WorkshopRecordMatch::query()->create(['source_record_id' => $record->id, 'target_type' => WorkshopRecordMatch::TARGET_WORKSHOP, 'status' => WorkshopRecordMatchStatus::Ambiguous, 'score' => 80, 'candidates' => [
+            ['workshop_id' => $near->id, 'name' => $near->name, 'score' => 80, 'signals' => ['name_similarity' => 1, 'address_similarity' => 1]],
+            ['workshop_id' => $far->id, 'name' => $far->name, 'score' => 75, 'signals' => ['name_similarity' => 1]],
+        ]]);
+
+        Livewire::actingAs($this->admin)->test(WorkshopReviewQueue::class)
+            ->set('tab', 'records')
+            ->assertSee('Strada Zizinului 110, Brașov')
+            ->assertSee('Str. Zizinului nr. 110, Brașov')
+            ->assertSee('Calea București nr. 5, Brașov')
+            ->assertSee('la 14 m de punctul OSM')
+            ->assertSee('la 3,3 km de punctul OSM')
+            ->assertSee('adresă 100%')
+            ->assertSee('vezi în OpenStreetMap');
     }
 
     public function test_a_source_is_cleared_for_publication_with_a_visible_button(): void

@@ -55,37 +55,68 @@
             <x-admin.empty title="Nicio potrivire de verificat" hint="Punctele OSM și firmele ONRC ambigue apar aici după import." />
         @else
             <div class="space-y-3">
-                @foreach($records as $match)
-                    @php($payload = (array) $match->sourceRecord?->payload)
+                @foreach($reviewItems as $item)
+                    @php($match = $item['match'])
+                    @php($subject = $item['subject'])
                     <div class="rounded-xl border border-stone-200 bg-white p-4 text-sm" wire:key="match-{{ $match->id }}">
-                        <div class="flex flex-wrap items-baseline justify-between gap-2">
-                            <div>
-                                <span class="font-medium text-stone-900">{{ $payload['tags']['name'] ?? $payload['DENUMIRE'] ?? $match->sourceRecord?->external_id }}</span>
-                                <span class="text-xs text-stone-500">· {{ $match->sourceRecord?->dataSource?->name }} · {{ $match->status->value }} · scor {{ $match->score ?? '—' }}</span>
+                        {{-- What the point (or the ONRC company) says about itself: the thing to compare against. --}}
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="text-xs text-stone-500">
+                                    {{ $match->sourceRecord?->dataSource?->name }} ·
+                                    {{ $match->status === \App\Enums\WorkshopRecordMatchStatus::Ambiguous ? 'mai mulți candidați la fel de potriviți' : 'potrivire probabilă, neconfirmată' }}
+                                </div>
+                                <div class="mt-0.5 font-medium text-stone-900">{{ $subject['name'] ?? $match->sourceRecord?->external_id }}</div>
+                                <div class="text-stone-700">{{ $subject['address'] ?? ($match->target_type === 'workshop' ? 'Punctul nu are adresă în OpenStreetMap' : 'Fără adresă') }}</div>
+                                <div class="text-xs text-stone-500">
+                                    @if($subject['phones'])tel. {{ implode(', ', $subject['phones']) }}@endif
+                                    @foreach($subject['websites'] as $website) · {{ $website }}@endforeach
+                                    @foreach($subject['details'] as $detail) · {{ $detail }}@endforeach
+                                </div>
                             </div>
-                            <a href="{{ route('admin.workshops.records.show', $match->source_record_id) }}" class="text-xs underline">înregistrarea brută</a>
+                            <div class="flex flex-wrap gap-3 text-xs">
+                                @if($subject['url'])<a href="{{ $subject['url'] }}" target="_blank" rel="noopener" class="underline">vezi în OpenStreetMap</a>@endif
+                                @if($subject['map'])<a href="{{ $subject['map'] }}" target="_blank" rel="noopener" class="underline">punctul pe hartă</a>@endif
+                                <a href="{{ route('admin.workshops.records.show', $match->source_record_id) }}" class="underline">înregistrarea brută</a>
+                            </div>
                         </div>
 
-                        <div class="mt-3 space-y-1.5">
-                            @foreach(array_slice((array) $match->candidates, 0, 5) as $candidate)
-                                @php($targetId = $candidate['workshop_id'] ?? $candidate['company_id'] ?? null)
-                                @if($targetId)
-                                    <div class="flex items-center justify-between gap-3 rounded-lg bg-stone-50 px-3 py-2">
-                                        <span>
-                                            @if($match->target_type === 'workshop')
-                                                <a href="{{ route('admin.workshops.show', $targetId) }}" class="underline">{{ $workshopNames[$targetId] ?? '#'.$targetId }}</a>
+                        <div class="mt-3 space-y-2">
+                            @foreach($item['candidates'] as $candidate)
+                                <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg px-3 py-2 {{ $candidate['suggested'] ? 'bg-emerald-50' : 'bg-stone-50' }}" wire:key="match-{{ $match->id }}-{{ $candidate['id'] }}">
+                                    <div class="min-w-0">
+                                        <div>
+                                            @if($candidate['url'])
+                                                <a href="{{ $candidate['url'] }}" class="font-medium text-stone-900 underline">{{ $candidate['name'] ?? '#'.$candidate['id'] }}</a>
                                             @else
-                                                {{ $companyNames[$targetId] ?? '#'.$targetId }}
+                                                <span class="font-medium text-stone-900">{{ $candidate['name'] ?? '#'.$candidate['id'] }}</span>
                                             @endif
-                                            <span class="text-xs text-stone-500">scor {{ $candidate['score'] ?? '—' }}</span>
-                                        </span>
-                                        <button type="button" class="btn-secondary" wire:click="linkRecord({{ $match->id }}, {{ $targetId }})">Este acesta</button>
+                                            @if($candidate['suggested'])<span class="text-xs text-emerald-800">· sugestia sistemului</span>@endif
+                                        </div>
+                                        <div class="text-stone-700">{{ $candidate['address'] ?? 'Fără adresă' }}</div>
+                                        <div class="text-xs text-stone-500">
+                                            {{ $candidate['place'] }}
+                                            · {{ $candidate['cui'] ? 'CUI '.$candidate['cui'] : 'fără CUI' }}
+                                            @if($candidate['phones']) · tel. {{ implode(', ', $candidate['phones']) }}@endif
+                                            @if($candidate['distance'] !== null)
+                                                · <span class="{{ $candidate['approximate'] ? '' : 'font-medium text-stone-700' }}">la {{ $candidate['distance'] < 1000 ? $candidate['distance'].' m' : number_format($candidate['distance'] / 1000, 1, ',', '').' km' }} de punctul OSM</span>
+                                                @if($candidate['approximate'])(poziția atelierului e doar la nivel de oraș)@endif
+                                            @endif
+                                            @foreach($candidate['signals'] as $signal) · {{ $signal }}@endforeach
+                                            @if($candidate['map']) · <a href="{{ $candidate['map'] }}" target="_blank" rel="noopener" class="underline">pe hartă</a>@endif
+                                        </div>
                                     </div>
-                                @endif
+                                    <button type="button" class="btn-secondary" wire:click="linkRecord({{ $match->id }}, {{ $candidate['id'] }})">Este acesta</button>
+                                </div>
                             @endforeach
                         </div>
 
-                        <div class="mt-3 text-right">
+                        <div class="mt-3 flex flex-wrap items-center justify-end gap-3">
+                            <span class="text-xs text-stone-500">
+                                {{ $match->target_type === 'workshop'
+                                    ? 'Dacă niciunul nu e la locul punctului, punctul OSM devine un atelier separat.'
+                                    : 'Firma din ONRC rămâne nelegată de companiile de mai sus.' }}
+                            </span>
                             <button type="button" class="btn-secondary" wire:click="rejectRecord({{ $match->id }})">Niciunul dintre ei</button>
                         </div>
                     </div>
