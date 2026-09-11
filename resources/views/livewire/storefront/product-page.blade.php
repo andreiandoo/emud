@@ -298,8 +298,10 @@
                 {{-- Fit, in one line above the button: it decides whether this is the right part, so it
                      is read before the order — without taking the buy box's room to say it. --}}
                 @php($connector = $incompatible ? 'cu' : ($fitsForSure ? 'pe' : 'pentru'))
+                {{-- On a phone the links go under the text: side by side, they would squeeze the
+                     sentence into a column one word wide. --}}
                 <div title="{{ $verdict->explanation() }}" @class([
-                    'flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[3px] border px-3.5 py-2.5 text-[13.5px]',
+                    'flex flex-col gap-2 rounded-[3px] border px-3.5 py-2.5 text-[13.5px] sm:flex-row sm:items-center sm:gap-4',
                     'border-fit/30 bg-fit/[.06]' => $fitsForSure,
                     'border-signal/35 bg-signal/[.06]' => $incompatible,
                     'border-amber-300 bg-amber-50' => ! $fitsForSure && ! $incompatible && ! $unknown,
@@ -326,7 +328,7 @@
                         </span>
                     </p>
 
-                    <span class="flex shrink-0 items-center gap-3 text-[12.5px] font-semibold">
+                    <span class="flex flex-wrap items-center gap-x-3 gap-y-1 pl-[2.125rem] text-[12.5px] font-semibold sm:shrink-0 sm:pl-0">
                         <button type="button" @click="$dispatch('open-vehicle-selector', { tab: 'car' })" class="underline underline-offset-2 transition hover:text-signal">
                             {{ $vehicle ? 'Schimbă' : 'Alege mașina' }}
                         </button>
@@ -339,33 +341,36 @@
                     </span>
                 </div>
 
+                {{-- On a phone the row is tightened — a narrower stepper, the button without its icon —
+                     because a button that will not wrap its label otherwise pushes the heart off
+                     the screen and widens the whole column with it. --}}
                 <div class="grid gap-3" x-intersect:leave="bar = $el.getBoundingClientRect().top < 0" x-intersect:enter="bar = false">
-                    <div class="flex items-stretch gap-2.5">
+                    <div class="flex items-stretch gap-2 sm:gap-2.5">
                         <div class="flex h-[3.5rem] shrink-0 items-center rounded-[3px] border border-line2 bg-white">
-                            <button type="button" @click="$refs.qty.stepDown(); $refs.qty.dispatchEvent(new Event('input'))" class="grid h-full w-11 place-items-center transition hover:bg-light" aria-label="Scade cantitatea">
+                            <button type="button" @click="$refs.qty.stepDown(); $refs.qty.dispatchEvent(new Event('input'))" class="grid h-full w-9 place-items-center transition hover:bg-light sm:w-11" aria-label="Scade cantitatea">
                                 <x-storefront.icon name="minus" class="h-4 w-4" />
                             </button>
                             <label>
                                 <span class="sr-only">Cantitate</span>
                                 <input x-ref="qty" type="number" min="1" max="99" wire:model="quantity"
-                                       class="h-full min-h-0 w-11 rounded-none border-0 bg-transparent p-0 text-center font-mono tabular-nums focus:shadow-none focus:ring-0">
+                                       class="h-full min-h-0 w-9 rounded-none border-0 bg-transparent p-0 text-center font-mono tabular-nums focus:shadow-none focus:ring-0 sm:w-11">
                             </label>
-                            <button type="button" @click="$refs.qty.stepUp(); $refs.qty.dispatchEvent(new Event('input'))" class="grid h-full w-11 place-items-center transition hover:bg-light" aria-label="Crește cantitatea">
+                            <button type="button" @click="$refs.qty.stepUp(); $refs.qty.dispatchEvent(new Event('input'))" class="grid h-full w-9 place-items-center transition hover:bg-light sm:w-11" aria-label="Crește cantitatea">
                                 <x-storefront.icon name="plus" class="h-4 w-4" />
                             </button>
                         </div>
 
-                        <button wire:click="addToCart" @disabled(! $availability->orderable()) class="st-btn min-h-[3.5rem] flex-1">
+                        <button wire:click="addToCart" @disabled(! $availability->orderable()) class="st-btn min-h-[3.5rem] min-w-0 flex-1 max-sm:px-4">
                             <span wire:loading.remove wire:target="addToCart">Adaugă în coș</span>
                             <span wire:loading wire:target="addToCart">Se adaugă…</span>
-                            <x-storefront.icon name="cart" wire:loading.remove wire:target="addToCart" />
+                            <x-storefront.icon name="cart" wire:loading.remove wire:target="addToCart" class="max-sm:hidden" />
                         </button>
 
                         {{-- Filled once saved, so the button says where the part already is. --}}
                         <button wire:click="toggleWishlist" aria-pressed="{{ $inWishlist ? 'true' : 'false' }}"
                                 aria-label="{{ $inWishlist ? 'Scoate din favorite' : 'Salvează la favorite' }}"
                                 title="{{ $inWishlist ? 'Salvat la favorite' : 'Salvează la favorite' }}" @class([
-                                    'group grid h-[3.5rem] w-[3.5rem] shrink-0 place-items-center rounded-[3px] border transition duration-300',
+                                    'group grid h-[3.5rem] w-12 shrink-0 place-items-center rounded-[3px] border transition duration-300 sm:w-[3.5rem]',
                                     'border-signal bg-signal/10 text-signal' => $inWishlist,
                                     'border-line2 bg-white text-ink hover:border-signal hover:bg-signal/[.06] hover:text-signal' => ! $inWishlist,
                                 ])>
@@ -387,12 +392,14 @@
                         [
                             'truck',
                             $shippingPrice === null ? 'Livrare prin curier' : ($shippingPrice->isZero() ? 'Livrare gratuită' : 'Livrare '.$shippingPrice->format()),
-                            $availability->deliveryWindow() ?? ($freeOver !== null && $shippingPrice !== null && ! $shippingPrice->isZero() ? 'Gratuită de la '.$freeOver->format() : 'Prin curier, în toată țara'),
+                            $availability->deliveryRange() ?? ($freeOver !== null && $shippingPrice !== null && ! $shippingPrice->isZero() ? 'Gratuită de la '.$freeOver->format() : 'Prin curier, în toată țara'),
                         ],
                         ['return', 'Retur în 14 zile', 'De la primire, conform legii'],
                         ['shield', 'Garanție '.($product->warranty_months ? $product->warranty_months.' luni' : 'legală'), 'Factura ține loc de certificat'],
                     ] as [$icon, $title, $detail])
-                        <li class="group flex items-center gap-3 rounded-[3px] border border-line bg-white p-3 transition-colors duration-300 hover:border-line2">
+                        {{-- Icon above the words where three share a narrow column, beside them where
+                             each has the width to itself. --}}
+                        <li class="group flex items-center gap-3 rounded-[3px] border border-line bg-white p-3 transition-colors duration-300 hover:border-line2 lg:flex-col lg:items-start lg:gap-2.5">
                             <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sand text-sandink transition-colors duration-300 group-hover:bg-ink group-hover:text-light">
                                 <x-storefront.icon :name="$icon" class="h-[1.15rem] w-[1.15rem]" />
                             </span>
