@@ -40,3 +40,9 @@ if (config('workshops.schedule.enabled')) {
     Schedule::command('workshops:onrc:import')->cron((string) config('workshops.schedule.onrc_cron'))->withoutOverlapping(360);
     Schedule::command('workshops:deduplicate')->weeklyOn(1, '07:30')->withoutOverlapping(120);
 }
+
+// The public directory follows the registry: after the weekly import and deduplication, so a
+// listing is built from the workshop as it stands, not from a duplicate about to be folded.
+if (config('workshops.schedule.enabled')) {
+    Schedule::command('service-shops:sync-registry')->weeklyOn(1, '10:00')->withoutOverlapping(120);
+}

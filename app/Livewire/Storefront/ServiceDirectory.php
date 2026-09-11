@@ -7,6 +7,7 @@ use App\Models\ServiceShop;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -117,15 +118,21 @@ class ServiceDirectory extends Component
             ->get();
     }
 
-    /** @return Collection<int, string> */
+    /**
+     * Cached: with the registry behind the directory, this reads every published listing to fill
+     * one dropdown, and the answer changes only when a sync or an admin edit runs.
+     *
+     * @return Collection<int, string>
+     */
     private function availableSpecialities(): Collection
     {
-        return ServiceShop::query()
+        return Cache::remember('storefront:directory:specialities', now()->addMinutes(10), fn (): Collection => ServiceShop::query()
             ->published()
+            ->whereNotNull('specialities')
             ->pluck('specialities')
             ->flatMap(fn (mixed $list): array => is_array($list) ? $list : [])
             ->unique()
             ->sort()
-            ->values();
+            ->values());
     }
 }

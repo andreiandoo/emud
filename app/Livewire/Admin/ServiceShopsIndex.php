@@ -27,6 +27,8 @@ class ServiceShopsIndex extends Component
         'published' => 'Publicate',
         'draft' => 'Ciorne',
         'promoted' => 'Promovate',
+        'registry' => 'Din registru',
+        'manual' => 'Adăugate manual',
     ];
 
     #[Url(except: '')]
@@ -46,7 +48,13 @@ class ServiceShopsIndex extends Component
     {
         $shop = ServiceShop::query()->findOrFail($shopId);
 
-        $shop->update(['status' => $shop->status === 'published' ? 'draft' : 'published']);
+        $shop->update([
+            'status' => $shop->status === 'published' ? 'draft' : 'published',
+            // Published or taken down by a person: the registry sync must not reverse it.
+            'registry_locked' => $shop->workshop_id === null
+                ? $shop->registry_locked
+                : array_values(array_unique([...$shop->lockedFields(), 'status'])),
+        ]);
     }
 
     public function render()
@@ -79,7 +87,9 @@ class ServiceShopsIndex extends Component
             // Expired promotions are not promotions, so the filter uses the same cut-off the
             // public ordering does rather than the raw column.
             ->when($this->tab === 'promoted', fn (Builder $q) => $q->where('promotion_tier', '!=', 'none')
-                ->where(fn (Builder $inner) => $inner->whereNull('promoted_until')->orWhere('promoted_until', '>=', now()->toDateString())));
+                ->where(fn (Builder $inner) => $inner->whereNull('promoted_until')->orWhere('promoted_until', '>=', now()->toDateString())))
+            ->when($this->tab === 'registry', fn (Builder $q) => $q->whereNotNull('workshop_id'))
+            ->when($this->tab === 'manual', fn (Builder $q) => $q->whereNull('workshop_id'));
     }
 
     /** @return array<string, int> */
@@ -95,6 +105,8 @@ class ServiceShopsIndex extends Component
                 ->where('promotion_tier', '!=', 'none')
                 ->where(fn (Builder $q) => $q->whereNull('promoted_until')->orWhere('promoted_until', '>=', now()->toDateString()))
                 ->count(),
+            'registry' => ServiceShop::query()->whereNotNull('workshop_id')->count(),
+            'manual' => ServiceShop::query()->whereNull('workshop_id')->count(),
         ];
     }
 

@@ -19,6 +19,41 @@
         </p>
     @endif
 
+    {{-- Said up front on a listing built from the registry: which fields an import will still
+         rewrite is the one thing an editor must know before changing any of them. --}}
+    @if($shop?->workshop_id)
+        <div class="mb-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="space-y-1">
+                    <p class="font-semibold">Fișă preluată din registrul național</p>
+                    <p>
+                        Atelierul <a href="{{ route('admin.workshops.show', $shop->workshop_id) }}" class="font-semibold underline">#{{ $shop->workshop_id }}</a>
+                        · sincronizat {{ $shop->registry_synced_at?->diffForHumans() ?? 'niciodată' }}.
+                        Adresa, contactul, autorizațiile, mărcile și lucrările urmează registrul la fiecare import;
+                        un câmp pe care îl modifici aici rămâne cum l-ai scris.
+                    </p>
+                    @if($lockedFields !== [])
+                        <p>
+                            Preluate de tine:
+                            @foreach($lockedFields as $field)
+                                <span class="mr-1 inline-block rounded bg-white px-1.5 py-0.5 text-xs font-medium ring-1 ring-sky-200">{{ $fieldLabels[$field] ?? $field }}</span>
+                            @endforeach
+                        </p>
+                    @endif
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" wire:click="syncFromRegistry" class="btn-secondary">Sincronizează acum</button>
+                    @if($lockedFields !== [])
+                        <button type="button" wire:click="followRegistryAgain"
+                                wire:confirm="Câmpurile preluate de tine vor fi rescrise cu datele din registru. Continui?"
+                                class="btn-secondary">Reia totul din registru</button>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Alpine rather than Livewire tabs: switching a tab must not lose what has been typed into
          the other ones, and every field here belongs to a single unsaved listing. --}}
     <div class="mb-6 flex flex-wrap items-center gap-1">

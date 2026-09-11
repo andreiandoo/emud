@@ -39,6 +39,10 @@
                         <tr wire:key="shop-{{ $shop->id }}">
                             <td>
                                 <a href="{{ route('admin.service-shops.edit', $shop) }}" class="font-medium text-stone-900 hover:underline">{{ $shop->name }}</a>
+                                @if($shop->workshop_id)
+                                    <a href="{{ route('admin.workshops.show', $shop->workshop_id) }}" title="Fișă preluată din registrul național"
+                                       class="ml-1 rounded bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800 ring-1 ring-sky-200 hover:bg-sky-100">registru</a>
+                                @endif
                                 <div class="text-xs text-stone-500">{{ $shop->address ?: '—' }}</div>
                             </td>
 
