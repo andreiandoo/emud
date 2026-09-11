@@ -196,6 +196,28 @@ class ServiceShop extends Model
     }
 
     /**
+     * The address on one line, without naming the town or the county twice: an address copied
+     * from the registry often already reads "Mun. Ploiești, Str. Curcubeului, Nr. 44, Jud. Prahova".
+     */
+    public function fullAddress(bool $withPostalCode = false): string
+    {
+        $parts = array_filter([trim((string) $this->address), $withPostalCode ? trim((string) $this->postal_code) : '']);
+        $written = str(implode(' ', $parts))->ascii()->lower()->value();
+
+        foreach ([$this->city, $this->county] as $place) {
+            $folded = str((string) $place)->trim()->ascii()->lower()->value();
+
+            // Whole words only, so Deva is still added after "Str. Devasului".
+            if ($folded !== '' && preg_match('/\b'.preg_quote($folded, '/').'\b/', $written) !== 1) {
+                $parts[] = trim((string) $place);
+                $written .= ' '.$folded;
+            }
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
      * A link that opens the customer's own map application. Coordinates are used when we have
      * them because a pin is unambiguous; the written address is the fallback and is often good
      * enough for a workshop on a named street.
@@ -204,7 +226,7 @@ class ServiceShop extends Model
     {
         $destination = $this->latitude && $this->longitude
             ? "{$this->latitude},{$this->longitude}"
-            : trim(implode(', ', array_filter([$this->address, $this->city, $this->county])));
+            : $this->fullAddress();
 
         return 'https://www.google.com/maps/dir/?api=1&destination='.urlencode($destination);
     }
@@ -214,7 +236,7 @@ class ServiceShop extends Model
     {
         return $this->latitude && $this->longitude
             ? "https://waze.com/ul?ll={$this->latitude},{$this->longitude}&navigate=yes"
-            : 'https://waze.com/ul?q='.urlencode(trim(implode(', ', array_filter([$this->address, $this->city, $this->county])))).'&navigate=yes';
+            : 'https://waze.com/ul?q='.urlencode($this->fullAddress()).'&navigate=yes';
     }
 
     /** The first page of the workshop's own site, as a reader would type it: host only. */

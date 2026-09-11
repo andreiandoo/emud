@@ -17,7 +17,7 @@
 
             <p class="mt-1 flex items-start gap-1.5 text-sm text-ink2">
                 <x-storefront.icon name="pin" class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                {{ collect([$shop->address, $shop->city, $shop->county])->filter()->implode(', ') }}
+                {{ $shop->fullAddress() }}
             </p>
         </div>
 
