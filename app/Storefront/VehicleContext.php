@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Session;
  * are different states: an absent session entry means "nothing chosen yet, fall back to the
  * garage", while a null entry means "the customer deliberately cleared it". Collapsing them
  * would make the clear button useless for exactly the customers who own a garage.
+ *
+ * A customer can also choose several of their garage cars at once; listings and search then show
+ * what fits any of them. current() stays one car — the first chosen — for the answers that are
+ * about a single car, like the car an order is noted for.
  */
 class VehicleContext
 {
@@ -49,20 +53,45 @@ class VehicleContext
 
     public function current(): ?SelectedVehicle
     {
+        return $this->selection()?->primary();
+    }
+
+    /** Every car the storefront answers for: the one current() returns, or several chosen together. */
+    public function selection(): ?VehicleSelection
+    {
         // exists(), not has(): has() reports false for a null value, which would erase the
         // difference between "nothing chosen yet" and "deliberately cleared".
         if (Session::exists(self::SESSION_KEY)) {
-            $stored = Session::get(self::SESSION_KEY);
-
-            return is_array($stored) ? SelectedVehicle::fromArray($stored) : null;
+            return $this->stored(Session::get(self::SESSION_KEY));
         }
 
-        return $this->fromGarage();
+        $vehicle = $this->fromGarage();
+
+        return $vehicle === null ? null : new VehicleSelection([$vehicle]);
     }
 
     public function select(SelectedVehicle $vehicle): void
     {
         Session::put(self::SESSION_KEY, $vehicle->toArray());
+    }
+
+    /**
+     * Several cars at once, in the order given; the first becomes current(). One car is stored
+     * the way select() stores it, so nothing reading the session has to tell the two apart.
+     *
+     * @param  list<SelectedVehicle>  $vehicles
+     */
+    public function selectMany(array $vehicles): void
+    {
+        $vehicles = array_values($vehicles);
+
+        if ($vehicles === []) {
+            $this->clear();
+        } elseif (count($vehicles) === 1) {
+            $this->select($vehicles[0]);
+        } else {
+            Session::put(self::SESSION_KEY, ['several' => array_map(fn (SelectedVehicle $vehicle): array => $vehicle->toArray(), $vehicles)]);
+        }
     }
 
     /**
@@ -86,6 +115,22 @@ class VehicleContext
     public function has(): bool
     {
         return $this->current() !== null;
+    }
+
+    private function stored(mixed $stored): ?VehicleSelection
+    {
+        if (! is_array($stored)) {
+            return null;
+        }
+
+        $rows = isset($stored['several']) && is_array($stored['several']) ? $stored['several'] : [$stored];
+
+        $vehicles = array_values(array_filter(array_map(
+            fn (mixed $row): ?SelectedVehicle => is_array($row) ? SelectedVehicle::fromArray($row) : null,
+            $rows,
+        )));
+
+        return $vehicles === [] ? null : new VehicleSelection($vehicles);
     }
 
     private function fromGarage(): ?SelectedVehicle

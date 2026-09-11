@@ -1,4 +1,4 @@
-<x-storefront.account active="garage" :title="$vehicle->nickname ?: $vehicle->label()" kicker="Garajul meu">
+<x-storefront.account active="garage" :title="$vehicle->nickname ?: $vehicle->label()">
     <x-seo :title="$vehicle->label()" :index="false" :follow="false" />
 
     <x-slot:actions>
@@ -74,13 +74,44 @@
                     @endforeach
                 </dl>
             @else
-                {{-- Said plainly rather than shown as empty rows: there is no configuration
-                     linked, and blank fields would read as missing data instead of absent link. --}}
-                <p class="border-t border-line pt-4 text-sm text-ink2">
-                    Nu avem încă o configurație tehnică legată de această mașină. Completeaz-o din seria de șasiu (VIN) în
-                    <a href="{{ route('customer.garage') }}" class="font-semibold text-ink underline underline-offset-2">garaj</a>
-                    ca să potrivim piesele mai exact.
-                </p>
+                {{-- Said plainly rather than shown as empty rows, with the two ways to fill it in:
+                     read it off the VIN, or pick it from the builds the catalogue has. --}}
+                <div class="grid gap-3 border-t border-line pt-4">
+                    <p class="text-sm text-ink2">
+                        @if($vehicle->vin)
+                            Seria de șasiu e salvată, dar nu știm încă motorizarea exactă. O căutăm după serie sau o alegi din listă, ca să potrivim piesele mai exact.
+                        @else
+                            Nu știm încă motorizarea exactă. Alege-o din listă, sau adaugă seria de șasiu (VIN) din
+                            <a href="{{ route('customer.garage') }}" class="font-semibold text-ink underline underline-offset-2">garaj</a>.
+                        @endif
+                    </p>
+
+                    @if($vehicle->vin)
+                        <button type="button" wire:click="identifyFromVin" class="st-btn st-btn--outline st-btn--sm w-fit">
+                            <x-storefront.icon name="vin" />
+                            <span wire:loading.remove wire:target="identifyFromVin">Caută motorizarea după serie</span>
+                            <span wire:loading wire:target="identifyFromVin">Se caută…</span>
+                        </button>
+                    @endif
+
+                    @if($configurationOptions->isNotEmpty())
+                        <form wire:submit="saveConfiguration" class="grid gap-1.5">
+                            <span class="field-label">Motorizare</span>
+                            <div class="flex gap-2">
+                                <select wire:model="configurationPick" class="min-w-0 flex-1">
+                                    <option value="">Alege motorizarea</option>
+                                    @foreach($configurationOptions as $option)
+                                        <option value="{{ $option['id'] }}">{{ $option['label'] }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="submit" class="st-btn st-btn--ink st-btn--sm shrink-0">Salvează</button>
+                            </div>
+                            @error('configurationPick') <span class="field-error">{{ $message }}</span> @enderror
+                        </form>
+                    @else
+                        <p class="text-xs text-ink2">Catalogul nu are încă motorizări pentru acest model, așa că potrivim piesele după model și generație.</p>
+                    @endif
+                </div>
             @endif
 
             <form wire:submit="saveMileage" class="grid gap-1.5">
@@ -109,23 +140,25 @@
             </div>
 
             {{-- The deadlines every owner has, each one click away: add it if it is not set, change
-                 it if it is. --}}
+                 it if it is. A deadline by kilometres shows how far off it is, read against the
+                 last odometer reading. --}}
             <ul class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 @foreach($essentials as $type)
                     @php($set = $byType->get($type->value))
                     @php($state = $set?->status())
+                    @php($kmLeft = $set?->kilometresRemaining())
                     <li wire:key="essential-{{ $type->value }}" @class([
-                        'flex items-center justify-between gap-3 rounded-[3px] border p-3.5',
+                        'flex items-start justify-between gap-3 rounded-[3px] border p-3.5',
                         'border-dashed border-line2' => $set === null,
                         'border-red-300 bg-red-50' => $state === 'overdue',
                         'border-amber-300 bg-amber-50' => $state === 'due_soon',
                         'border-line bg-light' => $set !== null && ! in_array($state, ['overdue', 'due_soon'], true),
                     ])>
-                        <span class="min-w-0">
+                        <span class="min-w-0 flex-1">
                             <span class="block text-sm font-semibold">{{ $type->label() }}</span>
                             <span class="block text-xs text-ink2">
                                 @if($set?->due_on)
-                                    {{ $set->due_on->format('d/m/Y') }}
+                                    {{ $set->due_on->format('d/m/Y') }}@if($set->due_at_km) · la {{ number_format($set->due_at_km, 0, ',', '.') }} km @endif
                                 @elseif($set?->due_at_km)
                                     la {{ number_format($set->due_at_km, 0, ',', '.') }} km
                                 @elseif($set)
@@ -134,9 +167,33 @@
                                     nesetată
                                 @endif
                             </span>
+
+                            @if($set?->due_at_km)
+                                @if($kmLeft === null)
+                                    <span class="mt-1 block text-xs text-ink2">Salvează kilometrajul curent ca să vezi cât mai ai.</span>
+                                @else
+                                    <span @class([
+                                        'mt-1 block text-xs font-semibold',
+                                        'text-red-700' => $kmLeft < 0,
+                                        'text-amber-800' => $kmLeft >= 0 && $kmLeft <= 1000,
+                                        'text-fit' => $kmLeft > 1000,
+                                    ])>{{ $set->kilometresLabel() }}</span>
+
+                                    @if(($used = $set->mileageUsed()) !== null)
+                                        <span class="mt-1.5 block h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
+                                            <span @class([
+                                                'block h-full rounded-full',
+                                                'bg-red-600' => $kmLeft < 0,
+                                                'bg-amber-500' => $kmLeft >= 0 && $kmLeft <= 1000,
+                                                'bg-fit' => $kmLeft > 1000,
+                                            ]) style="width: {{ round($used * 100) }}%"></span>
+                                        </span>
+                                    @endif
+                                @endif
+                            @endif
                         </span>
                         <button type="button" @click="$wire.startReminder('{{ $type->value }}').then(() => modal = true)"
-                                class="shrink-0 rounded-full border border-line2 px-3 py-1 text-xs font-semibold transition hover:border-ink hover:bg-ink hover:text-light">
+                                class="shrink-0 rounded-full border border-line2 bg-white px-3 py-1 text-xs font-semibold transition hover:border-ink hover:bg-ink hover:text-light">
                             {{ $set ? 'Modifică' : '+ Adaugă' }}
                         </button>
                     </li>
@@ -148,6 +205,8 @@
 
                 @forelse($reminders as $reminder)
                     @php($state = $reminder->status())
+                    @php($days = $reminder->daysRemaining())
+                    @php($kmLeft = $reminder->kilometresRemaining())
                     <div wire:key="reminder-{{ $reminder->id }}" @class([
                         'flex flex-wrap items-center gap-3 rounded-[3px] border p-4 text-sm',
                         'border-red-300 bg-red-50' => $state === 'overdue',
@@ -160,30 +219,48 @@
                                 <span class="ml-1 pill-neutral">obligatoriu</span>
                             @endif
 
-                            <div class="mt-0.5 text-xs text-ink2">
+                            <div class="mt-0.5 flex flex-wrap gap-x-1.5 text-xs text-ink2">
                                 @if($reminder->due_on)
-                                    Scadent {{ $reminder->due_on->format('d/m/Y') }}
-                                    @if($state === 'overdue')
-                                        <span class="font-semibold text-red-700">· expirat de {{ abs($reminder->daysRemaining()) }} zile</span>
-                                    @elseif($state === 'due_soon')
-                                        <span class="font-semibold text-amber-800">· în {{ $reminder->daysRemaining() }} zile</span>
+                                    <span>Scadent {{ $reminder->due_on->format('d/m/Y') }}</span>
+                                    @if($days < 0)
+                                        <span class="font-semibold text-red-700">· expirat de {{ abs($days) }} {{ abs($days) === 1 ? 'zi' : 'zile' }}</span>
+                                    @elseif($days <= 30)
+                                        <span class="font-semibold text-amber-800">· {{ $days === 0 ? 'azi' : 'în '.$days.' '.($days === 1 ? 'zi' : 'zile') }}</span>
                                     @endif
                                 @endif
                                 @if($reminder->due_at_km)
-                                    · la {{ number_format($reminder->due_at_km, 0, ',', '.') }} km
+                                    <span>{{ $reminder->due_on ? '·' : '' }} la {{ number_format($reminder->due_at_km, 0, ',', '.') }} km</span>
+                                    @if($kmLeft !== null)
+                                        <span @class([
+                                            'font-semibold',
+                                            'text-red-700' => $kmLeft < 0,
+                                            'text-amber-800' => $kmLeft >= 0 && $kmLeft <= 1000,
+                                            'text-fit' => $kmLeft > 1000,
+                                        ])>· {{ $reminder->kilometresLabel() }}</span>
+                                    @endif
                                 @endif
                                 @unless($reminder->due_on || $reminder->due_at_km)
-                                    Fără scadență setată
+                                    <span>Fără scadență setată</span>
                                 @endunless
                             </div>
 
                             @if($reminder->notes)<p class="mt-1 text-xs text-ink2">{{ $reminder->notes }}</p>@endif
                         </div>
 
-                        <div class="flex items-center gap-3 text-xs">
-                            <button type="button" @click="$wire.startReminder('{{ $reminder->type->value }}').then(() => modal = true)" class="font-semibold underline underline-offset-2 hover:text-ink">Modifică</button>
-                            <button type="button" wire:click="markDone({{ $reminder->id }})" class="font-semibold underline underline-offset-2 hover:text-fit">Am făcut-o</button>
-                            <button type="button" wire:click="removeReminder({{ $reminder->id }})" wire:confirm="Ștergi scadența?" class="text-red-700 underline underline-offset-2">Șterge</button>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" @click="$wire.startReminder('{{ $reminder->type->value }}').then(() => modal = true)"
+                                    class="inline-flex h-8 items-center gap-1.5 rounded-full border border-line2 bg-white px-3 text-xs font-semibold transition hover:border-ink">
+                                <x-storefront.icon name="pencil" class="h-3.5 w-3.5" /> Modifică
+                            </button>
+                            <button type="button" wire:click="markDone({{ $reminder->id }})"
+                                    class="inline-flex h-8 items-center gap-1.5 rounded-full bg-ink px-3 text-xs font-semibold text-light transition hover:bg-fit">
+                                <x-storefront.icon name="check" class="h-3.5 w-3.5" /> Am făcut-o
+                            </button>
+                            <button type="button" wire:click="removeReminder({{ $reminder->id }})" wire:confirm="Ștergi scadența?"
+                                    class="grid h-8 w-8 place-items-center rounded-full border border-line2 bg-white text-ink2 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                                    aria-label="Șterge scadența" title="Șterge scadența">
+                                <x-storefront.icon name="trash" class="h-3.5 w-3.5" />
+                            </button>
                         </div>
                     </div>
                 @empty
@@ -194,7 +271,12 @@
 
         <div class="grid content-start gap-6">
             <section class="grid gap-3 rounded-[3px] bg-white p-6">
-                <h2 class="font-display text-xl font-semibold">Service-uri lângă tine</h2>
+                <div class="flex items-baseline justify-between gap-3">
+                    <h2 class="font-display text-xl font-semibold">Service-uri lângă tine</h2>
+                    @if($nearbyTotal > $nearby->count())
+                        <span class="shrink-0 font-mono text-[11px] text-ink2">{{ $nearby->count() }} din {{ $nearbyTotal }}</span>
+                    @endif
+                </div>
 
                 @if(! $location['city'] && ! $location['county'])
                     <p class="text-sm text-ink2">
@@ -209,7 +291,7 @@
                             <li wire:key="nearby-{{ $shop->id }}">
                                 <a href="{{ $shop->url() }}" class="grid gap-0.5 rounded-[3px] border border-line p-3.5 transition hover:border-ink">
                                     <span class="font-semibold">{{ $shop->name }}</span>
-                                    <span class="text-xs text-ink2">{{ $shop->address ?: $shop->city }}@if($shop->address), {{ $shop->city }}@endif</span>
+                                    <span class="text-xs text-ink2">{{ $shop->fullAddress() }}</span>
                                     @if($vehicle->make_id && $shop->makes->contains('id', $vehicle->make_id))
                                         <span class="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-fit"><x-storefront.icon name="check" class="h-3.5 w-3.5" /> lucrează pe {{ $vehicle->make?->name }}</span>
                                     @endif
@@ -217,6 +299,12 @@
                             </li>
                         @endforeach
                     </ul>
+
+                    @if($nearbyUrl && $nearbyTotal > $nearby->count())
+                        <a href="{{ $nearbyUrl }}" class="st-btn st-btn--outline st-btn--sm st-btn--block">
+                            Vezi toate cele {{ $nearbyTotal }} <x-storefront.icon name="arrow-right" class="st-arrow" />
+                        </a>
+                    @endif
                 @endif
             </section>
 
@@ -282,6 +370,10 @@
                         @error('reminderDueAtKm') <span class="field-error">{{ $message }}</span> @enderror
                     </label>
                 </div>
+
+                @if($vehicle->mileage_km)
+                    <p class="-mt-2 text-xs text-ink2">Kilometrajul salvat: {{ number_format($vehicle->mileage_km, 0, ',', '.') }} km. Diferența până la scadență apare în listă.</p>
+                @endif
 
                 <label class="block">
                     <span class="field-label">Notă <span class="font-normal normal-case tracking-normal opacity-70">(opțional)</span></span>

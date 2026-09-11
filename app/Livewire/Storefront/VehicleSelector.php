@@ -26,6 +26,10 @@ use Livewire\Component;
  * else gets the make/model/generation cascade, plus the reason to make an account stated where
  * the benefit is obvious rather than as a generic banner.
  *
+ * A customer with several cars can tick more than one, and listings and search then show what
+ * fits any of them. Cars leave the garage from the garage page only, so nothing here removes
+ * one: unticking narrows the search, and at least one car stays ticked.
+ *
  * The widget lives in the layout, so it renders on every storefront page. Anything it queries
  * on a cold render is therefore paid for site-wide, which is why the make list is cached and
  * the models and generations load only once a make has been chosen.
@@ -109,24 +113,56 @@ class VehicleSelector extends Component
         $this->dispatch('vehicle-changed');
     }
 
-    /** Picks one of the customer's own cars, which is the one-click path the garage exists for. */
+    /** Only this car: what picking one out of a single-car garage means. */
     public function chooseFromGarage(int $vehicleId, VehicleContext $context): void
     {
-        $user = Auth::user();
-
-        abort_if($user === null, 403);
-
-        $vehicle = CustomerVehicle::query()
-            // Scoped to the signed-in customer rather than resolved by id alone: the id comes
-            // from the browser, and another customer's plate and service history hang off it.
-            ->whereBelongsTo($user)
-            ->with(['make', 'model', 'generation'])
-            ->findOrFail($vehicleId);
+        $vehicle = $this->ownedVehicle($vehicleId);
 
         $context->select(SelectedVehicle::fromCustomerVehicle($vehicle));
         $this->syncFromContext();
 
         $this->dispatch('vehicle-changed');
+    }
+
+    /**
+     * Ticks or unticks one car of the garage. The last ticked car stays ticked: an empty choice
+     * would mean "no car", and showing the whole catalogue is what the switch is for.
+     */
+    public function toggleFromGarage(int $vehicleId, VehicleContext $context, Garage $garage): void
+    {
+        $vehicle = $this->ownedVehicle($vehicleId);
+        $selection = $context->selection();
+
+        // A car picked from the dropdowns is not one of the garage's; ticking a garage car starts
+        // a new choice rather than mixing the two.
+        $ticked = $selection !== null && $selection->isFromGarage() ? $selection->garageIds() : [];
+
+        if (in_array($vehicle->id, $ticked, true)) {
+            if (count($ticked) === 1) {
+                return;
+            }
+
+            $ticked = array_values(array_diff($ticked, [$vehicle->id]));
+        } else {
+            $ticked[] = $vehicle->id;
+        }
+
+        $this->chooseGarageCars($context, $garage, $ticked);
+    }
+
+    public function chooseAllFromGarage(VehicleContext $context, Garage $garage): void
+    {
+        abort_if(Auth::user() === null, 403);
+
+        $this->chooseGarageCars($context, $garage, $garage->forUser(Auth::user())->modelKeys());
+    }
+
+    /** A VIN that names only the make still starts the dropdowns on it. */
+    protected function prefillMake(int $makeId, ?int $modelYear): void
+    {
+        $this->makeId = $makeId;
+        $this->modelId = null;
+        $this->generationId = null;
     }
 
     /** A VIN decoded here selects the car exactly as the dropdowns would, then clears the form. */
@@ -143,17 +179,6 @@ class VehicleSelector extends Component
     public function toggleFilter(VehicleContext $context): void
     {
         $context->setFiltersParts(! $context->filtersParts());
-
-        $this->dispatch('vehicle-changed');
-    }
-
-    public function clear(VehicleContext $context): void
-    {
-        $context->clear();
-
-        $this->makeId = null;
-        $this->modelId = null;
-        $this->generationId = null;
 
         $this->dispatch('vehicle-changed');
     }
@@ -181,15 +206,52 @@ class VehicleSelector extends Component
     public function render(VehicleContext $context, Garage $garage)
     {
         $user = Auth::user();
+        $selection = $context->selection();
 
         return view('livewire.storefront.vehicle-selector', [
-            'selected' => $context->current(),
+            'selection' => $selection,
+            'tickedIds' => $selection !== null && $selection->isFromGarage() ? $selection->garageIds() : [],
             'filtersParts' => $context->filtersParts(),
             'garageVehicles' => $user === null ? new EloquentCollection : $garage->forUser($user),
             'makes' => $this->selectableMakes(),
             'models' => $this->models,
             'generations' => $this->generations,
         ]);
+    }
+
+    /**
+     * The chosen cars in the garage's own order, primary first, so the car single-car answers
+     * speak about does not depend on which box was ticked first.
+     *
+     * @param  list<int>  $ids
+     */
+    private function chooseGarageCars(VehicleContext $context, Garage $garage, array $ids): void
+    {
+        $context->selectMany($garage->forUser(Auth::user())
+            ->whereIn('id', $ids)
+            ->map(fn (CustomerVehicle $vehicle): SelectedVehicle => SelectedVehicle::fromCustomerVehicle($vehicle))
+            ->values()
+            ->all());
+
+        $this->syncFromContext();
+
+        $this->dispatch('vehicle-changed');
+    }
+
+    /**
+     * Scoped to the signed-in customer rather than resolved by id alone: the id comes from the
+     * browser, and another customer's plate and service history hang off it.
+     */
+    private function ownedVehicle(int $vehicleId): CustomerVehicle
+    {
+        $user = Auth::user();
+
+        abort_if($user === null, 403);
+
+        return CustomerVehicle::query()
+            ->whereBelongsTo($user)
+            ->with(['make', 'model', 'generation'])
+            ->findOrFail($vehicleId);
     }
 
     /**

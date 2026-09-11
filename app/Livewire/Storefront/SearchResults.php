@@ -51,7 +51,7 @@ class SearchResults extends Component
 
     public function render(VehicleContext $context, FitmentMatcher $matcher)
     {
-        $vehicle = $context->current();
+        $vehicle = $context->selection();
 
         return view('livewire.storefront.search-results', [
             'vehicle' => $vehicle,

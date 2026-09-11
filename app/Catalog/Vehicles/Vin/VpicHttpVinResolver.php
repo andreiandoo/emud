@@ -43,6 +43,6 @@ class VpicHttpVinResolver
             return new VinResolutionResult('unavailable', null, 0, message: 'The vPIC HTTP decoder is unavailable.');
         }
 
-        return $this->matcher->match($decoded, $publicContext);
+        return $this->matcher->match($decoded, $publicContext, $vin);
     }
 }

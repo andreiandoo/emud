@@ -21,7 +21,7 @@ class Dashboard extends Component
 
         return view('livewire.customer.dashboard', [
             'vehicles' => $vehicles,
-            'vehicle' => $context->current(),
+            'vehicle' => $context->selection(),
             'recentOrders' => Order::query()->where('user_id', $user->id)->with('items')->latest('id')->limit(3)->get(),
             'orderCount' => Order::query()->where('user_id', $user->id)->count(),
             'appointments' => ServiceAppointment::query()->whereBelongsTo($user)->with(['shop', 'service'])->latest('id')->limit(3)->get(),

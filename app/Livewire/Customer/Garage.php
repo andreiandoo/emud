@@ -143,6 +143,19 @@ class Garage extends Component
     }
 
     /**
+     * A VIN that names only the make still saves one dropdown. The model year fills the year only
+     * when the customer has not typed one: the car's own year of manufacture is the better answer.
+     */
+    protected function prefillMake(int $makeId, ?int $modelYear): void
+    {
+        $this->makeId = $makeId;
+        $this->modelId = null;
+        $this->generationId = null;
+        $this->configurationId = null;
+        $this->year ??= $modelYear;
+    }
+
+    /**
      * Ids come from the rendered page, so ownership is re-checked on every action rather than
      * assumed: a customer must not be able to rename or delete a vehicle in someone else's
      * garage by editing the id in the request.

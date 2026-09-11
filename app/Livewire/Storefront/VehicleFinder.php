@@ -128,7 +128,7 @@ class VehicleFinder extends Component
         return view('livewire.storefront.vehicle-finder', [
             'collection' => $collection,
             'category' => $category,
-            'current' => $context->current(),
+            'current' => $context->selection(),
             'makes' => $this->makes(),
             'years' => $this->years(),
             'models' => $this->models(),
@@ -148,6 +148,13 @@ class VehicleFinder extends Component
         // Two events: one the rest of the page already listens for, one the panel closes on.
         $this->dispatch('vehicle-changed');
         $this->dispatch('vehicle-picked');
+    }
+
+    /** A VIN that names only the make still starts the picker on it. */
+    protected function prefillMake(int $makeId, ?int $modelYear): void
+    {
+        $this->pickMakeId = (string) $makeId;
+        $this->reset(['pickModelId', 'pickGenerationId', 'pickYear']);
     }
 
     /**

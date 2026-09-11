@@ -10,8 +10,8 @@ use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\ProductVariant;
 use App\Storefront\Compatibility\FitmentMatcher;
-use App\Storefront\SelectedVehicle;
 use App\Storefront\VehicleContext;
+use App\Storefront\VehicleSelection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -73,8 +73,8 @@ class CategoryPage extends Component
     /** Starts from the shop-wide setting (VehicleContext::filtersParts) and writes back to it. */
     public bool $onlyForMyVehicle = true;
 
-    /** Set for the length of one render, so every count is taken against the same car. */
-    private ?SelectedVehicle $vehicle = null;
+    /** Set for the length of one render, so every count is taken against the same cars. */
+    private ?VehicleSelection $vehicle = null;
 
     private ?FitmentMatcher $matcher = null;
 
@@ -172,7 +172,7 @@ class CategoryPage extends Component
 
     public function render(VehicleContext $context, FitmentMatcher $matcher)
     {
-        $this->vehicle = $context->current();
+        $this->vehicle = $context->selection();
         $this->matcher = $matcher;
         $vehicle = $this->vehicle;
 
