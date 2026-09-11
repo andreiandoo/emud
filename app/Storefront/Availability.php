@@ -154,6 +154,14 @@ final class Availability
         return $days === null ? null : 'Livrare în '.self::range($days).' zile lucrătoare';
     }
 
+    /** "În 2–4 zile lucrătoare": the range alone, for a line that already says "Livrare". */
+    public function deliveryRange(): ?string
+    {
+        $days = $this->sources[0]['delivery'] ?? null;
+
+        return $days === null ? null : 'În '.self::range($days).' zile lucrătoare';
+    }
+
     /** The line on a product card: "În stoc · livrare în 2–4 zile". */
     public function shortDelivery(): ?string
     {
