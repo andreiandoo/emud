@@ -18,7 +18,7 @@ Last updated 2026-09-10.
 | 9 — website discovery | `WebSearchProvider` (Null default, Brave), candidates from OSM, ONRC and email domains, validation by phone / CUI / name / town / street, listing and social sites refused. |
 | 10 — crawler and contacts | robots.txt (RFC 9309), same host, page and size caps, per-host delay; mailto, tel, WhatsApp, Facebook, Instagram, JSON-LD; business emails only. |
 | 11 — service classification | Rule-based Romanian classifier behind a `ServiceClassifier` contract, evidence snippets kept, declared services never marked as authorised. |
-| 12 — deduplication and confidence | Blocked candidate pairs, pair scoring, auto-merge only when certain, never across two places of one company or two RAR authorisations at different addresses, and never across two companies; review queue, provenance-preserving merge; workshop confidence score. |
+| 12 — deduplication and confidence | Blocked candidate pairs, pair scoring, auto-merge only when certain, never across two places of one company or two RAR authorisations at different addresses; two CUIs are two workshops, one CUI at one place is merged; review queue, provenance-preserving merge; workshop confidence score. |
 | 13 — other RAR registries | ITP, GPL/GNC, tachographs, B4 modifications as separate sources, linked to the same place when company and address agree. |
 | 14 — admin, search, export, API | *Registru național* (filters, plain-phrase search, CSV export), workshop page with full provenance, raw record viewer, *Surse ateliere*, *Ateliere de verificat*; `WorkshopSearch` with pg_trgm; `workshops:export`; `/admin/api/workshops`. |
 | 15 — scheduling, docs, tests | Scheduler entries behind `WORKSHOPS_SCHEDULE_ENABLED`; README, architecture, sources, operations; 124 tests, 724 assertions (unit + feature, offline fixtures). CI green on PostgreSQL. |
@@ -85,7 +85,8 @@ Last updated 2026-09-10.
 - **Two companies, one address.** On the first national pass every automatic merge (64 of 64) joined
   two *different* companies at one address sharing a phone: mostly an owner's service firm and a
   separate ITP firm ("OEN SERVICE SRL" / "OEN ITP SRL"), but also tenants of one yard (a
-  cooperative's compound in Bucharest). A workshop has one company, so these now wait for review.
+  cooperative's compound in Bucharest). Decided on 2026-09-11: two CUIs are two workshops, so such
+  pairs are kept apart and never queued; one CUI at one place is merged whatever the score.
 - **One address, many spellings**: "DN65" / "DN 65", "18A" / "18 A", with or without the postal code,
   the floor area ("spațiu în suprafață de 150 mp"), "clădirea C1" / "construcție C1". Worse, a
   Bucharest sector number had been accepted as the house number, so "nr. 5, sector 3" could pass

@@ -76,10 +76,10 @@ class DeduplicationTest extends TestCase
         $this->assertSame(2, Workshop::query()->canonical()->count());
     }
 
-    public function test_two_companies_at_one_address_wait_for_a_person(): void
+    public function test_two_fiscal_codes_are_two_workshops_even_at_one_address(): void
     {
-        // An owner's service firm and ITP firm at one gate, or two tenants of one yard: the data
-        // cannot tell which, so neither is folded into the other automatically.
+        // An owner's service firm and ITP firm at one gate, or two tenants of one yard: two CUIs
+        // are two businesses, so the pair is neither merged nor queued.
         $service = WorkshopCompany::query()->create(['legal_name' => 'OEN SERVICE SRL', 'normalized_name' => 'oen service', 'cui' => '50686496']);
         $itp = WorkshopCompany::query()->create(['legal_name' => 'OEN ITP SRL', 'normalized_name' => 'oen itp', 'cui' => '50828019']);
         $this->workshop('OEN SERVICE SRL', 'Bulevardul Muncii nr. 74, Brașov', 45.66252, 25.5713, '+40744705739', ['company_id' => $service->id]);
@@ -88,10 +88,58 @@ class DeduplicationTest extends TestCase
         $counts = app(WorkshopDeduplicator::class)->run('BV');
 
         $this->assertSame(0, $counts['auto_merged']);
-        $this->assertSame(1, $counts['candidates']);
-        $pair = WorkshopMatchCandidate::query()->firstOrFail();
-        $this->assertSame(WorkshopMatchStatus::Pending, $pair->status);
-        $this->assertTrue($pair->evidence['different_companies']);
+        $this->assertSame(0, $counts['candidates']);
+        $this->assertSame(2, Workshop::query()->canonical()->count());
+    }
+
+    public function test_one_fiscal_code_at_one_place_is_merged_however_the_address_was_typed(): void
+    {
+        // No shared phone and a score well under the automatic threshold: the CUI is the identity.
+        $company = WorkshopCompany::query()->create(['legal_name' => 'MORARILOR AUTO SRL', 'normalized_name' => 'morarilor auto', 'cui' => '38400861']);
+        $this->workshop('MORARILOR AUTO SRL', 'Șoseaua Morarilor nr. 2, clădire C 61, Brașov', 45.66252, 25.5713, null, ['company_id' => $company->id]);
+        $this->workshop('MORARILOR AUTO SRL', 'Șos. Morarilor 2, C61, Brașov', 45.66270, 25.5713, null, ['company_id' => $company->id]);
+
+        $counts = app(WorkshopDeduplicator::class)->run('BV');
+
+        $this->assertSame(1, $counts['auto_merged']);
+        $this->assertSame(1, Workshop::query()->canonical()->count());
+    }
+
+    public function test_one_fiscal_code_at_two_house_numbers_is_two_branches(): void
+    {
+        $company = WorkshopCompany::query()->create(['legal_name' => 'CALIPSO AUTOCLEAN SRL', 'normalized_name' => 'calipso autoclean', 'cui' => '25035284']);
+        $this->workshop('CALIPSO AUTOCLEAN SRL', 'Str. Lungă 10, Brașov', 45.66252, 25.5713, '+40767533644', ['company_id' => $company->id]);
+        $this->workshop('CALIPSO AUTOCLEAN SRL', 'Str. Lungă 12, Brașov', 45.66290, 25.5716, '+40767533644', ['company_id' => $company->id]);
+
+        $counts = app(WorkshopDeduplicator::class)->run('BV');
+
+        $this->assertSame(0, $counts['auto_merged']);
+        $this->assertSame(0, $counts['candidates']);
+        $this->assertSame(2, Workshop::query()->canonical()->count());
+    }
+
+    public function test_one_fiscal_code_on_two_streets_with_one_house_number_is_two_branches(): void
+    {
+        $company = WorkshopCompany::query()->create(['legal_name' => 'PANSERVICE SRL', 'normalized_name' => 'panservice', 'cui' => '1205810']);
+        $this->workshop('PANSERVICE SRL', 'Str. Dezrobirii nr. 13, Brașov', 45.66252, 25.5713, '+40744804429', ['company_id' => $company->id]);
+        $this->workshop('PANSERVICE SRL', 'Str. Toamnei nr. 13, Brașov', 45.66952, 25.5813, '+40744804429', ['company_id' => $company->id]);
+
+        $counts = app(WorkshopDeduplicator::class)->run('BV');
+
+        $this->assertSame(0, $counts['auto_merged']);
+        $this->assertSame(0, $counts['candidates']);
+        $this->assertSame(2, Workshop::query()->canonical()->count());
+    }
+
+    public function test_one_fiscal_code_kilometres_apart_on_a_long_road_is_not_merged_on_the_road_name_alone(): void
+    {
+        $company = WorkshopCompany::query()->create(['legal_name' => 'UNION MOTORS SRL', 'normalized_name' => 'union motors', 'cui' => '26901729']);
+        $this->workshop('UNION MOTORS SRL', 'Șos. București-Ploiești nr. 145, Brașov', 45.66252, 25.5713, null, ['company_id' => $company->id]);
+        $this->workshop('UNION MOTORS SRL', 'Șoseaua București-Ploiești, Brașov', 45.69100, 25.6013, null, ['company_id' => $company->id]);
+
+        $counts = app(WorkshopDeduplicator::class)->run('BV');
+
+        $this->assertSame(0, $counts['auto_merged']);
         $this->assertSame(2, Workshop::query()->canonical()->count());
     }
 
@@ -134,7 +182,7 @@ class DeduplicationTest extends TestCase
     public function test_a_likely_pair_waits_for_a_person(): void
     {
         $this->workshop('Auto Tehnic Șerban', 'Str. Lungă 10, Brașov', 45.66252, 25.5713);
-        $this->workshop('Tehnic Șerban Auto Service', 'Str. Lungă 10 bis, Brașov', 45.66300, 25.5720);
+        $this->workshop('Tehnic Șerban Auto Service', 'Strada Lungă nr. 10, Brașov', 45.66300, 25.5720);
 
         $counts = app(WorkshopDeduplicator::class)->run('BV');
 

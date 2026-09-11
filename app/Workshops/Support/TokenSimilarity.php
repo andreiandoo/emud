@@ -68,6 +68,11 @@ class TokenSimilarity
             return false;
         }
 
+        // "Fântânele" and "Fîntînele": â and î are one sound, spelt either way wherever it occurs.
+        if (strlen($a) === strlen($b) && strlen($a) >= 5 && strtr($a, 'a', 'i') === strtr($b, 'a', 'i')) {
+            return true;
+        }
+
         return strlen($a) >= 5 && strlen($b) >= 5 && levenshtein($a, $b) <= 1;
     }
 }

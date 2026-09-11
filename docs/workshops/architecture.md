@@ -88,9 +88,14 @@ word in one locality, an address fingerprint or a 200 m cell. `WorkshopPairScore
 website, name, address, locality, distance and company. It **auto-merges** (score ≥ 85) only with
 an identity signal and a compatible place, and never two workshops that each hold a RAR
 authorisation, or belong to one company, at different addresses; such pairs are not even queued.
-Nor does it ever merge two **different companies**, even at one address with one phone: an owner's
-service firm and ITP firm at one gate, and two tenants of one yard sharing the landlord's number,
-look the same in the data. Those pairs wait for a person with `different_companies` in their evidence.
+The fiscal code decides first (the owner's rule, 2026-09-11): two **different CUIs are two
+workshops**, never merged and never queued, even at one address with one phone (an owner's service
+and ITP firms at one gate, two tenants of one yard); **one CUI at one place is one workshop**, merged
+automatically whatever the score, unless the addresses give different house numbers or different
+streets (two branches). "One place" is the same street in the same town, or real points within
+100 m. A house number is what follows "nr" (a number in the street's own name, "Str. 1 Decembrie
+1918", is not one); a street is the same street spelt with â or î or declined ("București",
+"Bucureștilor").
 The very same point at two plainly different addresses is not "the same yard": RAR often copies the
 office's point to every branch.
 A likely pair (≥ 55) waits in the review queue; a decision a person took is never reopened, and a

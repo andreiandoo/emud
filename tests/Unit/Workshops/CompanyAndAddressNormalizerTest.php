@@ -70,6 +70,28 @@ class CompanyAndAddressNormalizerTest extends TestCase
         $this->assertSame(1.0, AddressNormalizer::similarity('BD. MĂRĂȘTI, NR. 59, HALA NR. 1, SECTORUL 1', 'B-DUL MĂRĂȘTI NR. 59, HALA 1, SECTOR 1', 'B'));
     }
 
+    public function test_two_house_numbers_on_one_street_are_two_buildings(): void
+    {
+        $this->assertTrue(AddressNormalizer::houseNumbersDisagree('Șos. Chitilei nr. 131, sector 1', 'Șos. Chitilei nr. 295, sector 1', 'B'));
+        $this->assertFalse(AddressNormalizer::houseNumbersDisagree('Str. Spineni nr. 18A, sector 4', 'STR. SPINENI NR. 18 A, SECTORUL 4', 'B'));
+        $this->assertFalse(AddressNormalizer::houseNumbersDisagree('Strada Principală', 'Strada Principală nr. 5', 'CJ'));
+        // A number in the street's own name is not a house number.
+        $this->assertTrue(AddressNormalizer::houseNumbersDisagree('Str. Euro 85, nr. 160, Mărăcineni', 'Str. Euro 85 nr. 39-41, Mărăcineni', 'BZ'));
+        $this->assertTrue(AddressNormalizer::houseNumbersDisagree('Aleea 1 Șimnic 11C, Craiova', 'Craiova, Aleea 1 Șimnic nr. 3 B', 'DJ'));
+        $this->assertFalse(AddressNormalizer::houseNumbersDisagree('Str. 1 Decembrie 1918 nr. 143', 'Str. 1 Decembrie 1917 nr. 143', 'TL'));
+        // The T of a plot ("T.29") that follows the house number is not a letter of it.
+        $this->assertFalse(AddressNormalizer::houseNumbersDisagree('Calea Moldovei nr. 31, T.29-P.149/1/1, Focșani', 'Focșani, Calea Moldovei, T.29-P.149/1/1 nr. 31', 'VN'));
+    }
+
+    public function test_a_street_is_the_same_street_however_it_is_spelt_or_declined(): void
+    {
+        $this->assertFalse(AddressNormalizer::sameStreet('Str. Dezrobirii nr. 13, Târgu Mureș', 'Str. Toamnei nr. 13, Târgu Mureș', 'MS', ['Târgu Mureș']));
+        $this->assertTrue(AddressNormalizer::sameStreet('Calea București nr. 24, Otopeni', 'Otopeni, Calea Bucureștilor nr. 24', 'IF', ['Otopeni']));
+        $this->assertTrue(AddressNormalizer::sameStreet('Strada Fântânele nr. 43, Pașcani', 'Strada Fîntînele nr. 43, Pașcani', 'IS', ['Pașcani']));
+        $this->assertTrue(AddressNormalizer::sameStreet('Com. Bradu, DN65B, nr. 2', 'Com. Bradu, Șos. DN 65 B nr. 2', 'AG', ['Bradu']));
+        $this->assertNull(AddressNormalizer::sameStreet('Sat Șercaia, FN', 'Principala nr. FN, Șercaia', 'BV', ['Șercaia']));
+    }
+
     public function test_a_sector_or_a_floor_area_is_not_a_house_number(): void
     {
         $this->assertSame(0.0, AddressNormalizer::similarity('Str. Răcari nr. 5, sector 3', 'Str. Răcari nr. 7, sector 3', 'B'));

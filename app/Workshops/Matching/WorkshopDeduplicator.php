@@ -40,7 +40,7 @@ class WorkshopDeduplicator
             $workshops = Workshop::query()
                 ->canonical()
                 ->where('county_code', $county)
-                ->with(['contacts:id,workshop_id,type,normalized_value', 'authorizations:id,workshop_id,is_current,system'])
+                ->with(['company:id,cui', 'contacts:id,workshop_id,type,normalized_value', 'authorizations:id,workshop_id,is_current,system'])
                 ->get()
                 ->keyBy('id');
 
@@ -69,7 +69,8 @@ class WorkshopDeduplicator
                 $result = $this->scorer->score($a, $b);
                 $counts['compared']++;
 
-                if ($result['score'] >= self::AUTO_MERGE_SCORE && $result['auto']) {
+                // One CUI at one place needs no score: the fiscal code is the identity.
+                if ($result['auto'] && ($result['certain'] || $result['score'] >= self::AUTO_MERGE_SCORE)) {
                     $counts['auto_merged']++;
 
                     if (! $dryRun) {

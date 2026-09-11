@@ -5,9 +5,12 @@ namespace Tests\Feature\Workshops;
 use App\Enums\WorkshopMatchStatus;
 use App\Livewire\Admin\Workshops\WorkshopReviewQueue;
 use App\Livewire\Admin\Workshops\WorkshopsIndex;
+use App\Livewire\Admin\Workshops\WorkshopSourcesIndex;
 use App\Models\User;
 use App\Models\Workshop;
+use App\Models\WorkshopDataSource;
 use App\Models\WorkshopMatchCandidate;
+use App\Workshops\Ingestion\DataSourceCatalog;
 use App\Workshops\Support\CompanyNameNormalizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -73,6 +76,19 @@ class AdminWorkshopsTest extends TestCase
         $this->assertSame($this->workshop->id, $twin->fresh()->merged_into_id);
         $this->assertSame(WorkshopMatchStatus::Confirmed, $pair->fresh()->status);
         $this->assertSame($this->admin->id, $pair->fresh()->reviewed_by);
+    }
+
+    public function test_a_source_is_cleared_for_publication_with_a_visible_button(): void
+    {
+        $source = WorkshopDataSource::forKey(DataSourceCatalog::rarKey('SERVICE'));
+        $this->assertFalse($source->is_public_output_allowed);
+
+        Livewire::actingAs($this->admin)->test(WorkshopSourcesIndex::class)
+            ->assertSee('Fă publicabilă')
+            ->call('togglePublic', $source->id)
+            ->assertSee('Fă internă');
+
+        $this->assertTrue($source->fresh()->is_public_output_allowed);
     }
 
     public function test_the_internal_api_answers_admins_only(): void

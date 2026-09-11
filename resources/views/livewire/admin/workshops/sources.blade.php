@@ -35,15 +35,24 @@
                             <td class="text-right tabular-nums">{{ $source->failed_records_count }}</td>
                             <td class="whitespace-nowrap text-stone-500">{{ $source->last_completed_at?->timezone('Europe/Bucharest')->format('d.m.Y H:i') ?? '—' }}</td>
                             <td>
-                                <button type="button" wire:click="toggleEnabled({{ $source->id }})">
+                                <div class="flex items-center gap-3 whitespace-nowrap">
                                     <x-admin.status :label="$source->is_enabled ? 'da' : 'nu'" :tone="$source->is_enabled ? 'positive' : 'neutral'" />
-                                </button>
+                                    <button type="button" class="btn-secondary" wire:click="toggleEnabled({{ $source->id }})">
+                                        {{ $source->is_enabled ? 'Dezactivează' : 'Activează' }}
+                                    </button>
+                                </div>
                             </td>
                             <td>
                                 {{-- Publication is a licensing decision, taken per source and never by default. --}}
-                                <button type="button" wire:click="togglePublic({{ $source->id }})">
+                                <div class="flex items-center gap-3 whitespace-nowrap">
                                     <x-admin.status :label="$source->is_public_output_allowed ? 'da' : 'doar intern'" :tone="$source->is_public_output_allowed ? 'positive' : 'neutral'" />
-                                </button>
+                                    <button type="button" class="btn-secondary" wire:click="togglePublic({{ $source->id }})"
+                                            wire:confirm="{{ $source->is_public_output_allowed
+                                                ? 'Datele din „'.$source->name.'” nu vor mai apărea public. Continui?'
+                                                : 'Datele din „'.$source->name.'” vor putea apărea public (directorul de service-uri, exporturile publice). Ai verificat condițiile de reutilizare ale sursei?' }}">
+                                        {{ $source->is_public_output_allowed ? 'Fă internă' : 'Fă publicabilă' }}
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
