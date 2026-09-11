@@ -21,7 +21,7 @@ Last updated 2026-09-10.
 | 12 — deduplication and confidence | Blocked candidate pairs, pair scoring, auto-merge only when certain, never across two places of one company or two RAR authorisations at different addresses, and never across two companies; review queue, provenance-preserving merge; workshop confidence score. |
 | 13 — other RAR registries | ITP, GPL/GNC, tachographs, B4 modifications as separate sources, linked to the same place when company and address agree. |
 | 14 — admin, search, export, API | *Registru național* (filters, plain-phrase search, CSV export), workshop page with full provenance, raw record viewer, *Surse ateliere*, *Ateliere de verificat*; `WorkshopSearch` with pg_trgm; `workshops:export`; `/admin/api/workshops`. |
-| 15 — scheduling, docs, tests | Scheduler entries behind `WORKSHOPS_SCHEDULE_ENABLED`; README, architecture, sources, operations; 123 tests, 721 assertions (unit + feature, offline fixtures). CI green on PostgreSQL. |
+| 15 — scheduling, docs, tests | Scheduler entries behind `WORKSHOPS_SCHEDULE_ENABLED`; README, architecture, sources, operations; 124 tests, 724 assertions (unit + feature, offline fixtures). CI green on PostgreSQL. |
 
 ## IN PROGRESS
 
@@ -92,6 +92,11 @@ Last updated 2026-09-10.
   for "nr. 7, sector 3". 102 pairs of one company's own records were waiting for review only because
   of such spellings; the address comparison now reads them as one.
 - **Sites repeat their footer**: one site gave 24 email sightings for 3 distinct generic mailboxes.
+- **PostgreSQL checks what SQLite does not**: the first production import failed 282 ITP stations,
+  whose class list ("ITP_CLASS_1,ITP_CLASS_2,ITP_CLASS_3", 35 characters) did not fit a 32-character
+  column. Comparing every varchar with the longest value stored locally found one more (ONRC company
+  states of up to 294 characters). Both columns were widened; the failed records are read again
+  from the raw layer with `workshops:normalize --status=failed`.
 - **Round numbers can be real**: SERVICE returned exactly 13 000 rows. Not a cap: every county ended
   on a short page (Bucharest, the largest, 1 222 = four pages of 250 and one of 222), and one row
   was repeated across a page boundary (Constanța), leaving 12 999 records.
