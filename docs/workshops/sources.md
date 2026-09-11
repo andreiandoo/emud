@@ -89,8 +89,10 @@ and Overpass are not queried for the country.
 
 **How.** `osmium tags-filter` keeps `shop=car_repair`, `shop=tyres`, `shop=truck_repair`,
 `craft=car_repair`, `amenity=vehicle_inspection` and objects with `service:vehicle:repairs=yes`;
-`osmium export -f geojsonseq --add-unique-id=type_id --attributes=type,id` writes one feature per
-line with all tags. Outlines get the mean of their vertices as point. Services come from
+`osmium export -f geojsonseq --geometry-types=point,polygon --add-unique-id=type_id
+--attributes=type,id` writes one feature per line with all tags; points and areas only, because by
+default a closed way comes out twice, as a line and as an area, under one id. Outlines get the mean
+of their vertices as point. Services come from
 `shop=*` and `service:vehicle:*=yes` tags.
 
 **Counties.** OSM points rarely state a county. It is taken from `addr:county`, else from the

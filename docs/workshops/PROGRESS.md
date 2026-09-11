@@ -97,6 +97,10 @@ Last updated 2026-09-10.
   column. Comparing every varchar with the longest value stored locally found one more (ONRC company
   states of up to 294 characters). Both columns were widened; the failed records are read again
   from the raw layer with `workshops:normalize --status=failed`.
+- **osmium writes a closed way twice**: as a line and as an area, under one id. The first
+  production OSM import (real osmium; the local run used pyosmium, which wrote each object once)
+  saw 2 327 features for 1 841 objects and counted all 486 outlines as changed. The data was right,
+  but every refresh would have read them twice; the export now asks for points and areas only.
 - **Round numbers can be real**: SERVICE returned exactly 13 000 rows. Not a cap: every county ended
   on a short page (Bucharest, the largest, 1 222 = four pages of 250 and one of 222), and one row
   was repeated across a page boundary (Constanța), leaving 12 999 records.

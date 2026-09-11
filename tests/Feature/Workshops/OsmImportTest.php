@@ -133,6 +133,7 @@ class OsmImportTest extends TestCase
 
         $this->assertSame('/data/osm/workshops.geojsonseq', $output);
         Process::assertRan(fn (PendingProcess $process) => is_array($process->command) && in_array('tags-filter', $process->command, true) && in_array('nwr/shop=car_repair', $process->command, true));
-        Process::assertRan(fn (PendingProcess $process) => is_array($process->command) && in_array('geojsonseq', $process->command, true));
+        // A closed way would otherwise be written twice, as a line and as an area, under one id.
+        Process::assertRan(fn (PendingProcess $process) => is_array($process->command) && in_array('geojsonseq', $process->command, true) && in_array('--geometry-types=point,polygon', $process->command, true));
     }
 }

@@ -33,7 +33,9 @@ class OsmiumExtractor
         $export = $directory.'/workshops.geojsonseq';
 
         $this->run([$this->binary(), 'tags-filter', $pbf, ...array_values((array) config('workshops.osm.tag_filters')), '-o', $filtered, '--overwrite']);
-        $this->run([$this->binary(), 'export', $filtered, '-f', 'geojsonseq', '-o', $export, '--overwrite', '--add-unique-id=type_id', '--attributes=type,id']);
+        // Points and areas only. By default a closed way comes out twice, as a line and as an
+        // area, under one id: the first production import counted all 486 outlines as changed.
+        $this->run([$this->binary(), 'export', $filtered, '-f', 'geojsonseq', '-o', $export, '--overwrite', '--geometry-types=point,polygon', '--add-unique-id=type_id', '--attributes=type,id']);
 
         return $export;
     }
