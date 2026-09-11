@@ -25,7 +25,8 @@ class ServiceShopContactCardTest extends TestCase
             ->assertSee('Str. Lungă nr. 1')
             ->assertSee('Google Maps')
             ->assertSee('Waze')
-            ->assertSee('openstreetmap.org/export/embed.html', false);
+            ->assertSee('tile.openstreetmap.org/16/', false)
+            ->assertDontSee('openstreetmap.org/export/embed.html', false);
     }
 
     public function test_waze_opens_the_workshop_and_counts_as_directions(): void

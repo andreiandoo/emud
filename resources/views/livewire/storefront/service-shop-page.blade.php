@@ -234,8 +234,7 @@
                      with. The map is OpenStreetMap, drawn only for a point placed on the street. --}}
                 <div class="overflow-hidden rounded-[3px] bg-g0 text-bone">
                     @if($shop->latitude && $shop->longitude)
-                        <iframe title="Harta: {{ $shop->name }}" class="block h-56 w-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                                src="https://www.openstreetmap.org/export/embed.html?bbox={{ $shop->longitude - 0.006 }},{{ $shop->latitude - 0.004 }},{{ $shop->longitude + 0.006 }},{{ $shop->latitude + 0.004 }}&layer=mapnik&marker={{ $shop->latitude }},{{ $shop->longitude }}"></iframe>
+                        <x-storefront.static-map :lat="$shop->latitude" :lng="$shop->longitude" :label="'Harta: '.$shop->name" class="h-56 w-full" />
                         <a href="https://www.openstreetmap.org/?mlat={{ $shop->latitude }}&mlon={{ $shop->longitude }}#map=17/{{ $shop->latitude }}/{{ $shop->longitude }}"
                            target="_blank" rel="noopener" class="block bg-g1 px-5 py-1.5 text-right font-mono text-[10px] uppercase tracking-[.08em] text-mute transition hover:text-bone">
                             Hartă mai mare · © OpenStreetMap
