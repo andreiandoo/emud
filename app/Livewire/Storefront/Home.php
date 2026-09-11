@@ -216,7 +216,7 @@ class Home extends Component
      */
     private function bestSellers(?VehicleSelection $vehicle, FitmentMatcher $matcher): Collection
     {
-        $query = Product::query()->active()->with(['brand', 'media', 'fitments', 'variants']);
+        $query = Product::query()->active()->with(['brand', 'media', 'fitments', 'variants'])->withAvailability();
 
         if ($vehicle !== null) {
             $matcher->scopeForVehicle($query, $vehicle);

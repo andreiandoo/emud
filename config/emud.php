@@ -53,6 +53,15 @@ return [
             'warranty_reserve_percent' => (float) env('WARRANTY_RESERVE_PERCENT', 1),
         ],
     ],
+    // Courier transit in working days, from the country an offer ships from to a customer in
+    // Romania. Added to the supplier's dispatch window to state delivery as a range; '*' is any
+    // other country.
+    'delivery' => [
+        'transit_days' => [
+            'RO' => [1, 2],
+            '*' => [2, 4],
+        ],
+    ],
     'suppliers' => [
         'default_stale_after_minutes' => (int) env('SUPPLIER_STALE_AFTER_MINUTES', 60),
 

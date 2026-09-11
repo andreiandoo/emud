@@ -71,6 +71,7 @@ class SearchResults extends Component
         $products = Product::query()
             ->active()
             ->with(['brand', 'media', 'fitments', 'variants'])
+            ->withAvailability()
             ->where(function (Builder $query) use ($term): void {
                 // Part numbers are what customers paste in most often, so they are matched
                 // exactly rather than as a substring: an exact SKU should not be buried under
