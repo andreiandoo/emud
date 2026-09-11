@@ -23,7 +23,7 @@
                 @endif
                 <h1 class="st-display mt-5 text-[clamp(2.4rem,5.4vw,5rem)] leading-[.95]">{{ $article->title }}</h1>
                 <p class="mt-6 font-mono text-xs uppercase tracking-[.08em] text-mute">
-                    {{ $article->published_at?->format('d.m.Y') }}
+                    {{ $article->published_at?->format('d/m/Y') }}
                     @if($article->author) · {{ $article->author->name }} @endif
                 </p>
             </div>

@@ -50,6 +50,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'marketing_consent_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            'filters_parts_by_vehicle' => 'boolean',
         ];
     }
 

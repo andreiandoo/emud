@@ -18,6 +18,35 @@ class VehicleContext
 {
     private const SESSION_KEY = 'storefront.vehicle';
 
+    private const FILTER_KEY = 'storefront.vehicle-filter';
+
+    /**
+     * Whether listings, search and the home page show only what fits the selected car.
+     *
+     * One setting for the whole shop rather than a checkbox per page: a customer who unticks it
+     * once has said what they want and should not be asked again on the next page. It lives in
+     * the session, and on the account of someone signed in so it outlasts the visit too.
+     */
+    public function filtersParts(): bool
+    {
+        if (Session::has(self::FILTER_KEY)) {
+            return (bool) Session::get(self::FILTER_KEY);
+        }
+
+        return (bool) (Auth::user()?->filters_parts_by_vehicle ?? true);
+    }
+
+    public function setFiltersParts(bool $on): void
+    {
+        Session::put(self::FILTER_KEY, $on);
+
+        $user = Auth::user();
+
+        if ($user !== null && (bool) ($user->filters_parts_by_vehicle ?? true) !== $on) {
+            $user->forceFill(['filters_parts_by_vehicle' => $on])->save();
+        }
+    }
+
     public function current(): ?SelectedVehicle
     {
         // exists(), not has(): has() reports false for a null value, which would erase the

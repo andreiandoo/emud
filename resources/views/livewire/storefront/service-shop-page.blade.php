@@ -11,6 +11,15 @@
         <script type="application/ld+json">@json($breadcrumbs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)</script>
     @endpush
 
+    @if($preview)
+        <div class="bg-amber-100 text-amber-900">
+            <p class="shell py-3 text-sm font-medium">
+                Previzualizare: fișa este ciornă, deci clienții nu o pot vedea încă.
+                <a href="{{ route('admin.service-shops.edit', $shop) }}" class="font-semibold underline underline-offset-2">Editează fișa</a>
+            </p>
+        </div>
+    @endif
+
     <section class="relative isolate overflow-hidden bg-g0 text-bone">
         <canvas data-st-topo="rgba(241,238,230,.06)" class="pointer-events-none absolute inset-0 -z-10 h-full w-full" aria-hidden="true"></canvas>
 
@@ -198,27 +207,6 @@
                     </section>
                 @endif
 
-                @if($shop->latitude && $shop->longitude)
-                    {{-- Loaded on request rather than on page load: the map is a third-party frame,
-                         and most visitors want the address, not the tiles. --}}
-                    <section class="grid gap-4" x-data="{ loaded: false }">
-                        <h2 class="font-display text-xl font-semibold">Unde se află</h2>
-
-                        <div class="overflow-hidden rounded-[3px] border border-line bg-white">
-                            <template x-if="loaded">
-                                <iframe title="Harta către {{ $shop->name }}" class="h-80 w-full" loading="lazy"
-                                        src="https://www.openstreetmap.org/export/embed.html?bbox={{ $shop->longitude - 0.01 }},{{ $shop->latitude - 0.008 }},{{ $shop->longitude + 0.01 }},{{ $shop->latitude + 0.008 }}&layer=mapnik&marker={{ $shop->latitude }},{{ $shop->longitude }}"></iframe>
-                            </template>
-
-                            <div x-show="! loaded" class="relative isolate grid h-48 place-content-center justify-items-center gap-3 overflow-hidden bg-g0 text-sm text-mute">
-                                <canvas data-st-topo="rgba(241,238,230,.1)" class="absolute inset-0 -z-10 h-full w-full" aria-hidden="true"></canvas>
-                                <p>Harta este încărcată de la OpenStreetMap.</p>
-                                <button type="button" @click="loaded = true" class="st-btn st-btn--ghost st-btn--sm">Arată harta</button>
-                            </div>
-                        </div>
-                    </section>
-                @endif
-
                 @if($nearby->isNotEmpty())
                     <section class="grid gap-4">
                         <h2 class="font-display text-xl font-semibold">Alte service-uri din {{ $shop->city }}</h2>
@@ -240,37 +228,75 @@
 
             {{-- The rail holds the two things a visitor came for: when it is open, and how to get in
                  touch. It sticks because the services list beside it is long. --}}
-            <aside class="grid content-start gap-4 lg:sticky lg:top-[calc(var(--st-header-h)+1.5rem)] lg:self-start">
-                <div class="grid gap-3 rounded-[3px] bg-g0 p-5 text-bone">
-                    <h2 class="st-kicker text-mute">Contact</h2>
-
-                    @if($shop->phone)
-                        @if($phoneVisible)
-                            <a href="tel:{{ preg_replace('/\s+/', '', $shop->phone) }}" class="st-btn st-btn--block">
-                                <x-storefront.icon name="phone" /> {{ $shop->phone }}
-                            </a>
-                        @else
-                            <button type="button" wire:click="revealPhone" class="st-btn st-btn--block">
-                                <x-storefront.icon name="phone" /> Arată telefonul
-                            </button>
-                        @endif
-                    @endif
-
-                    <div class="grid grid-cols-2 gap-2">
-                        @if($shop->website)
-                            <a href="{{ route('storefront.service.link', ['city' => $shop->citySegment(), 'slug' => $shop->slug, 'type' => 'website']) }}"
-                               target="_blank" rel="noopener nofollow" class="st-btn st-btn--ghost st-btn--sm">Website</a>
-                        @endif
-
-                        <a href="{{ route('storefront.service.link', ['city' => $shop->citySegment(), 'slug' => $shop->slug, 'type' => 'directions']) }}"
-                           target="_blank" rel="noopener nofollow" @class(['st-btn st-btn--ghost st-btn--sm', 'col-span-2' => ! $shop->website])>
-                            <x-storefront.icon name="pin" /> Cum ajung
+            <aside class="grid content-start gap-4 lg:sticky lg:top-[calc(var(--st-header-visible,0px)+1.5rem)] lg:self-start">
+                {{-- Where it is and how to reach it, in one card: the map, the name and address as
+                     they would be written on an envelope, and the two apps drivers here navigate
+                     with. The map is OpenStreetMap, drawn only for a point placed on the street. --}}
+                <div class="overflow-hidden rounded-[3px] bg-g0 text-bone">
+                    @if($shop->latitude && $shop->longitude)
+                        <iframe title="Harta: {{ $shop->name }}" class="block h-56 w-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                                src="https://www.openstreetmap.org/export/embed.html?bbox={{ $shop->longitude - 0.006 }},{{ $shop->latitude - 0.004 }},{{ $shop->longitude + 0.006 }},{{ $shop->latitude + 0.004 }}&layer=mapnik&marker={{ $shop->latitude }},{{ $shop->longitude }}"></iframe>
+                        <a href="https://www.openstreetmap.org/?mlat={{ $shop->latitude }}&mlon={{ $shop->longitude }}#map=17/{{ $shop->latitude }}/{{ $shop->longitude }}"
+                           target="_blank" rel="noopener" class="block bg-g1 px-5 py-1.5 text-right font-mono text-[10px] uppercase tracking-[.08em] text-mute transition hover:text-bone">
+                            Hartă mai mare · © OpenStreetMap
                         </a>
-                    </div>
-
-                    @if($shop->email)
-                        <a href="mailto:{{ $shop->email }}" class="text-center text-sm text-mute transition hover:text-bone">{{ $shop->email }}</a>
+                    @else
+                        <div class="relative isolate grid h-36 place-content-center justify-items-center gap-2 overflow-hidden px-6 text-center text-xs text-mute">
+                            <canvas data-st-topo="rgba(241,238,230,.1)" class="absolute inset-0 -z-10 h-full w-full" aria-hidden="true"></canvas>
+                            <x-storefront.icon name="pin" class="h-6 w-6 text-sand" />
+                            <p class="max-w-[26ch]">Nu avem încă punctul exact pe hartă. Navigația de mai jos caută după adresă.</p>
+                        </div>
                     @endif
+
+                    <div class="grid gap-4 p-5">
+                        <div>
+                            <p class="st-kicker text-mute">Service</p>
+                            <p class="mt-2 font-display text-xl font-semibold leading-tight">{{ $shop->name }}</p>
+                        </div>
+
+                        <ul class="grid gap-2.5 text-sm text-[#d8d6cf]">
+                            <li class="flex items-start gap-2.5">
+                                <x-storefront.icon name="pin" class="mt-0.5 h-4 w-4 shrink-0 text-sand" />
+                                <span>{{ collect([$shop->address, $shop->postal_code, $shop->city, $shop->county])->filter()->implode(', ') }}</span>
+                            </li>
+                            @if($shop->websiteHost())
+                                <li class="flex items-start gap-2.5">
+                                    <x-storefront.icon name="globe" class="mt-0.5 h-4 w-4 shrink-0 text-sand" />
+                                    <a href="{{ route('storefront.service.link', ['city' => $shop->citySegment(), 'slug' => $shop->slug, 'type' => 'website']) }}"
+                                       target="_blank" rel="noopener nofollow" class="min-w-0 truncate underline underline-offset-2 transition hover:text-bone">{{ $shop->websiteHost() }}</a>
+                                </li>
+                            @endif
+                            @if($shop->email)
+                                <li class="flex items-start gap-2.5">
+                                    <x-storefront.icon name="mail" class="mt-0.5 h-4 w-4 shrink-0 text-sand" />
+                                    <a href="mailto:{{ $shop->email }}" class="min-w-0 truncate underline underline-offset-2 transition hover:text-bone">{{ $shop->email }}</a>
+                                </li>
+                            @endif
+                        </ul>
+
+                        @if($shop->phone)
+                            @if($phoneVisible)
+                                <a href="tel:{{ preg_replace('/\s+/', '', $shop->phone) }}" class="st-btn st-btn--block">
+                                    <x-storefront.icon name="phone" /> {{ $shop->phone }}
+                                </a>
+                            @else
+                                <button type="button" wire:click="revealPhone" class="st-btn st-btn--block">
+                                    <x-storefront.icon name="phone" /> Arată telefonul
+                                </button>
+                            @endif
+                        @endif
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="{{ route('storefront.service.link', ['city' => $shop->citySegment(), 'slug' => $shop->slug, 'type' => 'directions']) }}"
+                               target="_blank" rel="noopener nofollow" class="st-btn st-btn--ghost st-btn--sm">
+                                <x-storefront.icon name="pin" /> Google Maps
+                            </a>
+                            <a href="{{ route('storefront.service.link', ['city' => $shop->citySegment(), 'slug' => $shop->slug, 'type' => 'waze']) }}"
+                               target="_blank" rel="noopener nofollow" class="st-btn st-btn--ghost st-btn--sm">
+                                <x-storefront.icon name="navigation" /> Waze
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
                 @unless($schedule->isEmpty())
@@ -349,7 +375,7 @@
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <label class="block">
                                     <span class="field-label">Data preferată</span>
-                                    <input type="date" wire:model="preferredDate" min="{{ now()->toDateString() }}">
+                                    <x-date-input wire:model="preferredDate" :min="now()->toDateString()" />
                                     @error('preferredDate') <span class="field-error">{{ $message }}</span> @enderror
                                 </label>
 

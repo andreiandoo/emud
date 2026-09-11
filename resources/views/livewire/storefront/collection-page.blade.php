@@ -254,7 +254,7 @@
                                 </button>
                             @endif
 
-                            @if($fitsMyVehicle)
+                            @if($fitsMyVehicle && $vehicle)
                                 <button type="button" wire:click="removeFilter('vehicle')" class="st-chip h-8 border-fit/40 bg-fit/[.08] text-xs text-fit hover:border-fit">
                                     Se potrivește pe mașina mea <x-storefront.icon name="close" class="h-3 w-3" />
                                 </button>

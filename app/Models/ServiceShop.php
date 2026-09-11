@@ -208,4 +208,20 @@ class ServiceShop extends Model
 
         return 'https://www.google.com/maps/dir/?api=1&destination='.urlencode($destination);
     }
+
+    /** The same destination in Waze, which many drivers here navigate with instead. */
+    public function wazeUrl(): string
+    {
+        return $this->latitude && $this->longitude
+            ? "https://waze.com/ul?ll={$this->latitude},{$this->longitude}&navigate=yes"
+            : 'https://waze.com/ul?q='.urlencode(trim(implode(', ', array_filter([$this->address, $this->city, $this->county])))).'&navigate=yes';
+    }
+
+    /** The first page of the workshop's own site, as a reader would type it: host only. */
+    public function websiteHost(): ?string
+    {
+        $host = $this->website ? parse_url($this->website, PHP_URL_HOST) : null;
+
+        return is_string($host) && $host !== '' ? preg_replace('/^www\./i', '', $host) : null;
+    }
 }

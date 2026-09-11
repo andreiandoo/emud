@@ -139,6 +139,14 @@ class VehicleSelector extends Component
         $this->dispatch('vehicle-changed');
     }
 
+    /** The shop-wide switch between "only what fits my car" and everything. */
+    public function toggleFilter(VehicleContext $context): void
+    {
+        $context->setFiltersParts(! $context->filtersParts());
+
+        $this->dispatch('vehicle-changed');
+    }
+
     public function clear(VehicleContext $context): void
     {
         $context->clear();
@@ -176,6 +184,7 @@ class VehicleSelector extends Component
 
         return view('livewire.storefront.vehicle-selector', [
             'selected' => $context->current(),
+            'filtersParts' => $context->filtersParts(),
             'garageVehicles' => $user === null ? new EloquentCollection : $garage->forUser($user),
             'makes' => $this->selectableMakes(),
             'models' => $this->models,

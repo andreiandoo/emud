@@ -75,6 +75,10 @@
     'sliders' => 'M4 6h9M17 6h3M15 4v4M4 12h3M11 12h9M9 10v4M4 18h11M19 18h1M17 16v4',
     'expand' => 'M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7',
     'building' => 'M4 20V6l8-3v17M12 9h8v11M8 8h.01M8 12h.01M8 16h.01M16 13h.01M16 17h.01M3 20h18',
+    'globe' => 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3.6 9h16.8M3.6 15h16.8M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z',
+    'navigation' => 'M3 11l18-8-8 18-2-8z',
+    'camera' => 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+    'pencil' => 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
 ])
 
 {{-- Size comes from presentation attributes rather than a default class: a `class="h-4 w-4"`

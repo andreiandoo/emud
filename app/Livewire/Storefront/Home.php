@@ -177,7 +177,7 @@ class Home extends Component
         return view('livewire.storefront.home', [
             'vehicle' => $vehicle,
             'collections' => $showcase->featured(12),
-            'bestSellers' => $this->bestSellers($vehicle, $matcher),
+            'bestSellers' => $this->bestSellers($context->filtersParts() ? $vehicle : null, $matcher),
             'verdicts' => fn (Product $product) => $vehicle === null ? null : $matcher->verdictFor($product, $vehicle),
             'metrics' => collect($metrics->snapshot())
                 ->only(['makes', 'models', 'configurations', 'products'])

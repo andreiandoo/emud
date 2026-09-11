@@ -1,14 +1,21 @@
-@props(['prefix' => '', 'company' => false])
+@props(['prefix' => '', 'company' => false, 'county' => ''])
 
 {{-- The fields of one address, shared by the account page and checkout so the two can never ask
      for different things. `prefix` is the Livewire property the fields bind into ("billing"
      binds billing.city); empty for a component that keeps them flat. With `company`, the name
      fields give way to the firm's name, tax code and trade register number.
 
+     The county is a list, so a town and its county can be matched to the workshops near them.
+     The town is a field with suggestions from that county rather than a closed list: a village
+     with no workshop in it is still somewhere a parcel can go.
+
      The autocomplete tokens name their section, so a browser fills the delivery address into
      delivery and the invoice address into invoice, not the same one twice. --}}
 @php($key = fn (string $field): string => $prefix === '' ? $field : $prefix.'.'.$field)
 @php($section = $prefix === 'billing' ? 'billing' : 'shipping')
+@php($counties = \App\Directory\Localities::counties())
+@php($towns = \App\Directory\Localities::forCounty($county))
+@php($listId = 'localities-'.($prefix ?: 'address'))
 
 <div class="grid gap-4">
     @if($company)
@@ -53,14 +60,29 @@
 
     <div class="grid gap-4 sm:grid-cols-3">
         <label class="block">
-            <span class="field-label">Localitate</span>
-            <input type="text" wire:model="{{ $key('city') }}" autocomplete="{{ $section }} address-level2">
-            @error($key('city')) <span class="field-error">{{ $message }}</span> @enderror
+            <span class="field-label">Județ</span>
+            <select wire:model.live="{{ $key('county') }}" autocomplete="{{ $section }} address-level1">
+                <option value="">Alege județul</option>
+                {{-- A county saved before this was a list keeps showing as it was written. --}}
+                @if($county !== '' && ! in_array($county, $counties, true))
+                    <option value="{{ $county }}">{{ $county }}</option>
+                @endif
+                @foreach($counties as $countyName)
+                    <option value="{{ $countyName }}">{{ $countyName }}</option>
+                @endforeach
+            </select>
+            @error($key('county')) <span class="field-error">{{ $message }}</span> @enderror
         </label>
         <label class="block">
-            <span class="field-label">Județ</span>
-            <input type="text" wire:model="{{ $key('county') }}" autocomplete="{{ $section }} address-level1">
-            @error($key('county')) <span class="field-error">{{ $message }}</span> @enderror
+            <span class="field-label">Localitate</span>
+            <input type="text" list="{{ $listId }}" wire:model="{{ $key('city') }}" autocomplete="{{ $section }} address-level2"
+                   placeholder="{{ $county === '' ? 'Alege întâi județul' : 'Scrie sau alege' }}">
+            <datalist id="{{ $listId }}">
+                @foreach($towns as $town)
+                    <option value="{{ $town }}"></option>
+                @endforeach
+            </datalist>
+            @error($key('city')) <span class="field-error">{{ $message }}</span> @enderror
         </label>
         <label class="block">
             <span class="field-label">Cod poștal</span>

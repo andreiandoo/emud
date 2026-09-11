@@ -74,7 +74,7 @@
                     </label>
                     <label class="block">
                         <span class="field-label">În vigoare din</span>
-                        <input type="date" wire:model="effective_from">
+                        <x-date-input wire:model="effective_from" />
                     </label>
                     <label class="block">
                         <span class="field-label">Poziție</span>

@@ -50,7 +50,7 @@
                         <span class="grid h-7 w-7 place-items-center rounded-full bg-ink font-mono text-xs text-light">2</span> Date de livrare
                     </h2>
 
-                    <x-storefront.address-fields />
+                    <x-storefront.address-fields :county="$county" />
                 </section>
 
                 {{-- Who the invoice is made out to. Most people are invoiced where the parcel goes,
@@ -65,7 +65,7 @@
                     </div>
 
                     @if($billingType === 'company')
-                        <x-storefront.address-fields prefix="billing" :company="true" />
+                        <x-storefront.address-fields prefix="billing" :company="true" :county="$billing['county'] ?? ''" />
                         <p class="text-xs text-ink2">Factura se emite pe firmă; persoana de contact este cea de la livrare.</p>
                     @else
                         <label class="flex cursor-pointer items-center gap-2.5 text-sm">
@@ -74,7 +74,7 @@
                         </label>
 
                         @unless($billingSame)
-                            <x-storefront.address-fields prefix="billing" />
+                            <x-storefront.address-fields prefix="billing" :county="$billing['county'] ?? ''" />
                         @endunless
                     @endif
                 </section>

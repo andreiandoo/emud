@@ -26,7 +26,7 @@
                     ['Adresă', collect([$appointment->shop->address, $appointment->shop->city])->filter()->implode(', ')],
                     ['Lucrare', $appointment->service?->name ?? 'Nespecificată'],
                     ['Mașina', $appointment->vehicleLabel()],
-                    ['Când', ($appointment->preferred_date?->format('d.m.Y') ?? 'Oricând').' · '.$appointment->preferred_slot->label()],
+                    ['Când', ($appointment->preferred_date?->format('d/m/Y') ?? 'Oricând').' · '.$appointment->preferred_slot->label()],
                 ] as [$label, $value])
                     <dt class="border-b border-line py-3 font-mono text-[11px] uppercase tracking-[.1em] text-ink2 sm:py-3.5">{{ $label }}</dt>
                     <dd class="border-b border-line pb-3 font-medium sm:py-3.5">{{ $value }}</dd>

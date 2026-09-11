@@ -15,8 +15,8 @@
                 {{-- The picture comes from the collection this car belongs to, assigned when it
                      was saved. Without one, a drawn landscape stands in rather than an empty box. --}}
                 <div class="st-tile aspect-[16/8] bg-g2">
-                    @if($vehicle->collection?->garageImageUrl())
-                        <img src="{{ $vehicle->collection->garageImageUrl() }}" alt="{{ $vehicle->collection->name }}" class="st-media">
+                    @if($vehicle->photoUrl())
+                        <img src="{{ $vehicle->photoUrl() }}" alt="{{ $vehicle->label() }}" class="st-media">
                     @else
                         <canvas class="st-media" data-st-scene="{{ $scenes[$index % count($scenes)] }}" data-seed="{{ $vehicle->id * 5 }}" aria-hidden="true"></canvas>
                     @endif
