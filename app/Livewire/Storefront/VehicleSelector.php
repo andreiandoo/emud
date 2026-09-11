@@ -10,6 +10,7 @@ use App\Models\VehicleModel;
 use App\Storefront\Garage;
 use App\Storefront\SelectedVehicle;
 use App\Storefront\VehicleContext;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +45,9 @@ class VehicleSelector extends Component
 
     public ?int $generationId = null;
 
+    /** What a VIN decoded here found, said in the panel instead of closing it without a word. */
+    public string $vinFound = '';
+
     public function mount(): void
     {
         $this->syncFromContext();
@@ -76,6 +80,12 @@ class VehicleSelector extends Component
     public function updatedModelId(): void
     {
         $this->generationId = null;
+    }
+
+    /** A new VIN being typed makes the last answer stale. */
+    public function updatedVin(): void
+    {
+        $this->vinFound = '';
     }
 
     /**
@@ -165,13 +175,24 @@ class VehicleSelector extends Component
         $this->generationId = null;
     }
 
-    /** A VIN decoded here selects the car exactly as the dropdowns would, then clears the form. */
+    /**
+     * A VIN decoded here selects the car the way the dropdowns would, and says what it found.
+     * When it names a car already in the garage, that car is the one selected: it carries the
+     * year, the plate and the history the decoded model does not. The panel stays open on the
+     * answer — closing it silently looked, to a customer, as though nothing had happened.
+     */
     protected function selectVehicle(VehicleContext $context, SelectedVehicle $vehicle): void
     {
-        $context->select($vehicle);
+        $own = $this->garageMatch($vehicle);
+
+        $context->select($own === null ? $vehicle : SelectedVehicle::fromCustomerVehicle($own));
         $this->syncFromContext();
         $this->vin = '';
+        $this->vinFound = $own === null
+            ? 'Am identificat '.$vehicle->label().'. Căutăm piese pentru ea.'
+            : 'E mașina din garajul tău: '.($own->nickname ?: $own->label()).'. Căutăm piese pentru ea.';
 
+        $this->dispatch('vehicle-decoded');
         $this->dispatch('vehicle-changed');
     }
 
@@ -236,6 +257,27 @@ class VehicleSelector extends Component
         $this->syncFromContext();
 
         $this->dispatch('vehicle-changed');
+    }
+
+    /** The signed-in customer's car of the same make and model, and generation when both know it. */
+    private function garageMatch(SelectedVehicle $vehicle): ?CustomerVehicle
+    {
+        $user = Auth::user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        return CustomerVehicle::query()
+            ->whereBelongsTo($user)
+            ->where('make_id', $vehicle->makeId)
+            ->where('model_id', $vehicle->modelId)
+            ->when($vehicle->generationId !== null, fn (Builder $query) => $query
+                ->where(fn (Builder $same) => $same->whereNull('generation_id')->orWhere('generation_id', $vehicle->generationId)))
+            ->with(['make', 'model', 'generation'])
+            ->orderByDesc('is_primary')
+            ->orderBy('id')
+            ->first();
     }
 
     /**

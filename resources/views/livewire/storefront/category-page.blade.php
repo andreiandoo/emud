@@ -35,14 +35,6 @@
             @if($category->description)
                 <p class="mt-5 max-w-2xl text-[#cfcdc6]">{{ $category->description }}</p>
             @endif
-
-            <p class="mt-8 inline-flex h-11 items-center gap-2 rounded-full border border-white/20 bg-g0/40 px-4 text-sm font-semibold backdrop-blur">
-                <x-storefront.icon name="part" class="h-4 w-4 text-sand" />
-                {{ $total }} {{ $total === 1 ? 'produs' : 'produse' }}
-                @if($vehicle && $onlyForMyVehicle)
-                    <span class="font-normal text-mute">pentru {{ $vehicle->label() }}</span>
-                @endif
-            </p>
         </div>
     </section>
 

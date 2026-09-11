@@ -83,7 +83,7 @@ class GarageSelectionTest extends TestCase
     public function test_the_header_offers_no_button_to_drop_the_car(): void
     {
         Livewire::test(VehicleSelector::class)
-            ->assertSee('Caut piese pentru')
+            ->assertSee('Doar piese pentru mașinile mele')
             ->assertSee('Bifează toate')
             ->assertDontSee('Renunță');
     }

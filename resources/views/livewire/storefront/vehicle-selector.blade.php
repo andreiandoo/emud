@@ -7,7 +7,7 @@
      reaches the document, where click.outside would close the panel it had just opened. It is
      cleared once that click has finished travelling. data-picking on the bar makes a bar hidden
      by scrolling come back, since the panel hangs from it. --}}
-<div x-data="{ open: false, tab: 'car', opening: false }" class="relative"
+<div x-data="{ open: false, tab: 'car', opening: false, keep: false }" class="relative"
      x-effect="$el.closest('[data-st-header]')?.toggleAttribute('data-picking', open)"
      @keydown.escape.window="open = false"
      @open-vehicle-selector.window="
@@ -16,7 +16,8 @@
          opening = true;
          setTimeout(() => opening = false);
          if (tab === 'vin') setTimeout(() => $refs.vin?.focus({ preventScroll: true }), 250)"
-     @vehicle-changed.window="open = false"
+     @vehicle-decoded.window="keep = true"
+     @vehicle-changed.window="if (keep) { keep = false } else { open = false }"
      @click.outside="if (! opening) open = false">
     <button type="button" @click="open = ! open" :aria-expanded="open ? 'true' : 'false'" aria-haspopup="dialog"
             class="flex h-[2.875rem] items-center gap-2.5 rounded-[3px] border border-white/15 px-3 text-left text-bone transition hover:border-bone">
@@ -43,31 +44,17 @@
          class="absolute right-0 top-full z-50 mt-3 max-h-[calc(100vh-var(--st-header-h)-1.5rem)] w-[24rem] overflow-y-auto rounded-[3px] border border-gl2 bg-g1 p-5 text-bone shadow-2xl
                 max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--st-header-h)+0.5rem)] max-sm:w-auto">
 
-        {{-- What the shop is filtering for. There is no button to drop it: cars leave the garage
-             from the garage page, and the switch below is how to see the whole catalogue. --}}
+        {{-- One switch for the whole shop. Turned off here or on any listing, it stays off on
+             every page and, for a signed-in customer, on the next visit too. Which cars it is
+             about is the list below; there is no button to drop one — cars leave the garage from
+             the garage page. --}}
         @if($selection)
-            <div class="mb-5 rounded-[3px] border border-gl2 bg-white/[.03] p-3.5">
-                <p class="font-mono text-[10.5px] uppercase tracking-[.08em] text-mute">Caut piese pentru</p>
-                <p class="mt-1 font-semibold leading-snug">{{ $selection->label() }}</p>
-                <p class="mt-0.5 text-xs text-mute">
-                    @if(! $selection->isFromGarage())
-                        Selectată pentru această vizită
-                    @elseif(count($selection) > 1)
-                        Din garajul tău · ce se potrivește pe oricare dintre ele
-                    @else
-                        Din garajul tău
-                    @endif
-                </p>
-            </div>
-
-            {{-- One switch for the whole shop. Turned off here or on any listing, it stays off on
-                 every page and, for a signed-in customer, on the next visit too. --}}
-            <div class="-mt-2 mb-5 flex items-center justify-between gap-3 rounded-[3px] border border-gl2 px-3.5 py-3 text-sm">
+            <div class="mb-5 flex items-center justify-between gap-3 rounded-[3px] border border-gl2 px-3.5 py-3 text-sm">
                 <span>
-                    <span class="block font-medium">Doar piese care se potrivesc</span>
-                    <span class="block text-xs text-mute">{{ $filtersParts ? 'Listele și căutarea arată doar ce merge pe '.(count($selection) > 1 ? 'ele.' : 'ea.') : 'Vezi tot catalogul, cu potrivirea marcată.' }}</span>
+                    <span class="block font-medium">Doar piese pentru mașinile mele</span>
+                    <span class="block text-xs text-mute">Întreg catalogul se personalizează pentru tine.</span>
                 </span>
-                <button type="button" wire:click="toggleFilter" role="switch" aria-checked="{{ $filtersParts ? 'true' : 'false' }}" aria-label="Doar piese care se potrivesc"
+                <button type="button" wire:click="toggleFilter" role="switch" aria-checked="{{ $filtersParts ? 'true' : 'false' }}" aria-label="Doar piese pentru mașinile mele"
                         class="relative h-6 w-11 shrink-0 rounded-full transition-colors {{ $filtersParts ? 'bg-signal' : 'bg-white/15' }}">
                     <span class="absolute top-0.5 h-5 w-5 rounded-full bg-bone shadow transition-all {{ $filtersParts ? 'left-[1.375rem]' : 'left-0.5' }}"></span>
                 </button>
@@ -204,6 +191,13 @@
                     <span wire:loading wire:target="decodeVin">Se caută…</span>
                 </button>
             </form>
+
+            @if($vinFound !== '')
+                <p class="mt-3 flex items-start gap-2 rounded-[3px] border border-fit-bright/30 bg-fit-bright/10 px-3.5 py-2.5 text-sm text-bone">
+                    <x-storefront.icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-fit-bright" />
+                    <span>{{ $vinFound }}</span>
+                </p>
+            @endif
 
             @if($vinMessage !== '')
                 <p class="mt-3 rounded-[3px] border border-signal/40 bg-signal/10 px-3.5 py-2.5 text-sm text-bone">{{ $vinMessage }}</p>

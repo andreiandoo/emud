@@ -6,6 +6,8 @@ use App\Catalog\Vehicles\Vin\VinModelHints;
 use App\Catalog\Vehicles\Vin\VpicDecodedVehicleMatcher;
 use App\Livewire\Storefront\VehicleSelector;
 use App\Models\CatalogSource;
+use App\Models\CustomerVehicle;
+use App\Models\User;
 use App\Models\VehicleConfiguration;
 use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
@@ -78,7 +80,8 @@ class VinDecodingTest extends TestCase
         $this->assertNull($result->makeId);
     }
 
-    public function test_the_header_selects_the_model_a_vin_names(): void
+    /** The panel says what it found and stays open on it, instead of closing without a word. */
+    public function test_the_header_selects_the_model_a_vin_names_and_says_so(): void
     {
         $this->connectVpic($this->vpicAnswer());
 
@@ -86,12 +89,37 @@ class VinDecodingTest extends TestCase
             ->set('vin', self::VIN)
             ->call('decodeVin')
             ->assertHasNoErrors()
+            ->assertSet('vinFound', 'Am identificat Land Rover Discovery Sport First generation (L550). Căutăm piese pentru ea.')
+            ->assertDispatched('vehicle-decoded')
             ->assertDispatched('vehicle-changed');
 
         $current = app(VehicleContext::class)->current();
 
         $this->assertSame($this->discoverySport->id, $current?->modelId);
         $this->assertSame($this->l550->id, $current->generationId);
+    }
+
+    /** A VIN that names a car already in the garage selects that car, with its year and history. */
+    public function test_a_vin_matching_a_garage_car_selects_that_car(): void
+    {
+        $this->connectVpic($this->vpicAnswer());
+        $user = User::factory()->create();
+        $own = CustomerVehicle::create([
+            'user_id' => $user->id,
+            'make_id' => $this->landRover->id,
+            'model_id' => $this->discoverySport->id,
+            'generation_id' => $this->l550->id,
+            'year' => 2016,
+            'is_primary' => true,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(VehicleSelector::class)
+            ->set('vin', self::VIN)
+            ->call('decodeVin')
+            ->assertSet('vinFound', 'E mașina din garajul tău: Land Rover Discovery Sport First generation (L550). Căutăm piese pentru ea.');
+
+        $this->assertSame($own->id, app(VehicleContext::class)->current()?->customerVehicleId);
     }
 
     /** A VIN that names only the make says so plainly, and starts the dropdowns on the make. */
