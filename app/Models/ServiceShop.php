@@ -7,6 +7,7 @@ use App\Directory\ShopFacilities;
 use App\Enums\ServicePromotionTier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -28,6 +29,8 @@ class ServiceShop extends Model
             'accepts_appointments' => 'boolean',
             'promotion_tier' => ServicePromotionTier::class,
             'promoted_until' => 'date',
+            'registry_locked' => 'array',
+            'registry_synced_at' => 'datetime',
         ];
     }
 
@@ -110,6 +113,28 @@ class ServiceShop extends Model
     public function leadEvents(): HasMany
     {
         return $this->hasMany(ServiceShopLeadEvent::class);
+    }
+
+    /** The registry workshop this listing speaks for, when it was built from one. */
+    public function workshop(): BelongsTo
+    {
+        return $this->belongsTo(Workshop::class);
+    }
+
+    /**
+     * The registry-filled fields an admin has taken over.
+     *
+     * @return list<string>
+     */
+    public function lockedFields(): array
+    {
+        return array_values(array_filter((array) $this->registry_locked, 'is_string'));
+    }
+
+    /** Whether the registry still decides this field, rather than an admin. */
+    public function followsRegistry(string $field): bool
+    {
+        return $this->workshop_id !== null && ! in_array($field, $this->lockedFields(), true);
     }
 
     /**

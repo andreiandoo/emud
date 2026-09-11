@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Directory\ShopFacilities;
+use App\Directory\WorkshopListingSync;
 use App\Enums\ServicePromotionTier;
 use App\Models\Service;
 use App\Models\ServiceShop;
@@ -249,6 +250,12 @@ class ServiceShopEditor extends Component
         $shop = DB::transaction(function () use ($data): ServiceShop {
             $shop = $this->shop() ?? new ServiceShop;
 
+            // A listing built from the registry: whatever the registry fills and this save
+            // changes is taken over, and the next sync leaves it as written here.
+            if ($shop->exists && $shop->workshop_id !== null) {
+                $shop->registry_locked = $this->takenOver($shop, $data);
+            }
+
             // Columns listed one by one rather than spread from the validated array: the form's
             // property names are not the table's column names, and a spread would try to write
             // "shopStatus" to a column that does not exist.
@@ -294,11 +301,40 @@ class ServiceShopEditor extends Component
         $this->saved = 'Service-ul a fost salvat.';
     }
 
+    /** Pulls the registry's current values into every field that still follows it. */
+    public function syncFromRegistry(WorkshopListingSync $sync): void
+    {
+        $shop = $this->shop();
+
+        abort_if($shop?->workshop === null, 404);
+
+        $sync->sync($shop->workshop);
+        $this->reload();
+        $this->saved = 'Fișa a fost actualizată din registru.';
+    }
+
+    /** Hands every taken-over field back to the registry, and syncs. */
+    public function followRegistryAgain(WorkshopListingSync $sync): void
+    {
+        $shop = $this->shop();
+
+        abort_if($shop?->workshop === null, 404);
+
+        $shop->update(['registry_locked' => null]);
+        $sync->sync($shop->workshop);
+        $this->reload();
+        $this->saved = 'Toate câmpurile urmează din nou registrul.';
+    }
+
     public function render()
     {
+        $shop = $this->shop();
+
         return view('livewire.admin.service-shop-editor', [
             'tabs' => self::TABS,
-            'shop' => $this->shop(),
+            'shop' => $shop,
+            'lockedFields' => $shop?->lockedFields() ?? [],
+            'fieldLabels' => WorkshopListingSync::FIELDS,
             'services' => Service::query()->with('serviceCategory')->orderBy('name')->get(),
             'makes' => VehicleMake::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'tiers' => ServicePromotionTier::cases(),
@@ -346,6 +382,88 @@ class ServiceShopEditor extends Component
     private function specialityList(string $raw): array
     {
         return collect(explode(',', $raw))->map(fn (string $item) => trim($item))->filter()->unique()->values()->all();
+    }
+
+    /**
+     * The registry-filled fields this save changes, added to the ones already taken over.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<string>
+     */
+    private function takenOver(ServiceShop $shop, array $data): array
+    {
+        $before = [
+            'name' => (string) $shop->name,
+            'county' => (string) $shop->county,
+            'city' => (string) $shop->city,
+            'address' => (string) $shop->address,
+            'postal_code' => (string) $shop->postal_code,
+            'latitude' => (string) $shop->latitude,
+            'longitude' => (string) $shop->longitude,
+            'phone' => (string) $shop->phone,
+            'email' => (string) $shop->email,
+            'website' => (string) $shop->website,
+            'specialities' => $shop->specialityList(),
+            'certifications' => $this->keys(array_keys($shop->certificationLabels())),
+            'makes' => $this->ids($shop->makes()->pluck('vehicle_makes.id')->all()),
+            'services' => $this->ids($shop->services()->pluck('services.id')->all()),
+            'status' => (string) $shop->status,
+        ];
+
+        $after = [
+            'name' => (string) $data['name'],
+            'county' => (string) $data['county'],
+            'city' => (string) $data['city'],
+            'address' => (string) ($data['address'] ?? ''),
+            'postal_code' => (string) ($data['postalCode'] ?? ''),
+            'latitude' => (string) ($data['latitude'] ?? ''),
+            'longitude' => (string) ($data['longitude'] ?? ''),
+            'phone' => (string) ($data['phone'] ?? ''),
+            'email' => (string) ($data['email'] ?? ''),
+            'website' => (string) ($data['website'] ?? ''),
+            'specialities' => $this->specialityList((string) ($data['specialities'] ?? '')),
+            'certifications' => $this->keys($this->certifications),
+            'makes' => $this->ids($this->makeIds),
+            'services' => $this->ids(array_column($this->priceList, 'service_id')),
+            'status' => (string) $data['shopStatus'],
+        ];
+
+        $changed = array_keys(array_filter(
+            $after,
+            fn (mixed $value, string $field): bool => $value !== $before[$field],
+            ARRAY_FILTER_USE_BOTH,
+        ));
+
+        return array_values(array_unique([...$shop->lockedFields(), ...$changed]));
+    }
+
+    /**
+     * @param  array<int, mixed>  $values
+     * @return list<int>
+     */
+    private function ids(array $values): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $values))));
+        sort($ids);
+
+        return $ids;
+    }
+
+    /**
+     * @param  array<int, mixed>  $values
+     * @return list<string>
+     */
+    private function keys(array $values): array
+    {
+        $keys = array_values(array_unique(array_map('strval', $values)));
+        sort($keys);
+
+        return $keys;
+    }
+
+    private function reload(): void
+    {
+        $this->mount(ServiceShop::query()->findOrFail($this->shopId));
     }
 
     /** @return array<int, array{weekday: int, is_closed: bool, opens_at: string, closes_at: string}> */
