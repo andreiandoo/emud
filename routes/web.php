@@ -108,7 +108,7 @@ Route::get('/programare/{token}', StorefrontAppointment::class)->whereUuid('toke
 Route::get('/service-auto/{city}', StorefrontServiceCity::class)->where('city', '[a-z0-9-]+')->name('storefront.services.city');
 Route::get('/service-auto/{city}/{slug}', StorefrontService::class)->where(['city' => '[a-z0-9-]+', 'slug' => '[a-z0-9-]+'])->name('storefront.service');
 Route::get('/service-auto/{city}/{slug}/catre/{type}', ServiceShopLinkController::class)
-    ->where(['city' => '[a-z0-9-]+', 'slug' => '[a-z0-9-]+', 'type' => 'website|directions'])
+    ->where(['city' => '[a-z0-9-]+', 'slug' => '[a-z0-9-]+', 'type' => 'website|directions|waze'])
     ->name('storefront.service.link');
 Route::get('/contact', StorefrontContact::class)->name('storefront.contact');
 Route::get('/cos', StorefrontCart::class)->name('storefront.cart');

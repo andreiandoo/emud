@@ -333,7 +333,7 @@
 
                 <label class="block">
                     <span class="field-label">Valabil până la</span>
-                    <input type="date" wire:model="promotedUntil" @disabled($promotionTier === 'none')>
+                    <x-date-input wire:model="promotedUntil" :disabled="$promotionTier === 'none'" />
                     <span class="field-hint">După această dată listarea nu mai urcă în ordine.</span>
                     @error('promotedUntil') <span class="field-error">{{ $message }}</span> @enderror
                 </label>

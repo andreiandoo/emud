@@ -37,7 +37,7 @@
                 <p class="text-sm text-ink2">O completăm automat când finalizezi o comandă. O poți schimba și acolo, pentru o singură comandă.</p>
             </div>
 
-            <x-storefront.address-fields prefix="shipping" />
+            <x-storefront.address-fields prefix="shipping" :county="$shipping['county'] ?? ''" />
 
             <div><button type="submit" class="st-btn st-btn--ink">Salvează adresa</button></div>
         </form>
@@ -54,7 +54,7 @@
             </div>
 
             @if($billingType === 'company')
-                <x-storefront.address-fields prefix="billing" :company="true" />
+                <x-storefront.address-fields prefix="billing" :company="true" :county="$billing['county'] ?? ''" />
                 <p class="flex items-start gap-2 text-xs text-ink2">
                     <x-storefront.icon name="shield" class="h-4 w-4 shrink-0" />
                     Factura se emite pe firmă. Persoana de contact rămâne cea de la livrare.
@@ -66,7 +66,7 @@
                 </label>
 
                 @unless($billingSame)
-                    <x-storefront.address-fields prefix="billing" />
+                    <x-storefront.address-fields prefix="billing" :county="$billing['county'] ?? ''" />
                 @endunless
             @endif
 

@@ -9,6 +9,7 @@ namespace App\Enums;
 enum ServiceReminderType: string
 {
     case Itp = 'itp';
+    case Rar = 'rar';
     case Rca = 'rca';
     case Rovinieta = 'rovinieta';
     case OilAndFilter = 'oil_and_filter';
@@ -28,7 +29,8 @@ enum ServiceReminderType: string
     {
         return match ($this) {
             self::Itp => 'ITP',
-            self::Rca => 'RCA',
+            self::Rar => 'Verificare RAR',
+            self::Rca => 'Asigurare RCA',
             self::Rovinieta => 'Rovinietă',
             self::OilAndFilter => 'Ulei și filtru de ulei',
             self::AirFilter => 'Filtru de aer',
@@ -48,7 +50,18 @@ enum ServiceReminderType: string
     /** Whether the deadline is a legal one, which changes how firmly it is presented. */
     public function isLegal(): bool
     {
-        return in_array($this, [self::Itp, self::Rca, self::Rovinieta], true);
+        return in_array($this, [self::Itp, self::Rar, self::Rca, self::Rovinieta], true);
+    }
+
+    /**
+     * The deadlines every owner has, offered one click away on each car rather than hidden in a
+     * dropdown of fifteen: the legal ones, and the oil change everyone forgets.
+     *
+     * @return list<self>
+     */
+    public static function essentials(): array
+    {
+        return [self::Itp, self::Rar, self::Rovinieta, self::Rca, self::OilAndFilter];
     }
 
     /** Months and kilometres a typical interval runs, used to propose the next due point. */

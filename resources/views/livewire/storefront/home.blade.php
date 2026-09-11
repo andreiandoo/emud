@@ -394,7 +394,7 @@
 
                             <div class="flex gap-3.5 font-mono text-[12px] uppercase tracking-[.06em] text-ink2">
                                 <span>{{ $article->category?->name ?? 'Ghid' }}</span>
-                                <span>{{ $article->published_at?->format('d.m.Y') }}</span>
+                                <span>{{ $article->published_at?->format('d/m/Y') }}</span>
                             </div>
 
                             <h3 class="font-display text-[1.4rem] font-semibold leading-tight tracking-[-.015em] text-balance transition group-hover:text-signal">{{ $article->title }}</h3>

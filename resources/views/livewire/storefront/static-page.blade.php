@@ -15,7 +15,7 @@
             @if($page->version || $page->effective_from)
                 <p class="mt-5 font-mono text-xs uppercase tracking-[.08em] text-mute">
                     @if($page->version) Versiunea {{ $page->version }} @endif
-                    @if($page->effective_from) · în vigoare din {{ $page->effective_from->format('d.m.Y') }} @endif
+                    @if($page->effective_from) · în vigoare din {{ $page->effective_from->format('d/m/Y') }} @endif
                 </p>
             @endif
         </div>

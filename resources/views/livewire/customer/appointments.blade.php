@@ -31,8 +31,8 @@
                             {{ $appointment->vehicleLabel() }}
                         </p>
                         <p class="mt-1 text-xs text-ink2">
-                            Trimisă {{ $appointment->created_at->format('d.m.Y') }} ·
-                            {{ $appointment->preferred_date?->format('d.m.Y') ?? 'oricând' }}, {{ $appointment->preferred_slot->label() }}
+                            Trimisă {{ $appointment->created_at->format('d/m/Y') }} ·
+                            {{ $appointment->preferred_date?->format('d/m/Y') ?? 'oricând' }}, {{ $appointment->preferred_slot->label() }}
                             @if($appointment->order) · comanda {{ $appointment->order->number }} @endif
                         </p>
                     </div>

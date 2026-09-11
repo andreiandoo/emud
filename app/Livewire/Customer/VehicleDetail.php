@@ -2,19 +2,24 @@
 
 namespace App\Livewire\Customer;
 
+use App\Directory\NearbyShops;
 use App\Enums\ServiceReminderType;
 use App\Models\CustomerVehicle;
 use App\Models\OrderItem;
 use App\Models\VehicleServiceReminder;
 use App\Storefront\ServicePlan;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('layouts::storefront', ['fullWidth' => true])]
 class VehicleDetail extends Component
 {
+    use WithFileUploads;
+
     public CustomerVehicle $vehicle;
 
     public ?int $mileage_km = null;
@@ -26,6 +31,9 @@ class VehicleDetail extends Component
     public ?int $reminderDueAtKm = null;
 
     public string $reminderNotes = '';
+
+    /** A photograph of the car, saved as soon as it is chosen. */
+    public mixed $photo = null;
 
     public string $status = '';
 
@@ -44,7 +52,7 @@ class VehicleDetail extends Component
         $this->vehicle = CustomerVehicle::query()
             ->where('user_id', auth()->id())
             ->where('slug', $slug)
-            ->with(['make', 'model', 'generation', 'configuration.engine'])
+            ->with(['make', 'model', 'generation', 'configuration.engine', 'collection'])
             ->firstOrFail();
 
         $this->mileage_km = $this->vehicle->mileage_km;
@@ -66,6 +74,53 @@ class VehicleDetail extends Component
         $this->status = 'Kilometrajul a fost actualizat.';
     }
 
+    public function updatedPhoto(): void
+    {
+        $this->validate(['photo' => ['image', 'max:8192']], [
+            'photo.image' => 'Alege o fotografie (JPG, PNG sau WebP).',
+            'photo.max' => 'Fotografia poate avea cel mult 8 MB.',
+        ]);
+
+        $previous = $this->vehicle->photo_path;
+
+        $this->vehicle->update(['photo_path' => $this->photo->store('garage', 'public')]);
+
+        // The old file goes with it: a garage photographed three times keeps one picture, not
+        // three, on a disk served to the web.
+        if ($previous !== null) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        $this->photo = null;
+        $this->status = 'Fotografia a fost salvată.';
+    }
+
+    public function removePhoto(): void
+    {
+        if ($this->vehicle->photo_path !== null) {
+            Storage::disk('public')->delete($this->vehicle->photo_path);
+            $this->vehicle->update(['photo_path' => null]);
+        }
+
+        $this->status = 'Fotografia a fost ștearsă.';
+    }
+
+    /**
+     * Fills the deadline form for a kind of deadline — with what is already set for it, so the
+     * same button adds a deadline and changes one — or empty for "any other deadline".
+     */
+    public function startReminder(string $type = ''): void
+    {
+        $this->resetValidation();
+
+        $existing = $type === '' ? null : $this->vehicle->reminders()->where('type', $type)->first();
+
+        $this->reminderType = $type;
+        $this->reminderDueOn = $existing?->due_on?->toDateString();
+        $this->reminderDueAtKm = $existing?->due_at_km;
+        $this->reminderNotes = (string) ($existing?->notes ?? '');
+    }
+
     public function addReminder(): void
     {
         $data = $this->validate([
@@ -75,6 +130,7 @@ class VehicleDetail extends Component
             'reminderNotes' => ['nullable', 'string', 'max:500'],
         ], [
             'reminderType.required' => 'Alege ce anume urmărești.',
+            'reminderDueOn.date' => 'Scrie data ca zz/ll/aaaa.',
         ]);
 
         $type = ServiceReminderType::from($data['reminderType']);
@@ -95,6 +151,7 @@ class VehicleDetail extends Component
 
         $this->reset(['reminderType', 'reminderDueOn', 'reminderDueAtKm', 'reminderNotes']);
         $this->status = 'Scadența a fost salvată.';
+        $this->dispatch('reminder-saved');
     }
 
     public function markDone(int $reminderId, ServicePlan $plan): void
@@ -111,13 +168,18 @@ class VehicleDetail extends Component
         $this->status = 'Scadența a fost ștearsă.';
     }
 
-    public function render(ServicePlan $plan)
+    public function render(ServicePlan $plan, NearbyShops $nearby)
     {
+        $reminders = $plan->forVehicle($this->vehicle);
+
         return view('livewire.customer.vehicle-detail', [
-            'reminders' => $plan->forVehicle($this->vehicle),
-            'suggestions' => $plan->suggestedFor($this->vehicle),
+            'reminders' => $reminders,
+            'byType' => $reminders->keyBy(fn (VehicleServiceReminder $reminder): string => $reminder->type->value),
+            'essentials' => ServiceReminderType::essentials(),
             'types' => ServiceReminderType::cases(),
             'history' => $this->partsHistory(),
+            'location' => $nearby->locationOf(auth()->user()),
+            'nearby' => $nearby->forUser(auth()->user(), $this->vehicle, 3),
         ]);
     }
 

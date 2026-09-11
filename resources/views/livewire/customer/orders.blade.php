@@ -15,7 +15,7 @@
                 <a href="{{ route('storefront.order', $order->checkout_token) }}"
                    class="grid gap-2 border-b border-line px-5 py-4 transition last:border-b-0 hover:bg-light md:grid-cols-[1.2fr_1fr_.8fr_1fr_1.2fr] md:items-center md:gap-4">
                     <span class="font-mono text-sm font-medium">{{ $order->number }}</span>
-                    <span class="text-sm text-ink2">{{ $order->placed_at?->format('d.m.Y') }}</span>
+                    <span class="text-sm text-ink2">{{ $order->placed_at?->format('d/m/Y') }}</span>
                     <span class="text-sm text-ink2">{{ $order->items->count() }} produse</span>
                     <span class="font-display text-lg font-semibold tabular-nums">{{ \App\Support\Money::of($order->grand_total, $order->currency)->format() }}</span>
                     <span class="flex flex-wrap gap-1.5">

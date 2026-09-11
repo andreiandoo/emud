@@ -56,6 +56,19 @@
                     Renunță
                 </button>
             </div>
+
+            {{-- One switch for the whole shop. Turned off here or on any listing, it stays off on
+                 every page and, for a signed-in customer, on the next visit too. --}}
+            <div class="-mt-2 mb-5 flex items-center justify-between gap-3 rounded-[3px] border border-gl2 px-3.5 py-3 text-sm">
+                <span>
+                    <span class="block font-medium">Doar piese care se potrivesc</span>
+                    <span class="block text-xs text-mute">{{ $filtersParts ? 'Listele și căutarea arată doar ce merge pe ea.' : 'Vezi tot catalogul, cu potrivirea marcată.' }}</span>
+                </span>
+                <button type="button" wire:click="toggleFilter" role="switch" aria-checked="{{ $filtersParts ? 'true' : 'false' }}" aria-label="Doar piese care se potrivesc"
+                        class="relative h-6 w-11 shrink-0 rounded-full transition-colors {{ $filtersParts ? 'bg-signal' : 'bg-white/15' }}">
+                    <span class="absolute top-0.5 h-5 w-5 rounded-full bg-bone shadow transition-all {{ $filtersParts ? 'left-[1.375rem]' : 'left-0.5' }}"></span>
+                </button>
+            </div>
         @endif
 
         @auth

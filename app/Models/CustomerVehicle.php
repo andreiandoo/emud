@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CustomerVehicle extends Model
@@ -120,6 +121,16 @@ class CustomerVehicle extends Model
     public function configuration(): BelongsTo
     {
         return $this->belongsTo(VehicleConfiguration::class, 'configuration_id');
+    }
+
+    /** The owner's own photograph, else the collection's picture of the model, else none. */
+    public function photoUrl(): ?string
+    {
+        if ($this->photo_path) {
+            return Storage::disk('public')->url($this->photo_path);
+        }
+
+        return $this->collection?->garageImageUrl();
     }
 
     public function label(): string

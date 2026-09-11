@@ -58,7 +58,7 @@ class CollectionPage extends Component
     #[Url(as: 'stoc', except: false)]
     public bool $inStock = false;
 
-    #[Url(as: 'potrivite', except: false)]
+    /** Starts from the shop-wide setting (VehicleContext::filtersParts) and writes back to it. */
     public bool $fitsMyVehicle = false;
 
     #[Url(except: 'relevance')]
@@ -71,6 +71,8 @@ class CollectionPage extends Component
             ->where('slug', $slug)
             ->where('is_active', true)
             ->firstOrFail();
+
+        $this->fitsMyVehicle = app(VehicleContext::class)->filtersParts();
     }
 
     public function updated(string $property): void
@@ -83,12 +85,21 @@ class CollectionPage extends Component
     #[On('vehicle-changed')]
     public function vehicleChanged(): void
     {
+        $this->fitsMyVehicle = app(VehicleContext::class)->filtersParts();
         $this->resetPage();
     }
 
+    /** Unticked here, unticked everywhere: the choice is the customer's, not this page's. */
+    public function updatedFitsMyVehicle(bool $value): void
+    {
+        app(VehicleContext::class)->setFiltersParts($value);
+        $this->dispatch('vehicle-changed');
+    }
+
+    /** The car filter is left alone: it is a setting of the customer's, not one of this page's. */
     public function clearFilters(): void
     {
-        $this->reset(['categories', 'brands', 'priceMin', 'priceMax', 'inStock', 'fitsMyVehicle']);
+        $this->reset(['categories', 'brands', 'priceMin', 'priceMax', 'inStock']);
         $this->resetPage();
     }
 
@@ -100,7 +111,7 @@ class CollectionPage extends Component
             'brand' => $this->brands = array_values(array_diff($this->brands, [$value])),
             'price' => $this->reset(['priceMin', 'priceMax']),
             'stock' => $this->inStock = false,
-            'vehicle' => $this->fitsMyVehicle = false,
+            'vehicle' => $this->updatedFitsMyVehicle($this->fitsMyVehicle = false),
             default => null,
         };
 
@@ -113,7 +124,7 @@ class CollectionPage extends Component
             + count($this->brands)
             + (($this->priceMin !== '' || $this->priceMax !== '') ? 1 : 0)
             + ($this->inStock ? 1 : 0)
-            + ($this->fitsMyVehicle ? 1 : 0);
+            + ($this->fitsMyVehicle && app(VehicleContext::class)->has() ? 1 : 0);
     }
 
     public function render(VehicleContext $context, FitmentMatcher $matcher)

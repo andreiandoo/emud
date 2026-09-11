@@ -70,8 +70,7 @@ class CategoryPage extends Component
     #[Url(except: 'relevance')]
     public string $sort = 'relevance';
 
-    /** Kept in the URL so a filtered listing stays shareable and reproducible. */
-    #[Url(except: true)]
+    /** Starts from the shop-wide setting (VehicleContext::filtersParts) and writes back to it. */
     public bool $onlyForMyVehicle = true;
 
     /** Set for the length of one render, so every count is taken against the same car. */
@@ -91,12 +90,21 @@ class CategoryPage extends Component
     public function mount(Category $category): void
     {
         $this->category = $category;
+        $this->onlyForMyVehicle = app(VehicleContext::class)->filtersParts();
     }
 
     #[On('vehicle-changed')]
     public function vehicleChanged(): void
     {
+        $this->onlyForMyVehicle = app(VehicleContext::class)->filtersParts();
         $this->resetPage();
+    }
+
+    /** Unticked here, unticked everywhere: the choice is the customer's, not this page's. */
+    public function updatedOnlyForMyVehicle(bool $value): void
+    {
+        app(VehicleContext::class)->setFiltersParts($value);
+        $this->dispatch('vehicle-changed');
     }
 
     public function updated(string $property): void

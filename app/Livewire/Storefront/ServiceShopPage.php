@@ -58,18 +58,28 @@ class ServiceShopPage extends Component
 
     public string $formError = '';
 
+    /** True when an admin is looking at a listing the public cannot see yet. */
+    public bool $preview = false;
+
     /**
      * Resolved here so a draft listing is a 404 rather than readable by guessing the slug, and
      * so a workshop reached at the wrong city segment lands on its canonical address instead of
      * being served the same page at two URLs.
+     *
+     * Staff see drafts too, so a listing can be looked at as a customer will see it before it
+     * is published.
      */
     public function mount(string $city, string $slug): void
     {
+        $staff = (bool) Auth::user()?->isAdmin();
+
         $this->shop = ServiceShop::query()
-            ->published()
+            ->when(! $staff, fn ($query) => $query->published())
             ->with(['hours', 'media', 'makes', 'services.serviceCategory', 'services.partsCategory'])
             ->where('slug', $slug)
             ->firstOrFail();
+
+        $this->preview = $this->shop->status !== 'published';
 
         if ($city !== $this->shop->citySegment()) {
             $this->permanentRedirect($this->shop->url());

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\Storefront\CategoryPage;
 use App\Livewire\Storefront\SearchResults;
 use App\Livewire\Storefront\VehicleFinder;
+use App\Livewire\Storefront\VehicleSelector;
 use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
@@ -12,6 +13,9 @@ use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Models\ProductFitment;
 use App\Models\ProductVariant;
+use App\Models\Supplier;
+use App\Models\SupplierProduct;
+use App\Models\User;
 use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
@@ -303,6 +307,72 @@ class StorefrontCatalogTest extends TestCase
             ->assertSee('Alege mașina ta')
             ->assertSee('Alege subcategoria')
             ->assertSee('Arcuri');
+    }
+
+    /** The code on the box usually comes with a supplier's feed, not typed onto the product. */
+    public function test_search_finds_a_part_by_the_ean_on_its_supplier_record(): void
+    {
+        $product = $this->product(name: 'Filtru ulei');
+        $supplier = Supplier::query()->create(['name' => 'Furnizor', 'code' => 'furnizor', 'protocol' => 'csv']);
+        SupplierProduct::query()->create([
+            'supplier_id' => $supplier->id,
+            'product_id' => $product->id,
+            'external_id' => 'F-1',
+            'ean' => '5901234123457',
+            'name' => 'Oil filter',
+        ]);
+
+        Livewire::test(SearchResults::class)
+            ->set('query', '5901234123457')
+            ->assertSee('Filtru ulei');
+    }
+
+    /** Unticked once, the filter stays off on the next page instead of having to be unticked again. */
+    public function test_unticking_the_filter_on_a_category_carries_over_to_search(): void
+    {
+        $category = $this->category();
+        $otherMake = VehicleMake::create(['name' => 'Jeep', 'slug' => 'jeep']);
+        $notFitting = $this->product(name: 'Bară straina');
+        $notFitting->categories()->attach($category);
+        $this->fitment($notFitting, ['make_id' => $otherMake->id]);
+
+        app(VehicleContext::class)->select($this->vehicle());
+
+        Livewire::test(CategoryPage::class, ['category' => $category])
+            ->set('onlyForMyVehicle', false)
+            ->assertDispatched('vehicle-changed');
+
+        Livewire::test(SearchResults::class)
+            ->assertSet('onlyForMyVehicle', false)
+            ->set('query', 'Bară')
+            ->assertSee('Bară straina');
+    }
+
+    public function test_a_signed_in_customer_keeps_the_choice_on_their_account(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(SearchResults::class)->set('onlyForMyVehicle', false);
+
+        $this->assertFalse($user->fresh()->filters_parts_by_vehicle);
+
+        // A new visit starts with an empty session, and the account still remembers.
+        session()->forget('storefront.vehicle-filter');
+        $this->assertFalse(app(VehicleContext::class)->filtersParts());
+    }
+
+    public function test_the_header_switch_turns_the_filter_off_and_back_on(): void
+    {
+        Livewire::test(VehicleSelector::class)
+            ->call('toggleFilter')
+            ->assertDispatched('vehicle-changed');
+
+        $this->assertFalse(app(VehicleContext::class)->filtersParts());
+
+        Livewire::test(VehicleSelector::class)->call('toggleFilter');
+
+        $this->assertTrue(app(VehicleContext::class)->filtersParts());
     }
 
     private function vehicle(bool $withGeneration = true, ?int $year = 2020): SelectedVehicle

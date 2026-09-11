@@ -26,6 +26,7 @@ class ServiceShopLinkController extends Controller
         $destination = match ($type) {
             'website' => $shop->website,
             'directions' => $shop->directionsUrl(),
+            'waze' => $shop->wazeUrl(),
             default => null,
         };
 

@@ -15,8 +15,8 @@
         <section class="overflow-hidden rounded-[3px] bg-white">
             @if($primary)
                 <div class="st-tile aspect-[16/8] bg-g2">
-                    @if($primary->collection?->garageImageUrl())
-                        <img src="{{ $primary->collection->garageImageUrl() }}" alt="" class="st-media">
+                    @if($primary->photoUrl())
+                        <img src="{{ $primary->photoUrl() }}" alt="" class="st-media">
                     @else
                         <canvas class="st-media" data-st-scene="dusk" data-seed="{{ $primary->id * 5 }}" aria-hidden="true"></canvas>
                     @endif
@@ -96,7 +96,7 @@
                 <a href="{{ route('storefront.order', $order->checkout_token) }}" class="flex items-center justify-between gap-4 border-t border-line py-4 transition hover:bg-white">
                     <span>
                         <span class="block font-mono text-sm font-medium">{{ $order->number }}</span>
-                        <span class="text-sm text-ink2">{{ $order->placed_at?->format('d.m.Y') }} · {{ $order->items->count() }} produse</span>
+                        <span class="text-sm text-ink2">{{ $order->placed_at?->format('d/m/Y') }} · {{ $order->items->count() }} produse</span>
                     </span>
                     <span class="font-display text-lg font-semibold tabular-nums">{{ \App\Support\Money::of($order->grand_total, $order->currency)->format() }}</span>
                 </a>
@@ -115,7 +115,7 @@
                 <div class="flex items-center justify-between gap-4 border-t border-line py-4">
                     <span class="min-w-0">
                         <span class="block truncate font-semibold">{{ $appointment->shop?->name }}</span>
-                        <span class="text-sm text-ink2">{{ $appointment->service?->name ?? 'Lucrare nespecificată' }} · {{ $appointment->preferred_date?->format('d.m.Y') ?? 'oricând' }}</span>
+                        <span class="text-sm text-ink2">{{ $appointment->service?->name ?? 'Lucrare nespecificată' }} · {{ $appointment->preferred_date?->format('d/m/Y') ?? 'oricând' }}</span>
                     </span>
                     <span class="{{ $appointment->status->pillClass() }}">{{ $appointment->status->label() }}</span>
                 </div>
@@ -126,4 +126,42 @@
             @endforelse
         </section>
     </div>
+
+    {{-- Workshops near the customer, from the town on their account and, among them, the ones
+         that work on their car first. --}}
+    <section class="mt-10">
+        <div class="mb-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h2 class="font-display text-2xl font-semibold">Service-uri lângă tine</h2>
+                @if($location['city'] || $location['county'])
+                    <p class="mt-1 text-sm text-ink2">
+                        {{ collect([$location['city'], $location['county'] ? 'județul '.$location['county'] : null])->filter()->implode(', ') }}
+                        · din adresa de livrare din <a href="{{ route('customer.profile') }}" class="underline underline-offset-2 hover:text-ink">Datele mele</a>
+                    </p>
+                @endif
+            </div>
+            @php($sameTown = $location['city'] ? $nearby->firstWhere('city_slug', \Illuminate\Support\Str::slug($location['city'])) : null)
+            @if($sameTown)
+                <a href="{{ route('storefront.services.city', $sameTown->citySegment()) }}" class="st-link">Toate din {{ $sameTown->city }} <x-storefront.icon name="arrow-right" /></a>
+            @endif
+        </div>
+
+        @if(! $location['city'] && ! $location['county'])
+            <p class="rounded-[3px] bg-white p-5 text-sm text-ink2">
+                Completează orașul în <a href="{{ route('customer.profile') }}" class="font-semibold text-ink underline underline-offset-2">Datele mele</a>
+                și îți arătăm atelierele din apropiere, cu cele care lucrează pe mașina ta primele.
+            </p>
+        @elseif($nearby->isEmpty())
+            <p class="rounded-[3px] bg-white p-5 text-sm text-ink2">
+                Nu avem încă ateliere listate în zona ta.
+                <a href="{{ route('storefront.services') }}" class="font-semibold text-ink underline underline-offset-2">Vezi directorul</a>
+            </p>
+        @else
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                @foreach($nearby as $shop)
+                    <x-storefront.shop-card :shop="$shop" wire:key="nearby-{{ $shop->id }}" />
+                @endforeach
+            </div>
+        @endif
+    </section>
 </x-storefront.account>
