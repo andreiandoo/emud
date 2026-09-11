@@ -24,10 +24,7 @@
         <div @class(['shell', 'pt-6 sm:pt-7' => $compact, 'pt-12 sm:pt-16' => ! $compact])>
             @if($compact)
                 <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-                    <div class="flex min-w-0 items-baseline gap-3">
-                        <p class="st-kicker shrink-0 text-mute max-sm:hidden">{{ $kicker }}</p>
-                        <h1 class="min-w-0 truncate font-display text-[clamp(1.4rem,2.2vw,1.9rem)] font-semibold leading-tight tracking-[-.02em]">{{ $title }}</h1>
-                    </div>
+                    <h1 class="min-w-0 truncate font-display text-[clamp(1.4rem,2.2vw,1.9rem)] font-semibold leading-tight tracking-[-.02em]">{{ $title }}</h1>
 
                     @isset($actions)
                         <div class="flex flex-wrap gap-2">{{ $actions }}</div>

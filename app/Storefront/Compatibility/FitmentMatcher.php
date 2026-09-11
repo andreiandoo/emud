@@ -5,6 +5,7 @@ namespace App\Storefront\Compatibility;
 use App\Models\Product;
 use App\Models\ProductFitment;
 use App\Storefront\SelectedVehicle;
+use App\Storefront\VehicleSelection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -22,16 +23,80 @@ class FitmentMatcher
      * Narrows a product query to what could plausibly fit, keeping the uncertain cases in.
      * Excluding them would hide parts the customer can buy after confirming one detail.
      */
-    public function scopeForVehicle(Builder $query, SelectedVehicle $vehicle): Builder
+    /** One car, or everything the customer has chosen: listings hand over the whole choice. */
+    public function scopeForVehicle(Builder $query, SelectedVehicle|VehicleSelection $vehicle): Builder
     {
+        if ($vehicle instanceof VehicleSelection) {
+            return $this->scopeForSelection($query, $vehicle);
+        }
+
         return $query->where(function (Builder $query) use ($vehicle): void {
             $query->where('is_universal', true)
                 ->orWhereHas('fitments', fn (Builder $fitment) => $this->constrainFitment($fitment, $vehicle));
         });
     }
 
-    public function verdictFor(Product $product, ?SelectedVehicle $vehicle): CompatibilityVerdict
+    /** The same narrowing for several cars at once: whatever could fit any of them. */
+    public function scopeForSelection(Builder $query, VehicleSelection $selection): Builder
     {
+        if (count($selection) === 1) {
+            return $this->scopeForVehicle($query, $selection->primary());
+        }
+
+        return $query->where(function (Builder $query) use ($selection): void {
+            $query->where('is_universal', true)
+                ->orWhereHas('fitments', fn (Builder $fitment) => $fitment->where(function (Builder $any) use ($selection): void {
+                    foreach ($selection->vehicles as $vehicle) {
+                        $any->orWhere(fn (Builder $one) => $this->constrainFitment($one, $vehicle));
+                    }
+                }));
+        });
+    }
+
+    /** The most favourable answer across the cars: a part that fits one of them is shown as fitting. */
+    public function verdictForSelection(Product $product, ?VehicleSelection $selection): CompatibilityVerdict
+    {
+        if ($selection === null) {
+            return CompatibilityVerdict::Unknown;
+        }
+
+        $best = null;
+
+        foreach ($selection->vehicles as $vehicle) {
+            $verdict = $this->verdictFor($product, $vehicle);
+            $best = $best === null ? $verdict : $this->preferred($best, $verdict);
+        }
+
+        return $best ?? CompatibilityVerdict::Unknown;
+    }
+
+    /**
+     * The car of the selection the product suits best, with that verdict. A product page speaks
+     * about one car, and it should be the one the part is for.
+     *
+     * @return array{0: SelectedVehicle, 1: CompatibilityVerdict}
+     */
+    public function bestFit(Product $product, VehicleSelection $selection): array
+    {
+        $best = [$selection->primary(), $this->verdictFor($product, $selection->primary())];
+
+        foreach (array_slice($selection->vehicles, 1) as $vehicle) {
+            $verdict = $this->verdictFor($product, $vehicle);
+
+            if ($verdict !== $best[1] && $this->preferred($best[1], $verdict) === $verdict) {
+                $best = [$vehicle, $verdict];
+            }
+        }
+
+        return $best;
+    }
+
+    public function verdictFor(Product $product, SelectedVehicle|VehicleSelection|null $vehicle): CompatibilityVerdict
+    {
+        if ($vehicle instanceof VehicleSelection) {
+            return $this->verdictForSelection($product, $vehicle);
+        }
+
         if ($vehicle === null) {
             return CompatibilityVerdict::Unknown;
         }

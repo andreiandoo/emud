@@ -22,14 +22,14 @@
             class="flex h-[2.875rem] items-center gap-2.5 rounded-[3px] border border-white/15 px-3 text-left text-bone transition hover:border-bone">
         <x-storefront.icon name="car" class="h-5 w-5 shrink-0" />
 
-        @if($selected)
+        @if($selection)
             <span class="h-2 w-2 shrink-0 rounded-full bg-fit-bright shadow-[0_0_0_4px_rgba(77,184,116,.18)]"></span>
         @endif
 
         <span class="hidden min-w-0 leading-tight xl:block">
-            @if($selected)
-                <span class="block font-mono text-[10.5px] uppercase tracking-[.08em] text-mute">Mașina ta</span>
-                <span class="block max-w-40 truncate text-sm font-semibold">{{ $selected->label() }}</span>
+            @if($selection)
+                <span class="block font-mono text-[10.5px] uppercase tracking-[.08em] text-mute">{{ count($selection) > 1 ? count($selection).' mașini' : 'Mașina ta' }}</span>
+                <span class="block max-w-40 truncate text-sm font-semibold">{{ $selection->label() }}</span>
             @else
                 <span class="block font-mono text-[10.5px] uppercase tracking-[.08em] text-mute">Caută după</span>
                 <span class="block text-sm font-semibold">Mașina mea</span>
@@ -43,18 +43,21 @@
          class="absolute right-0 top-full z-50 mt-3 max-h-[calc(100vh-var(--st-header-h)-1.5rem)] w-[24rem] overflow-y-auto rounded-[3px] border border-gl2 bg-g1 p-5 text-bone shadow-2xl
                 max-sm:fixed max-sm:inset-x-4 max-sm:top-[calc(var(--st-header-h)+0.5rem)] max-sm:w-auto">
 
-        @if($selected)
-            <div class="mb-5 flex items-start justify-between gap-3 rounded-[3px] border border-gl2 bg-white/[.03] p-3.5">
-                <div class="min-w-0">
-                    <p class="truncate font-semibold">{{ $selected->label() }}</p>
-                    <p class="mt-0.5 text-xs text-mute">
-                        {{ $selected->isFromGarage() ? 'Din garajul tău' : 'Selectată pentru această vizită' }}
-                    </p>
-                </div>
-
-                <button type="button" wire:click="clear" class="shrink-0 text-xs font-semibold text-mute underline underline-offset-2 transition hover:text-bone">
-                    Renunță
-                </button>
+        {{-- What the shop is filtering for. There is no button to drop it: cars leave the garage
+             from the garage page, and the switch below is how to see the whole catalogue. --}}
+        @if($selection)
+            <div class="mb-5 rounded-[3px] border border-gl2 bg-white/[.03] p-3.5">
+                <p class="font-mono text-[10.5px] uppercase tracking-[.08em] text-mute">Caut piese pentru</p>
+                <p class="mt-1 font-semibold leading-snug">{{ $selection->label() }}</p>
+                <p class="mt-0.5 text-xs text-mute">
+                    @if(! $selection->isFromGarage())
+                        Selectată pentru această vizită
+                    @elseif(count($selection) > 1)
+                        Din garajul tău · ce se potrivește pe oricare dintre ele
+                    @else
+                        Din garajul tău
+                    @endif
+                </p>
             </div>
 
             {{-- One switch for the whole shop. Turned off here or on any listing, it stays off on
@@ -62,7 +65,7 @@
             <div class="-mt-2 mb-5 flex items-center justify-between gap-3 rounded-[3px] border border-gl2 px-3.5 py-3 text-sm">
                 <span>
                     <span class="block font-medium">Doar piese care se potrivesc</span>
-                    <span class="block text-xs text-mute">{{ $filtersParts ? 'Listele și căutarea arată doar ce merge pe ea.' : 'Vezi tot catalogul, cu potrivirea marcată.' }}</span>
+                    <span class="block text-xs text-mute">{{ $filtersParts ? 'Listele și căutarea arată doar ce merge pe '.(count($selection) > 1 ? 'ele.' : 'ea.') : 'Vezi tot catalogul, cu potrivirea marcată.' }}</span>
                 </span>
                 <button type="button" wire:click="toggleFilter" role="switch" aria-checked="{{ $filtersParts ? 'true' : 'false' }}" aria-label="Doar piese care se potrivesc"
                         class="relative h-6 w-11 shrink-0 rounded-full transition-colors {{ $filtersParts ? 'bg-signal' : 'bg-white/15' }}">
@@ -73,27 +76,50 @@
 
         @auth
             {{-- One click instead of three dropdowns the customer has already filled in once.
-                 This is the whole point of the garage, so it comes before the cascade. --}}
+                 This is the whole point of the garage, so it comes before the cascade. With more
+                 than one car each is a box to tick, and the search covers every ticked one. --}}
             @if($garageVehicles->isNotEmpty())
-                <p class="st-kicker mb-3 text-mute">Din garajul tău</p>
+                @php($several = $garageVehicles->count() > 1)
+
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <p class="st-kicker text-mute">Din garajul tău</p>
+                    @if($several && count($tickedIds) < $garageVehicles->count())
+                        <button type="button" wire:click="chooseAllFromGarage" class="text-xs font-semibold text-sand transition hover:text-bone">Bifează toate</button>
+                    @endif
+                </div>
+
+                @if($several)
+                    <p class="-mt-1.5 mb-3 text-xs text-mute">Bifează una sau mai multe: căutăm piese pentru toate cele bifate.</p>
+                @endif
 
                 <ul class="mb-4 grid gap-1">
                     @foreach($garageVehicles as $vehicle)
-                        @php($isCurrent = $selected?->customerVehicleId === $vehicle->id)
+                        @php($isTicked = in_array($vehicle->id, $tickedIds, true))
                         <li wire:key="garage-vehicle-{{ $vehicle->id }}">
-                            <button type="button" wire:click="chooseFromGarage({{ $vehicle->id }})" @class([
-                                'flex w-full items-center gap-3 rounded-[3px] px-3 py-2.5 text-left text-sm transition',
-                                'bg-bone text-ink' => $isCurrent,
-                                'hover:bg-white/5' => ! $isCurrent,
-                            ])>
-                                <x-storefront.icon name="car" class="h-4 w-4 shrink-0 {{ $isCurrent ? '' : 'text-mute' }}" />
+                            <button type="button" wire:click="{{ $several ? 'toggleFromGarage' : 'chooseFromGarage' }}({{ $vehicle->id }})"
+                                    aria-pressed="{{ $isTicked ? 'true' : 'false' }}" @class([
+                                        'flex w-full items-center gap-3 rounded-[3px] px-3 py-2.5 text-left text-sm transition',
+                                        'bg-bone text-ink' => $isTicked,
+                                        'hover:bg-white/5' => ! $isTicked,
+                                    ])>
+                                @if($several)
+                                    <span @class([
+                                        'grid h-[1.125rem] w-[1.125rem] shrink-0 place-items-center rounded-[3px] border transition',
+                                        'border-ink bg-ink text-bone' => $isTicked,
+                                        'border-white/30' => ! $isTicked,
+                                    ])>
+                                        @if($isTicked)<x-storefront.icon name="check" class="h-3 w-3" />@endif
+                                    </span>
+                                @else
+                                    <x-storefront.icon name="car" class="h-4 w-4 shrink-0 {{ $isTicked ? '' : 'text-mute' }}" />
+                                @endif
 
                                 <span class="min-w-0 flex-1 truncate">
                                     {{ $vehicle->make?->name }} {{ $vehicle->model?->name }}
-                                    @if($vehicle->year)<span @class(['text-mute' => ! $isCurrent])>· {{ $vehicle->year }}</span>@endif
+                                    @if($vehicle->year)<span @class(['text-mute' => ! $isTicked])>· {{ $vehicle->year }}</span>@endif
                                 </span>
 
-                                @if($isCurrent)<x-storefront.icon name="check" class="h-4 w-4 shrink-0" />@endif
+                                @if(! $several && $isTicked)<x-storefront.icon name="check" class="h-4 w-4 shrink-0" />@endif
                             </button>
                         </li>
                     @endforeach

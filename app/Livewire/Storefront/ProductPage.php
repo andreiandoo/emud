@@ -125,7 +125,12 @@ class ProductPage extends Component
 
     public function render(VehicleContext $context, FitmentMatcher $matcher)
     {
-        $vehicle = $context->current();
+        // With several cars chosen, the page speaks about the one the part suits best: a part for
+        // the weekend 4x4 should not read as wrong because the family car comes first.
+        $selection = $context->selection();
+        [$vehicle, $verdict] = $selection === null
+            ? [null, CompatibilityVerdict::Unknown]
+            : $matcher->bestFit($this->product, $selection);
         $variant = $this->product->variants->firstWhere('is_active', true);
         // Resolved once and handed to both the page and the structured data: they must not be
         // able to disagree about whether the part is in stock.
@@ -134,9 +139,7 @@ class ProductPage extends Component
 
         return view('livewire.storefront.product-page', [
             'vehicle' => $vehicle,
-            'verdict' => $vehicle === null
-                ? CompatibilityVerdict::Unknown
-                : $matcher->verdictFor($this->product, $vehicle),
+            'verdict' => $verdict,
             'variant' => $variant,
             'availability' => $availability,
             'gallery' => $this->product->media->where('type', 'image')->values(),

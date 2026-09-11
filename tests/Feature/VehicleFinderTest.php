@@ -9,6 +9,7 @@ use App\Models\VehicleEngine;
 use App\Models\VehicleGeneration;
 use App\Models\VehicleMake;
 use App\Models\VehicleModel;
+use App\Storefront\SelectedVehicle;
 use App\Storefront\VehicleContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -172,6 +173,19 @@ class VehicleFinderTest extends TestCase
 
         $this->assertSame($configuration->id, $selected->configurationId);
         $this->assertSame(2020, $selected->year);
+    }
+
+    /** The bar names the car and opens the header's chooser, where the garage is, to change it. */
+    public function test_the_bar_offers_a_real_way_to_change_the_car(): void
+    {
+        app(VehicleContext::class)->select(new SelectedVehicle($this->dacia->id, 'Dacia', $this->duster->id, 'Duster'));
+
+        Livewire::test(VehicleFinder::class, ['collection' => $this->collection])
+            ->assertSee('Mașina ta:')
+            ->assertSee('Dacia Duster')
+            ->assertSee('Schimbă')
+            ->assertSee('open-vehicle-selector', false)
+            ->assertDontSee('o schimbi oricând de aici');
     }
 
     public function test_the_third_button_is_absent_where_there_are_no_derivatives(): void

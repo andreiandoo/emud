@@ -55,6 +55,34 @@ class VehicleServiceReminder extends Model
             : (int) $this->due_at_km - (int) $current;
     }
 
+    /** The gap between the target and the last odometer reading, in words: "mai ai 2.340 km". */
+    public function kilometresLabel(): ?string
+    {
+        $left = $this->kilometresRemaining();
+
+        return match (true) {
+            $left === null => null,
+            $left < 0 => 'depășit cu '.number_format(-$left, 0, ',', '.').' km',
+            default => 'mai ai '.number_format($left, 0, ',', '.').' km',
+        };
+    }
+
+    /**
+     * How much of the interval is used up, from 0 to 1, when the interval and a reading are both
+     * known: the bar under an oil change that fills as the kilometres go by.
+     */
+    public function mileageUsed(): ?float
+    {
+        $left = $this->kilometresRemaining();
+        $interval = (int) ($this->interval_km ?: $this->type?->defaultIntervalKm());
+
+        if ($left === null || $interval <= 0) {
+            return null;
+        }
+
+        return max(0.0, min(1.0, ($interval - $left) / $interval));
+    }
+
     /**
      * Owners act on whichever limit arrives first, so urgency takes the nearer of the two.
      * A rough 1000 km per month converts mileage into a comparable horizon.

@@ -12,8 +12,8 @@ use App\Storefront\CatalogMetrics;
 use App\Storefront\CategoryMenu;
 use App\Storefront\CollectionShowcase;
 use App\Storefront\Compatibility\FitmentMatcher;
-use App\Storefront\SelectedVehicle;
 use App\Storefront\VehicleContext;
+use App\Storefront\VehicleSelection;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -171,7 +171,7 @@ class Home extends Component
         CollectionShowcase $showcase,
         CategoryMenu $menu,
     ) {
-        $vehicle = $context->current();
+        $vehicle = $context->selection();
         $links = $this->categoryLinks();
 
         return view('livewire.storefront.home', [
@@ -214,7 +214,7 @@ class Home extends Component
      *
      * @return Collection<int, Product>
      */
-    private function bestSellers(?SelectedVehicle $vehicle, FitmentMatcher $matcher): Collection
+    private function bestSellers(?VehicleSelection $vehicle, FitmentMatcher $matcher): Collection
     {
         $query = Product::query()->active()->with(['brand', 'media', 'fitments', 'variants']);
 

@@ -19,11 +19,17 @@
     <section class="border-b border-gl bg-g1 text-bone">
         <div class="shell flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
             @if($current)
+                {{-- The car is changed in the header, where the garage is; this opens it there
+                     rather than promising a control the bar does not have. --}}
                 <p class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-mute">
                     <span class="h-2 w-2 shrink-0 rounded-full bg-fit-bright shadow-[0_0_0_4px_rgba(77,184,116,.18)]"></span>
-                    Mașina ta:
+                    {{ count($current) > 1 ? 'Mașinile tale:' : 'Mașina ta:' }}
                     <span class="font-semibold text-bone">{{ $current->label() }}</span>
-                    <span class="max-sm:hidden">· o schimbi oricând de aici.</span>
+                    <span aria-hidden="true">·</span>
+                    <button type="button" @click="$dispatch('open-vehicle-selector', { tab: 'car' })"
+                            class="font-semibold text-sand underline underline-offset-2 transition hover:text-bone">
+                        Schimbă
+                    </button>
                 </p>
             @else
                 <p class="text-sm text-mute">
