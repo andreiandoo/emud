@@ -132,6 +132,16 @@ class RarNormalizationTest extends TestCase
         $this->assertSame(25, $branch->coordinates_confidence);
     }
 
+    public function test_an_itp_station_authorised_for_all_three_classes_is_read(): void
+    {
+        // "ITP_CLASS_1,ITP_CLASS_2,ITP_CLASS_3" is 35 characters. PostgreSQL refused it while the
+        // column held 32, and 282 stations failed on the first production import.
+        $record = $this->ingestRar('ITP', $this->rarPayload('itp_station', ['itpAuthClass' => ['ITP_CLASS_1', 'ITP_CLASS_2', 'ITP_CLASS_3']]));
+
+        $this->assertSame('parsed', $record->fresh()->parse_status);
+        $this->assertSame('ITP_CLASS_1,ITP_CLASS_2,ITP_CLASS_3', $this->workshopFor($record)->authorizations()->firstOrFail()->authorization_class);
+    }
+
     public function test_an_itp_station_at_the_same_address_joins_the_service_workshop(): void
     {
         $service = $this->workshopFor($this->ingestRar('SERVICE', $this->rarPayload('service_awd')));
