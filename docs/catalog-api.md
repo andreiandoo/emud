@@ -18,7 +18,15 @@ Authorization: Bearer <token>
 
 API keys are stored hashed. Consumers have monthly quotas; responses include `X-RateLimit-Limit` and `X-RateLimit-Remaining` headers.
 
-The machine-readable contract is `public/openapi/catalog-v1.yaml`.
+The machine-readable contract is `public/openapi/catalog-v1.yaml`, and `docs/catalog/API.md` is the full reference. In short:
+
+- list endpoints page with `page` and `per_page` (max 100; `limit` still works as an alias) and report `total`, `total_pages` and `has_more`;
+- `/changes` pages by opaque `cursor`, because one import writes many events sharing a timestamp;
+- every response names the sources behind its rows in `meta.attribution`, with `meta.license_notice` where credit is required;
+- `/makes` → `/makes/{id}/models` → `/models/{id}/generations` → `/generations/{id}/vehicles` is the car-picker cascade, listing only branches that end in a publishable vehicle;
+- `POST /vin/batch` and `POST /parts/by-number/batch` resolve up to 50 items per request;
+- `/parts/lookup?number=` and `/parts/graph?number=` are the forms that can carry a number containing a slash, which a path segment cannot;
+- failures answer `{"error": {"code", "message"}}` with a stable code.
 
 ## VIN resolver modes
 
@@ -69,5 +77,7 @@ Then configure `database_connection` and `database_schema` on the `VPIC` source.
 ## Data publication rule
 
 API serialization is evidence-aware. Parent entities and individual identifiers/part numbers are filtered separately so a redistributable part cannot accidentally expose an OE number learned only from a restricted source.
+
+Visibility requires the assertion **and** the live source flag. An assertion's `api_redistributable` is a snapshot taken when it was written, and nothing rewrites it, so clearing **Publicare API** on a source used to leave its already-published rows still being served. The read scope now also requires `catalog_sources.allow_api_redistribution`, which makes a revocation take effect immediately on every existing assertion, with no backfill and no cache to wait out.
 
 Use the admin areas **Catalog API**, **Surse catalog**, **Conflicte & QA**, and **Calitate & acoperire** before enabling a source for public redistribution.

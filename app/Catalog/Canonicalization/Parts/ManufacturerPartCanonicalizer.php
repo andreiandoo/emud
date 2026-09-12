@@ -141,6 +141,7 @@ class ManufacturerPartCanonicalizer implements CatalogRecordCanonicalizer
             'event_type' => $created ? 'part.created' : 'part.updated',
             'entity_type' => 'catalog_part',
             'entity_id' => $part->id,
+            'catalog_source_id' => $record->source->id,
             'payload' => ['part_id' => (string) $part->public_id, 'source' => $record->source->code],
             'api_redistributable' => (bool) $record->source->allow_api_redistribution,
             'occurred_at' => now(),

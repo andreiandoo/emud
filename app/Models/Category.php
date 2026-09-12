@@ -47,6 +47,12 @@ class Category extends Model
         return $this->belongsToMany(Product::class)->withPivot('is_primary');
     }
 
+    /** Technical articles filed under this category, as opposed to sellable listings. */
+    public function catalogParts(): HasMany
+    {
+        return $this->hasMany(CatalogPart::class, 'category_id');
+    }
+
     public function attributes(): BelongsToMany
     {
         return $this->belongsToMany(Attribute::class)

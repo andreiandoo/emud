@@ -4,9 +4,46 @@ namespace App\Catalog\Api;
 
 use App\Models\CatalogPart;
 use App\Models\VehicleConfiguration;
+use App\Models\VehicleGeneration;
+use App\Models\VehicleMake;
+use App\Models\VehicleModel;
 
 class CatalogSerializer
 {
+    /** @return array<string, mixed> */
+    public function make(VehicleMake $make): array
+    {
+        return [
+            'id' => 'mk_'.$make->id,
+            'name' => $make->name,
+            'slug' => $make->slug,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function model(VehicleModel $model): array
+    {
+        return [
+            'id' => 'mdl_'.$model->id,
+            'name' => $model->name,
+            'slug' => $model->slug,
+            'make' => $model->relationLoaded('make') && $model->make ? $this->make($model->make) : null,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function generation(VehicleGeneration $generation): array
+    {
+        return [
+            'id' => 'gen_'.$generation->id,
+            'name' => $generation->name,
+            'year_from' => $generation->year_from,
+            'year_to' => $generation->year_to,
+            'chassis_code' => $generation->chassis_code,
+            'model' => $generation->relationLoaded('model') && $generation->model ? $this->model($generation->model) : null,
+        ];
+    }
+
     public function vehicle(VehicleConfiguration $vehicle): array
     {
         $vehicle->loadMissing(['generation.model.make', 'engine', 'identifiers.source']);

@@ -2,15 +2,19 @@
 
 namespace App\Providers;
 
+use App\Models\CatalogFitment;
 use App\Models\CatalogPart;
 use App\Models\CatalogPartNumber;
+use App\Models\CatalogPartRelation;
 use App\Models\CatalogSource;
+use App\Models\CatalogSourceAssertion;
 use App\Models\Category;
 use App\Models\VehicleAlias;
 use App\Models\VehicleConfiguration;
 use App\Models\VehicleIdentifier;
 use App\Observers\CatalogSearchMutationObserver;
 use App\Observers\CatalogSourceSearchObserver;
+use App\Observers\CatalogVersionObserver;
 use App\Observers\CategoryMenuObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -43,6 +47,14 @@ class AppServiceProvider extends ServiceProvider
 
         foreach ([CatalogPart::class, CatalogPartNumber::class, VehicleConfiguration::class, VehicleIdentifier::class, VehicleAlias::class] as $model) {
             $model::observe(CatalogSearchMutationObserver::class);
+        }
+
+        foreach ([
+            CatalogPart::class, CatalogPartNumber::class, CatalogFitment::class, CatalogPartRelation::class,
+            CatalogSourceAssertion::class, CatalogSource::class, VehicleConfiguration::class,
+            VehicleIdentifier::class, Category::class,
+        ] as $model) {
+            $model::observe(CatalogVersionObserver::class);
         }
 
         CatalogSource::observe(CatalogSourceSearchObserver::class);

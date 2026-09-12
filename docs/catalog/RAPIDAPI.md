@@ -141,6 +141,34 @@ Authorization: Bearer emud_...
 
 No RapidAPI configuration is required for direct API consumers.
 
+## Batch endpoints and marketplace billing
+
+`POST /api/v1/vin/batch` and `POST /api/v1/parts/by-number/batch` each cost **one** metered request whatever the batch size, because that is how RapidAPI bills and disagreeing with the marketplace's own counter causes support tickets. What bounds them is the item ceiling:
+
+```dotenv
+CATALOG_API_BATCH_MAX_ITEMS=50
+```
+
+Raise it deliberately. At 50 items a caller can pull 50 rows per billed request, which is the intended value of a paid plan; at 5,000 they can drain the catalogue through a handful of calls. If batch size should differ by plan, gate it on the resolved consumer's `plan` rather than raising the global ceiling.
+
+## Response caching
+
+```dotenv
+CATALOG_API_CACHE_ENABLED=true
+CATALOG_API_CACHE_TTL=300
+```
+
+Cache entries are shared across consumers on purpose — what may be published depends on source rights, not on the caller — and are keyed by a catalog version stamp so any change to a part, assertion or source retires them all. Quota headers are written onto the live response, so a cache hit still reports the right remaining quota for that caller. Keep it on: marketplace traffic is repetitive, and the same VIN decoded twice would otherwise cost two upstream vPIC calls.
+
+## Before listing a plan
+
+The transport is ready; what a plan can promise depends on what has actually been imported and cleared. Check, in this order:
+
+1. `GET /api/v1/coverage` against production — it reports visible entity counts per source. A listing whose endpoints return empty collections earns refunds and one-star reviews.
+2. Which sources are enabled. All four open profiles ship `is_active = false`, and every real supplier ships `allow_api_redistribution = false`; the parts endpoints have no licensed source behind them until one is contracted (see `MAHLE_TECCMD.md`).
+3. `GET /api/v1/sources` — the licence terms a subscriber inherits. EEA is CC BY and NHTSA asks that attribution survives copying, so the listing description and the plan's terms need to pass the credit obligation on. `meta.license_notice` gives subscribers the line to reproduce.
+4. Document only the endpoints that return data today. It is better to list a narrow "EU vehicle identification" API that works than a broad catalogue API with six empty endpoints.
+
 ## Deployment checklist
 
 1. Run migrations.

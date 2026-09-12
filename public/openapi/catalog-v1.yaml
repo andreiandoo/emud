@@ -1,19 +1,44 @@
 openapi: 3.1.0
 info:
   title: eMUD Automotive Catalog API
-  version: 1.2.0
+  version: 1.3.0
   description: >-
-    Rights-filtered automotive catalog API. Only canonical facts backed by source
-    evidence explicitly approved for API redistribution are exposed.
+    Rights-filtered automotive catalog API: vehicle identification, a make → model →
+    generation → vehicle tree for a storefront's car picker, part identifier resolution,
+    a cross-reference graph, and a change feed to mirror from.
+
+
+    Only canonical facts backed by source evidence explicitly approved for API
+    redistribution are exposed, and every response names the sources behind the rows it
+    returned in `meta.attribution`. Where `attribution_required` is true on one of those
+    sources, `meta.license_notice` carries the credit a consumer must reproduce.
+
+
+    Paging: list endpoints take `page` and `per_page` (max 100; `limit` is accepted as an
+    alias) and answer with `meta.total`, `meta.total_pages` and `meta.has_more`. Send
+    `with_total=0` to skip the count when only walking forward. The change feed pages by
+    opaque `cursor` instead, because events written in one import share a timestamp.
 servers:
   - url: /api/v1
 security:
   - ApiKeyHeader: []
   - BearerAuth: []
+tags:
+  - name: Vehicle identification
+  - name: Vehicle tree
+  - name: Parts
+  - name: Catalog
 paths:
   /vin/{vin}:
     get:
+      tags: [Vehicle identification]
       summary: Decode a VIN and map it to a canonical vehicle configuration
+      description: >-
+        Returns an explicit resolution state rather than a best guess: `invalid`,
+        `unsupported`, `unavailable`, `basic_only`, `ambiguous` or `high_confidence`.
+        When the VIN settles the make or model but not the exact build, `narrowed_to`
+        carries what it did settle so a car picker can be pre-selected, and
+        `missing_for_exact_fitment` says what is still needed.
       parameters:
         - name: vin
           in: path
@@ -27,92 +52,33 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
-                    $ref: '#/components/schemas/VinResolution'
+                  data: { $ref: '#/components/schemas/VinResolution' }
+                  meta: { $ref: '#/components/schemas/AttributionMeta' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '429': { $ref: '#/components/responses/RateLimited' }
-  /vehicles/search:
-    get:
-      summary: Search canonical vehicle configurations
-      parameters:
-        - { name: q, in: query, schema: { type: string } }
-        - { name: year, in: query, schema: { type: integer } }
-        - { name: fuel, in: query, schema: { type: string } }
-        - { name: market, in: query, schema: { type: string } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+  /vin/batch:
+    post:
+      tags: [Vehicle identification]
+      summary: Decode up to 50 VINs in one request
+      description: >-
+        One metered request regardless of batch size. A malformed VIN is reported as its
+        own `invalid` row rather than failing the batch.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vins]
+              properties:
+                vins:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { type: string }
       responses:
         '200':
-          description: Vehicle search results
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VehicleListResponse'
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-  /vehicles/{vehicle}:
-    get:
-      summary: Get one canonical vehicle configuration
-      parameters:
-        - { name: vehicle, in: path, required: true, schema: { type: integer } }
-      responses:
-        '200':
-          description: Vehicle
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data: { $ref: '#/components/schemas/Vehicle' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { description: Not found }
-        '429': { $ref: '#/components/responses/RateLimited' }
-  /vehicles/{vehicle}/parts:
-    get:
-      summary: Get confirmed or conditional parts for a vehicle configuration
-      parameters:
-        - { name: vehicle, in: path, required: true, schema: { type: integer } }
-        - { name: category_id, in: query, schema: { type: integer } }
-        - { name: position, in: query, schema: { type: string } }
-        - { name: min_confidence, in: query, schema: { type: number, minimum: 0, maximum: 100 } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
-      responses:
-        '200':
-          description: Parts matching the vehicle
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PartListResponse'
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { description: Vehicle not found }
-        '429': { $ref: '#/components/responses/RateLimited' }
-  /parts/search:
-    get:
-      summary: Search parts by text, brand, MPN, OE/IAM number or compact identifier
-      parameters:
-        - { name: q, in: query, schema: { type: string } }
-        - { name: brand, in: query, schema: { type: string } }
-        - { name: category_id, in: query, schema: { type: integer } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
-      responses:
-        '200':
-          description: Part search results
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PartListResponse'
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-  /parts/by-number/{number}:
-    get:
-      summary: Resolve an OE, IAM, EAN or other known part number to canonical parts
-      parameters:
-        - { name: number, in: path, required: true, schema: { type: string } }
-        - name: scheme
-          in: query
-          schema: { type: string, example: OE }
-      responses:
-        '200':
-          description: Matching parts
+          description: One row per distinct VIN, in the order supplied
           content:
             application/json:
               schema:
@@ -120,25 +86,317 @@ paths:
                 properties:
                   data:
                     type: array
-                    items: { $ref: '#/components/schemas/Part' }
+                    items: { $ref: '#/components/schemas/VinResolution' }
+                  meta:
+                    allOf:
+                      - $ref: '#/components/schemas/BatchMeta'
+                      - $ref: '#/components/schemas/AttributionMeta'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /makes:
+    get:
+      tags: [Vehicle tree]
+      summary: Vehicle makes that have at least one publishable vehicle
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Case-insensitive name filter }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged makes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Make' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '429': { $ref: '#/components/responses/RateLimited' }
-  /parts/by-number/{number}/graph:
+  /makes/{make}/models:
     get:
-      summary: Traverse API-redistributable equivalents and supersessions from a known part number
+      tags: [Vehicle tree]
+      summary: Models under a make
+      parameters:
+        - { name: make, in: path, required: true, schema: { type: integer } }
+        - { name: q, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged models; `meta.make` echoes the parent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Model' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /models/{model}/generations:
+    get:
+      tags: [Vehicle tree]
+      summary: Generations under a model
+      parameters:
+        - { name: model, in: path, required: true, schema: { type: integer } }
+        - name: year
+          in: query
+          schema: { type: integer }
+          description: Keep only generations whose production span covers this year.
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged generations; `meta.model` echoes the parent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Generation' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /generations/{generation}/vehicles:
+    get:
+      tags: [Vehicle tree]
+      summary: Vehicle configurations under a generation
+      parameters:
+        - { name: generation, in: path, required: true, schema: { type: integer } }
+        - { name: year, in: query, schema: { type: integer } }
+        - { name: fuel, in: query, schema: { type: string } }
+        - { name: body_type, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged vehicle configurations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VehicleListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /vehicles/search:
+    get:
+      tags: [Vehicle tree]
+      summary: Search canonical vehicle configurations
       description: >-
-        Resolves the supplied number to one or more canonical seed parts, then performs a bounded
-        cycle-safe traversal over canonical part relations. Both relation evidence and every returned
-        part must independently be approved for API redistribution.
+        With `q`, results are relevance-ranked from the search index, which returns at
+        most 500 candidates; a page beyond that window can run out of candidates before
+        it runs out of matches. Narrow with the filters rather than paging deeper.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: make, in: query, schema: { type: string } }
+        - { name: model, in: query, schema: { type: string } }
+        - { name: year, in: query, schema: { type: integer } }
+        - { name: fuel, in: query, schema: { type: string } }
+        - { name: market, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged vehicle configurations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VehicleListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /vehicles/{vehicle}:
+    get:
+      tags: [Vehicle tree]
+      summary: One canonical vehicle configuration
+      parameters:
+        - { name: vehicle, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Vehicle configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Vehicle' }
+                  meta: { $ref: '#/components/schemas/AttributionMeta' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /vehicles/{vehicle}/parts:
+    get:
+      tags: [Parts]
+      summary: Parts with a published fitment to this vehicle
+      description: >-
+        Paged over distinct parts, not over fitment rows: one part fitted front-left and
+        front-right is one result, not two.
+      parameters:
+        - { name: vehicle, in: path, required: true, schema: { type: integer } }
+        - { name: category_id, in: query, schema: { type: integer } }
+        - { name: position, in: query, schema: { type: string } }
+        - { name: min_confidence, in: query, schema: { type: number } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged parts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /parts/search:
+    get:
+      tags: [Parts]
+      summary: Search canonical parts
+      description: Same 500-candidate ranked window as `/vehicles/search` when `q` is sent.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: brand, in: query, schema: { type: string } }
+        - { name: category_id, in: query, schema: { type: integer } }
+        - { name: lifecycle_status, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged parts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /parts/lookup:
+    get:
+      tags: [Parts]
+      summary: Resolve one part number (query form)
+      description: >-
+        The form to prefer. Real part numbers contain slashes — Mann sells a `W 68/3` —
+        and a slash cannot survive a path segment even percent-encoded, so
+        `/parts/by-number/{number}` cannot address every number this one can.
+      parameters:
+        - { name: number, in: query, required: true, schema: { type: string } }
+        - name: scheme
+          in: query
+          schema: { type: string, enum: [MPN, OE, IAM, EAN_GTIN] }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged parts the number resolves to
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /parts/by-number/{number}:
+    get:
+      tags: [Parts]
+      summary: Resolve one part number (path form)
+      description: Cannot carry a number containing `/`; use `/parts/lookup` for those.
       parameters:
         - { name: number, in: path, required: true, schema: { type: string } }
-        - { name: scheme, in: query, schema: { type: string, example: MPN } }
+        - name: scheme
+          in: query
+          schema: { type: string, enum: [MPN, OE, IAM, EAN_GTIN] }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/WithTotal'
+      responses:
+        '200':
+          description: Paged parts the number resolves to
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /parts/by-number/batch:
+    post:
+      tags: [Parts]
+      summary: Resolve up to 50 part numbers in one request
+      description: >-
+        For matching a shop's own catalogue against this one. Answered with a fixed
+        number of queries whatever the batch size, and billed as one request. A number
+        with no match is returned with an empty `matches` array rather than omitted, so
+        the caller can tell which of its own rows failed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [numbers]
+              properties:
+                numbers:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { type: string, maxLength: 128 }
+                scheme:
+                  type: string
+                  enum: [MPN, OE, IAM, EAN_GTIN]
+      responses:
+        '200':
+          description: One row per distinct number, in the order supplied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        number: { type: string }
+                        matches:
+                          type: array
+                          items: { $ref: '#/components/schemas/Part' }
+                  meta:
+                    allOf:
+                      - $ref: '#/components/schemas/BatchMeta'
+                      - $ref: '#/components/schemas/AttributionMeta'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /parts/graph:
+    get:
+      tags: [Parts]
+      summary: Cross-reference and supersession graph for a number (query form)
+      description: >-
+        Resolves the identifier to seed parts, then traverses canonical part relations.
+        `path_confidence` is the strongest path to that node — the minimum edge
+        confidence along a path, maximised over paths. `truncated` means a budget was
+        reached and the result is not a complete connected component. An edge is
+        returned only when its relation source permits redistribution AND both endpoint
+        parts are independently published, so a public number cannot be used as a bridge
+        into restricted technical data.
+      parameters:
+        - { name: number, in: query, required: true, schema: { type: string } }
+        - { name: scheme, in: query, schema: { type: string, enum: [MPN, OE, IAM, EAN_GTIN] } }
         - { name: depth, in: query, schema: { type: integer, minimum: 0, maximum: 4, default: 2 } }
         - { name: max_nodes, in: query, schema: { type: integer, minimum: 1, maximum: 250, default: 100 } }
         - { name: max_edges, in: query, schema: { type: integer, minimum: 1, maximum: 2000, default: 800 } }
       responses:
         '200':
-          description: Bounded canonical part relation graph
+          description: Bounded, cycle-safe graph
           content:
             application/json:
               schema:
@@ -146,17 +404,36 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/PartGraph' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '422': { description: Validation error }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /parts/by-number/{number}/graph:
+    get:
+      tags: [Parts]
+      summary: Cross-reference and supersession graph for a number (path form)
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: string } }
+        - { name: scheme, in: query, schema: { type: string, enum: [MPN, OE, IAM, EAN_GTIN] } }
+        - { name: depth, in: query, schema: { type: integer, minimum: 0, maximum: 4, default: 2 } }
+        - { name: max_nodes, in: query, schema: { type: integer, minimum: 1, maximum: 250, default: 100 } }
+        - { name: max_edges, in: query, schema: { type: integer, minimum: 1, maximum: 2000, default: 800 } }
+      responses:
+        '200':
+          description: Bounded, cycle-safe graph
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PartGraph' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
         '429': { $ref: '#/components/responses/RateLimited' }
   /parts/{part}:
     get:
-      summary: Get one canonical part
+      tags: [Parts]
+      summary: One canonical part by public id
       parameters:
-        - name: part
-          in: path
-          required: true
-          description: Public part identifier, with or without the `prt_` prefix.
-          schema: { type: string }
+        - { name: part, in: path, required: true, schema: { type: string }, description: 'With or without the `prt_` prefix' }
       responses:
         '200':
           description: Part
@@ -166,12 +443,17 @@ paths:
                 type: object
                 properties:
                   data: { $ref: '#/components/schemas/Part' }
+                  meta: { $ref: '#/components/schemas/AttributionMeta' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { description: Not found }
+        '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/RateLimited' }
   /compatibility/check:
     post:
-      summary: Check whether a canonical part fits a vehicle configuration
+      tags: [Parts]
+      summary: Does this part fit this vehicle
+      description: >-
+        `compatible` is null and `status` is `unknown` when no published fitment links
+        the two — absence of evidence, not evidence of incompatibility.
       requestBody:
         required: true
         content:
@@ -181,25 +463,89 @@ paths:
               required: [vehicle_id, part_id]
               properties:
                 vehicle_id: { type: integer }
-                part_id: { type: string, description: Public part identifier with or without `prt_` prefix. }
+                part_id: { type: string }
       responses:
         '200':
-          description: Compatibility result
+          description: Fitment verdict with any conditions attached
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  data: { $ref: '#/components/schemas/Compatibility' }
+                  data:
+                    type: object
+                    properties:
+                      compatible: { type: [boolean, 'null'] }
+                      status: { type: string, enum: [confirmed, conditional, unknown] }
+                      confidence: { type: [number, 'null'] }
+                      constraints: { type: array, items: { type: object, additionalProperties: true } }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '422': { description: Validation error }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /categories:
+    get:
+      tags: [Catalog]
+      summary: Assembly-group tree parts are filed under
+      parameters:
+        - { name: flat, in: query, schema: { type: boolean, default: false }, description: Return a flat list instead of a nested tree }
+        - name: with_parts
+          in: query
+          schema: { type: boolean, default: false }
+          description: >-
+            Keep only groups that currently hold a publishable part. A child that
+            qualifies is promoted to the top when its parent does not, rather than being
+            lost with it.
+      responses:
+        '200':
+          description: Category tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Category' }
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      shape: { type: string, enum: [tree, flat] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /sources:
+    get:
+      tags: [Catalog]
+      summary: Sources behind the catalog, and their licence terms
+      description: >-
+        A consumer republishing this data inherits these conditions, so they are
+        readable by the integration rather than only by a contract. Restricted sources
+        held internally are not listed.
+      responses:
+        '200':
+          description: Redistributable sources
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Source' }
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '429': { $ref: '#/components/responses/RateLimited' }
   /coverage:
     get:
-      summary: Get current API-visible entity coverage
+      tags: [Catalog]
+      summary: How much of the catalog this key can see
       responses:
         '200':
-          description: Coverage counts
+          description: Visible entity counts, broken down by source
           content:
             application/json:
               schema:
@@ -211,18 +557,27 @@ paths:
                       vehicle_configurations: { type: integer }
                       vehicle_generations: { type: integer }
                       parts: { type: integer }
+                      by_source: { type: object, additionalProperties: true }
                       generated_at: { type: string, format: date-time }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '429': { $ref: '#/components/responses/RateLimited' }
   /changes:
     get:
-      summary: Read API-redistributable catalog change events
+      tags: [Catalog]
+      summary: Change feed to mirror the catalog from
+      description: >-
+        Paged by opaque cursor, not by timestamp: an import writes its events in batches
+        that share one `occurred_at`, so resuming from a timestamp alone would either
+        skip the rest of a batch or replay it forever. Store `meta.next_cursor` and send
+        it back; it stays valid across an empty poll. `since` seeds a first read only
+        and is ignored once a cursor is supplied.
       parameters:
-        - { name: since, in: query, schema: { type: string, format: date-time }, description: Defaults to 24 hours ago. }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: since, in: query, schema: { type: string, format: date-time }, description: 'Ignored when `cursor` is sent. Defaults to 24 hours ago.' }
+        - $ref: '#/components/parameters/PerPage'
       responses:
         '200':
-          description: Change events
+          description: Ordered events, oldest first
           content:
             application/json:
               schema:
@@ -231,8 +586,9 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/ChangeEvent' }
-                  meta: { $ref: '#/components/schemas/LimitMeta' }
+                  meta: { $ref: '#/components/schemas/CursorMeta' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
         '429': { $ref: '#/components/responses/RateLimited' }
 components:
   securitySchemes:
@@ -243,39 +599,144 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      description: '`limit` is accepted as an alias. Values above 100 are clamped.'
+    WithTotal:
+      name: with_total
+      in: query
+      schema: { type: boolean, default: true }
+      description: Set to false to skip the count query when only walking forward.
   responses:
     Unauthorized:
       description: Missing, invalid or inactive API key
       content:
         application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: No published record matches this request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationFailed:
+      description: Request parameters are not valid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
     RateLimited:
       description: Monthly API quota or request throttle exceeded
       content:
         application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
   schemas:
-    LimitMeta:
+    PageMeta:
       type: object
       properties:
+        page: { type: integer }
+        per_page: { type: integer }
+        limit: { type: integer, description: Alias of per_page, kept for consumers written against 1.2.0. }
+        has_more: { type: boolean }
+        total: { type: integer, description: Absent when with_total=0. }
+        total_pages: { type: integer, description: Absent when with_total=0. }
+        attribution:
+          type: array
+          items: { $ref: '#/components/schemas/Source' }
+        license_notice: { type: string }
+    CursorMeta:
+      type: object
+      properties:
+        per_page: { type: integer }
         limit: { type: integer }
-        count: { type: integer }
+        has_more: { type: boolean }
+        next_cursor: { type: string, description: Opaque. Send back as `cursor`; valid across an empty poll. }
+    BatchMeta:
+      type: object
+      properties:
+        requested: { type: integer }
+        matched: { type: integer, description: Number lookups only. }
+        resolved: { type: integer, description: VIN batches only — rows that reached high confidence. }
+        max_items: { type: integer }
+        scheme: { type: string }
+    AttributionMeta:
+      type: object
+      description: >-
+        Sources behind the rows in this response. Present whenever the response contains
+        source-backed facts.
+      properties:
+        attribution:
+          type: array
+          items: { $ref: '#/components/schemas/Source' }
+        license_notice:
+          type: string
+          description: The credit a consumer must reproduce, when any source requires it.
+    Source:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+        type: { type: string }
+        license: { type: string }
+        license_url: { type: string }
+        url: { type: string }
+        attribution_required: { type: boolean }
+        notes: { type: string }
+        capabilities: { type: array, items: { type: string } }
     VehicleListResponse:
       type: object
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/Vehicle' }
-        meta: { $ref: '#/components/schemas/LimitMeta' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
     PartListResponse:
       type: object
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/Part' }
-        meta: { $ref: '#/components/schemas/LimitMeta' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+    Make:
+      type: object
+      properties:
+        id: { type: string, description: 'Prefixed, e.g. `mk_12`. Path parameters take the bare integer.' }
+        name: { type: string }
+        slug: { type: string }
+    Model:
+      type: object
+      properties:
+        id: { type: string, description: 'Prefixed, e.g. `mdl_34`.' }
+        name: { type: string }
+        slug: { type: string }
+        make: { type: [object, 'null'], additionalProperties: true }
+    Generation:
+      type: object
+      properties:
+        id: { type: string, description: 'Prefixed, e.g. `gen_56`.' }
+        name: { type: string }
+        year_from: { type: [integer, 'null'] }
+        year_to: { type: [integer, 'null'] }
+        chassis_code: { type: [string, 'null'] }
+        model: { type: [object, 'null'], additionalProperties: true }
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        path: { type: string }
+        depth: { type: integer }
+        parent_id: { type: [integer, 'null'] }
+        children:
+          type: array
+          description: Absent when `flat=1`.
+          items: { $ref: '#/components/schemas/Category' }
     Vehicle:
       type: object
       additionalProperties: true
@@ -286,101 +747,83 @@ components:
         generation: { type: [string, 'null'] }
         commercial_name: { type: [string, 'null'] }
         year: { type: [integer, 'null'] }
+        model_year_from: { type: [integer, 'null'] }
+        model_year_to: { type: [integer, 'null'] }
+        market: { type: [string, 'null'] }
         engine: { type: [object, 'null'], additionalProperties: true }
         eu: { type: object, additionalProperties: true }
-        identifiers:
-          type: array
-          items: { type: object, additionalProperties: true }
+        identifiers: { type: array, items: { type: object, additionalProperties: true } }
         quality: { type: object, additionalProperties: true }
     Part:
       type: object
       additionalProperties: true
       properties:
-        id: { type: string, example: prt_01K... }
+        id: { type: string }
         brand: { type: [string, 'null'] }
-        mpn: { type: string }
+        mpn: { type: [string, 'null'] }
         name: { type: [string, 'null'] }
-        numbers:
-          type: array
-          items: { type: object, additionalProperties: true }
-    PartGraph:
-      type: object
-      required: [query, seeds, nodes, edges, truncated]
-      properties:
-        query:
-          type: object
-          properties:
-            number: { type: string }
-            scheme: { type: [string, 'null'] }
-            depth: { type: integer }
-            max_nodes: { type: integer }
-            max_edges: { type: integer }
-        seeds:
-          type: array
-          items: { type: string, example: prt_01K... }
-        nodes:
-          type: array
-          items:
-            type: object
-            properties:
-              distance: { type: integer, minimum: 0 }
-              path_confidence: { type: number, minimum: 0, maximum: 100 }
-              part: { $ref: '#/components/schemas/Part' }
-        edges:
-          type: array
-          items:
-            type: object
-            properties:
-              from: { type: string }
-              to: { type: string }
-              relation_type: { type: string, example: equivalent }
-              directed: { type: boolean }
-              confidence: { type: [number, 'null'] }
-              source: { type: [string, 'null'] }
-        truncated: { type: boolean }
+        category: { type: [object, 'null'], additionalProperties: true }
+        lifecycle_status: { type: [string, 'null'] }
+        numbers: { type: array, items: { type: object, additionalProperties: true } }
+        quality: { type: object, additionalProperties: true }
     VinResolution:
       type: object
+      additionalProperties: true
       properties:
         vin: { type: string }
         resolution:
           type: string
           enum: [invalid, unsupported, unavailable, basic_only, ambiguous, high_confidence]
-        confidence: { type: number, minimum: 0, maximum: 100 }
-        vehicle:
-          oneOf:
-            - { $ref: '#/components/schemas/Vehicle' }
-            - { type: 'null' }
+        confidence: { type: number }
+        vehicle: { type: [object, 'null'], additionalProperties: true }
+        narrowed_to:
+          type: [object, 'null']
+          description: >-
+            What the VIN settled when it could not settle a build — make, model and/or
+            generation — for pre-selecting a car picker.
+          additionalProperties: true
         decoded: { type: object, additionalProperties: true }
-        candidates:
-          type: array
-          items: { type: object, additionalProperties: true }
-        missing_for_exact_fitment:
-          type: array
-          items: { type: string }
+        candidates: { type: array, items: { type: object, additionalProperties: true } }
+        missing_for_exact_fitment: { type: array, items: { type: string } }
         message: { type: [string, 'null'] }
-    Compatibility:
+    PartGraph:
       type: object
       properties:
-        compatible: { type: [boolean, 'null'] }
-        status: { type: string, enum: [confirmed, conditional, unknown] }
-        confidence: { type: [number, 'null'] }
-        constraints:
-          type: array
-          items: { type: object, additionalProperties: true }
+        query: { type: object, additionalProperties: true }
+        seeds: { type: array, items: { type: string } }
+        nodes: { type: array, items: { type: object, additionalProperties: true } }
+        edges: { type: array, items: { type: object, additionalProperties: true } }
+        truncated: { type: boolean }
     ChangeEvent:
       type: object
       properties:
         id: { type: string }
         type: { type: string }
         entity_type: { type: string }
-        entity_id: { type: [integer, 'null'] }
+        entity_id: { type: integer }
         payload: { type: [object, 'null'], additionalProperties: true }
-        occurred_at: { type: [string, 'null'], format: date-time }
+        occurred_at: { type: string, format: date-time }
     ErrorResponse:
       type: object
       properties:
         error:
           type: object
           properties:
-            code: { type: string }
+            code:
+              type: string
+              description: >-
+                Stable machine-readable code. Branch on this rather than on the message.
+              examples:
+                - API_KEY_REQUIRED
+                - API_KEY_INVALID
+                - NOT_FOUND
+                - VALIDATION_FAILED
+                - NUMBER_REQUIRED
+                - CURSOR_INVALID
+                - QUOTA_EXCEEDED
+                - RATE_LIMITED
             message: { type: string }
+            details:
+              type: object
+              description: Field-level errors, on VALIDATION_FAILED only.
+              additionalProperties: true

@@ -2,10 +2,17 @@
 
 use App\Http\Middleware\AuthenticateCatalogApiKey;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -37,5 +44,47 @@ return Application::configure(basePath: dirname(__DIR__))
             : route('customer.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // The catalog API answers failures in the same envelope as successes, so an integration
+        // can branch on `error.code` instead of parsing prose or guessing from the status alone.
+        // Scoped to /api so the storefront and the back office keep Laravel's own pages.
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            [$status, $code] = match (true) {
+                $e instanceof ValidationException => [422, 'VALIDATION_FAILED'],
+                $e instanceof ModelNotFoundException => [404, 'NOT_FOUND'],
+                $e instanceof NotFoundHttpException => [404, 'NOT_FOUND'],
+                $e instanceof MethodNotAllowedHttpException => [405, 'METHOD_NOT_ALLOWED'],
+                $e instanceof ThrottleRequestsException => [429, 'RATE_LIMITED'],
+                $e instanceof AuthenticationException => [401, 'UNAUTHENTICATED'],
+                $e instanceof HttpExceptionInterface => [$e->getStatusCode(), 'REQUEST_FAILED'],
+                default => [500, 'SERVER_ERROR'],
+            };
+
+            $error = ['code' => $code, 'message' => match ($code) {
+                'VALIDATION_FAILED' => 'The request parameters are not valid.',
+                'NOT_FOUND' => 'No published record matches this request.',
+                'METHOD_NOT_ALLOWED' => 'That method is not allowed on this endpoint.',
+                'RATE_LIMITED' => 'Too many requests. Retry after the window resets.',
+                'UNAUTHENTICATED' => 'A valid API key is required.',
+                // A 500 says nothing about its cause: a resolver failure must not hand a
+                // consumer a database or upstream exception to read.
+                'SERVER_ERROR' => config('app.debug') ? $e->getMessage() : 'The request could not be completed.',
+                default => $e->getMessage(),
+            }];
+
+            if ($e instanceof ValidationException) {
+                $error['details'] = $e->errors();
+            }
+
+            $response = response()->json(['error' => $error], $status);
+
+            if ($e instanceof ThrottleRequestsException && $retry = $e->getHeaders()['Retry-After'] ?? null) {
+                $response->headers->set('Retry-After', (string) $retry);
+            }
+
+            return $response;
+        });
     })->create();
